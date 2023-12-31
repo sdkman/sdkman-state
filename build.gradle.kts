@@ -30,7 +30,6 @@ dependencies {
     implementation("io.ktor:ktor-server-swagger-jvm")
     implementation("io.ktor:ktor-server-metrics-jvm")
     implementation("io.ktor:ktor-server-content-negotiation-jvm")
-    implementation("io.ktor:ktor-serialization-gson-jvm")
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
