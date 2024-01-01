@@ -56,7 +56,7 @@ fun String.runCommand(): String =
 
 ktor {
     docker {
-        localImageName.set("sdkman-state")
+        localImageName.set("registry.digitalocean.com/sdkman/sdkman-state")
         imageTag.set("git rev-parse --short=8 HEAD".runCommand())
         jreVersion.set(JavaVersion.VERSION_21)
     }
