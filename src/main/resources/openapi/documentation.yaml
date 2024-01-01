@@ -1,0 +1,54 @@
+openapi: "3.0.3"
+info:
+  title: "sdkman_state API"
+  description: "sdkman_state API"
+  version: "1.0.0"
+servers:
+- url: "https://sdkman_state"
+paths:
+  /candidates/{candidate}:
+    get:
+      description: ""
+      parameters:
+      - name: "candidate"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/CandidateVersion"
+components:
+  schemas:
+    CandidateVersion:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        version:
+          type: "string"
+        platform:
+          type: "string"
+        url:
+          type: "string"
+        visible:
+          type: "boolean"
+        vendor:
+          type: "string"
+        md5sum:
+          type: "string"
+        sha256sum:
+          type: "string"
+        sha512sum:
+          type: "string"
+      required:
+      - "candidate"
+      - "version"
+      - "platform"
+      - "url"
