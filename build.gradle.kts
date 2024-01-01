@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream
+
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -41,4 +43,21 @@ dependencies {
 
     testImplementation("io.ktor:ktor-server-tests-jvm")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+}
+
+fun String.runCommand(): String =
+    with(ByteArrayOutputStream()) baos@{
+        project.exec {
+            commandLine = split(" ")
+            standardOutput = this@baos
+        }
+        toString().trim()
+    }
+
+ktor {
+    docker {
+        localImageName.set("sdkman-state")
+        imageTag.set("git rev-parse --short=8 HEAD".runCommand())
+        jreVersion.set(JavaVersion.VERSION_21)
+    }
 }
