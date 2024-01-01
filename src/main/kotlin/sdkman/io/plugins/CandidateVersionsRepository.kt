@@ -10,8 +10,8 @@ class CandidateVersionsRepository {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
         val platform = varchar("platform", length = 15)
-        val visible = bool("visible")
         val url = varchar("url", length = 500)
+        val visible = bool("visible")
         val vendor = varchar("vendor", length = 10).nullable()
         val md5Sum = varchar("md5_sum", length = 32).nullable()
         val sha256Sum = varchar("sha_256_sum", length = 64).nullable()
@@ -30,8 +30,8 @@ class CandidateVersionsRepository {
                         version = it[CandidateVersions.version],
                         platform = it[CandidateVersions.platform],
                         url = it[CandidateVersions.url],
-                        vendor = it[CandidateVersions.vendor],
                         visible = it[CandidateVersions.visible],
+                        vendor = it[CandidateVersions.vendor],
                         md5sum = it[CandidateVersions.md5Sum],
                         sha256sum = it[CandidateVersions.sha256Sum],
                         sha512sum = it[CandidateVersions.sha512Sum]
