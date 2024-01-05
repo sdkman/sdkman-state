@@ -27,9 +27,9 @@ jobs:
           version=$(git rev-parse --short=8 HEAD)
           docker push registry.digitalocean.com/sdkman/sdkman-state:$version
           docker push registry.digitalocean.com/sdkman/sdkman-state:latest
-      - name: Deploy sdkman-state to DO
-        uses: fjogeleit/http-request-action@master
-        with:
-          url: https://api.digitalocean.com/v2/apps/${{ secrets.APP_ID }}/deployments
-          method: 'POST'
-          bearerToken: ${{ secrets.DIGITALOCEAN_TOKEN }}
+#      - name: Deploy sdkman-state to DO
+#        uses: fjogeleit/http-request-action@master
+#        with:
+#          url: https://api.digitalocean.com/v2/apps/${{ secrets.APP_ID }}/deployments
+#          method: 'POST'
+#          bearerToken: ${{ secrets.DIGITALOCEAN_TOKEN }}
