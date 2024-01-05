@@ -1,0 +1,35 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    name: "Release"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_TOKEN }}
+      - name: Log in to DigitalOcean Docker Registry
+        run: |
+          doctl registry login
+      - name: Build and publish Docker image locally
+        run: |
+          ./gradlew publishImageToLocalRegistry
+      - name: Push image to DO registry
+        run: |
+          version=$(git rev-parse --short=8 HEAD)
+          docker push registry.digitalocean.com/sdkman/sdkman-state:$version
+          docker push registry.digitalocean.com/sdkman/sdkman-state:latest
+#      - name: Deploy to Digital Ocean
+#        uses: fjogeleit/http-request-action@master
+#        with:
+#          url: https://api.digitalocean.com/v2/apps/${{ secrets.APP_ID }}/deployments
+#          method: 'POST'
+#          bearerToken: ${{ secrets.DIGITALOCEAN_TOKEN }}
