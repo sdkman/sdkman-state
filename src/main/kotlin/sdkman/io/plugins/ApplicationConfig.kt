@@ -11,7 +11,5 @@ fun configureAppConfig(environment: ApplicationEnvironment): ApplicationConfig {
     val port: Int = environment.config.property("database.port").getString().toInt()
     val username: String = environment.config.property("database.username").getString()
     val password: String = environment.config.property("database.password").getString()
-    return ApplicationConfig(
-        DatabaseConfig(host, port, username, password)
-    )
+    return ApplicationConfig(DatabaseConfig(host, port, username, password))
 }
