@@ -2,6 +2,7 @@ package sdkman.io.plugins
 
 import io.ktor.server.application.*
 import org.jetbrains.exposed.sql.Database
+import sdkman.io.config.DatabaseConfig
 
 fun Application.configureDatabase(config: DatabaseConfig) =
     Database.connect(

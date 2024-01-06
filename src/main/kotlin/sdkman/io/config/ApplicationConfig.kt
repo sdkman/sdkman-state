@@ -1,4 +1,4 @@
-package sdkman.io.plugins
+package sdkman.io.config
 
 import io.ktor.server.application.*
 

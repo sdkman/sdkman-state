@@ -8,7 +8,9 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import sdkman.io.config.configureAppConfig
 import sdkman.io.plugins.*
+import sdkman.io.repos.CandidateVersionsRepository
 import sdkman.io.support.*
 import sdkman.io.support.CandidateVersion
 
