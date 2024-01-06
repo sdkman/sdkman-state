@@ -1,9 +1,9 @@
-package sdkman.io
+package io.sdkman
 
 import io.ktor.server.application.*
-import sdkman.io.config.configureAppConfig
-import sdkman.io.plugins.*
-import sdkman.io.repos.CandidateVersionsRepository
+import io.sdkman.config.configureAppConfig
+import io.sdkman.plugins.*
+import io.sdkman.repos.CandidateVersionsRepository
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 

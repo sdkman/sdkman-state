@@ -1,10 +1,10 @@
-package sdkman.io.plugins
+package io.sdkman.plugins
 
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import sdkman.io.repos.CandidateVersionsRepository
+import io.sdkman.repos.CandidateVersionsRepository
 
 fun Application.configureRouting(repo: CandidateVersionsRepository) {
     routing {

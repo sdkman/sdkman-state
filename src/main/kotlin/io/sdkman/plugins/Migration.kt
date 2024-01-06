@@ -1,8 +1,8 @@
-package sdkman.io.plugins
+package io.sdkman.plugins
 
 import io.ktor.server.application.*
 import org.flywaydb.core.Flyway
-import sdkman.io.config.DatabaseConfig
+import io.sdkman.config.DatabaseConfig
 
 fun Application.configureDatabaseMigration(config: DatabaseConfig) {
     Flyway.configure()

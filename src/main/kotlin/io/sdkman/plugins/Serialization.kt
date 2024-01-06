@@ -1,4 +1,4 @@
-package sdkman.io.plugins
+package io.sdkman.plugins
 
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*

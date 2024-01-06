@@ -1,4 +1,4 @@
-package sdkman.io.domain
+package io.sdkman.domain
 
 import kotlinx.serialization.Serializable
 

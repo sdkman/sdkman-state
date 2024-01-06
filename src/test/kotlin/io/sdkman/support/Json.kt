@@ -1,4 +1,4 @@
-package sdkman.io.support
+package io.sdkman.support
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement

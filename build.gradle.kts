@@ -13,7 +13,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
 }
 
-group = "sdkman.io"
+group = "io.sdkman"
 version = "0.0.1"
 
 application {

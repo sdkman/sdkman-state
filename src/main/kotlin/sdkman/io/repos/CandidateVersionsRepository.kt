@@ -1,10 +1,10 @@
-package sdkman.io.repos
+package io.sdkman.repos
 
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import sdkman.io.domain.CandidateVersion
+import io.sdkman.domain.CandidateVersion
 
 class CandidateVersionsRepository {
 
