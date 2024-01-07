@@ -20,7 +20,6 @@ class ApiSpec : ShouldSpec({
         testApplication {
             application {
                 val dbConfig = configureAppConfig(environment).databaseConfig
-                configureDatabaseMigration(dbConfig)
                 configureDatabase(dbConfig)
                 configureRouting(CandidateVersionsRepository())
             }
@@ -28,16 +27,16 @@ class ApiSpec : ShouldSpec({
             val java17linuxArm64 = CandidateVersion(
                 candidate = "java",
                 version = "17.0.1",
-                platform = "LINUX_ARM64",
                 vendor = "tem",
+                platform = "LINUX_ARM64",
                 url = "https://java-17.0.1-tem",
                 visible = true
             )
             val java17linuxX64 = CandidateVersion(
                 candidate = "java",
                 version = "17.0.1",
-                platform = "LINUX_X64",
                 vendor = "tem",
+                platform = "LINUX_X64",
                 url = "https://java-17.0.1-tem-",
                 visible = true
             )
@@ -45,7 +44,6 @@ class ApiSpec : ShouldSpec({
             initialisePostgres()
             deleteVersions()
             insertVersions(java17linuxArm64, java17linuxX64)
-
             client.get("/candidates/java").apply {
                 status shouldBe HttpStatusCode.OK
                 Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(

@@ -6,12 +6,12 @@ import kotlinx.serialization.Serializable
 data class CandidateVersion(
     val candidate: String,
     val version: String,
+    val vendor: String,
     val platform: String,
     val url: String,
     val visible: Boolean,
-    val vendor: String?,
     val md5sum: String?,
     val sha256sum: String?,
-    val sha512sum: String?
+    val sha512sum: String?,
 )
 
