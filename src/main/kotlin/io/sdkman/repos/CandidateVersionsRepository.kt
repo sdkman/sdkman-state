@@ -3,8 +3,10 @@ package io.sdkman.repos
 import io.sdkman.domain.CandidateVersion
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.transactions.transaction
 
 class CandidateVersionsRepository {
 
@@ -39,5 +41,19 @@ class CandidateVersionsRepository {
                 )
             }
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
+    }
+
+    fun create(cv: CandidateVersion) = transaction {
+        CandidateVersions.insert {
+            it[candidate] = cv.candidate
+            it[version] = cv.version
+            it[vendor] = cv.vendor
+            it[platform] = cv.platform
+            it[url] = cv.url
+            it[visible] = cv.visible
+            it[md5sum] = cv.md5sum
+            it[sha256sum] = cv.sha256sum
+            it[sha512sum] = cv.sha512sum
+        }
     }
 }

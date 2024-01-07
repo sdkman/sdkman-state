@@ -1,11 +1,12 @@
 package io.sdkman.support
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.deleteAll
-import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
 const val dbHost = "localhost"
@@ -53,6 +54,33 @@ fun insertVersions(vararg cvs: CandidateVersion) = transaction {
         }
     }
 }
+
+private fun <T> dbQuery(block: suspend () -> T): T =
+    runBlocking(Dispatchers.IO) {
+        newSuspendedTransaction(Dispatchers.IO) { block() }
+    }
+
+fun selectVersion(candidate: String, version: String, vendor: String, platform: String): CandidateVersion? =
+    dbQuery {
+        CandidateVersions.select {
+            (CandidateVersions.candidate eq candidate) and
+                    (CandidateVersions.version eq version) and
+                    (CandidateVersions.vendor eq vendor) and
+                    (CandidateVersions.platform eq platform)
+        }.map {
+            CandidateVersion(
+                candidate = it[CandidateVersions.candidate],
+                version = it[CandidateVersions.version],
+                vendor = it[CandidateVersions.vendor],
+                platform = it[CandidateVersions.platform],
+                url = it[CandidateVersions.url],
+                visible = it[CandidateVersions.visible],
+                md5sum = it[CandidateVersions.md5sum],
+                sha256sum = it[CandidateVersions.sha256sum],
+                sha512sum = it[CandidateVersions.sha512sum]
+            )
+        }.firstOrNull()
+    }
 
 private fun initialisePostgres() =
     Database.connect(

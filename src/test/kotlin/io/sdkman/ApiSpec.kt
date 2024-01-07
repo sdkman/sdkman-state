@@ -44,5 +44,34 @@ class ApiSpec : ShouldSpec({
             }
         }
     }
+
+    should("POST a new version for a candidate, platform and vendor") {
+        val expected = CandidateVersion(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = "MACOS_64",
+            url = "https://java-17.0.1-tem",
+            visible = true,
+            md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e"
+        )
+        val request = expected.toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.post("/candidates") {
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
+                response.status shouldBe HttpStatusCode.NoContent
+            }
+            selectVersion(
+                candidate = expected.candidate,
+                version = expected.version,
+                vendor = expected.vendor,
+                platform = expected.platform
+            ) shouldBe expected
+        }
+    }
 })
 
