@@ -13,18 +13,6 @@ const val dbPort = 5432
 const val dbUsername = "postgres"
 const val dbPassword = "postgres"
 
-fun initialisePostgres() =
-    Database.connect(
-        url = "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2",
-        user = dbUsername,
-        password = dbPassword,
-        driver = "org.postgresql.Driver"
-    ).also {
-        Flyway.configure().dataSource(
-            "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2", dbUsername, dbPassword
-        ).load().migrate()
-    }
-
 @Serializable
 data class CandidateVersion(
     val candidate: String,
@@ -50,8 +38,6 @@ private object CandidateVersions : IntIdTable(name = "versions") {
     val sha512sum = varchar("sha_512_sum", length = 128).nullable()
 }
 
-fun deleteVersions() = transaction { CandidateVersions.deleteAll() }
-
 fun insertVersions(vararg cvs: CandidateVersion) = transaction {
     cvs.forEach { cv ->
         CandidateVersions.insert {
@@ -66,4 +52,24 @@ fun insertVersions(vararg cvs: CandidateVersion) = transaction {
             it[sha512sum] = cv.sha512sum
         }
     }
+}
+
+private fun initialisePostgres() =
+    Database.connect(
+        url = "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2",
+        user = dbUsername,
+        password = dbPassword,
+        driver = "org.postgresql.Driver"
+    ).also {
+        Flyway.configure().dataSource(
+            "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2", dbUsername, dbPassword
+        ).load().migrate()
+    }
+
+private fun deleteVersions() = transaction { CandidateVersions.deleteAll() }
+
+fun withCleanDatabase(fn: () -> Unit) {
+    initialisePostgres()
+    deleteVersions()
+    fn()
 }
