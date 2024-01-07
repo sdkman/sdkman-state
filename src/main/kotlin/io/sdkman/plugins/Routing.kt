@@ -10,12 +10,12 @@ import io.sdkman.repos.CandidateVersionsRepository
 
 fun Application.configureRouting(repo: CandidateVersionsRepository) {
     routing {
-            get("/candidates/{candidate}") {
+            get("/versions/{candidate}") {
                 val candidate = call.parameters["candidate"] ?: throw IllegalArgumentException("Candidate not found")
                 val versions = repo.read(candidate)
                 call.respond(HttpStatusCode.OK, versions)
             }
-            post("/candidates") {
+            post("/versions") {
                 call.receive<CandidateVersion>().let { version ->
                     repo.create(version)
                 }.also {

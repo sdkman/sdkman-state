@@ -32,7 +32,7 @@ class ApiSpec : ShouldSpec({
         withCleanDatabase {
             insertVersions(java17linuxArm64, java17linuxX64)
             withTestApplication {
-                client.get("/candidates/java").apply {
+                client.get("/versions/java").apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
                         listOf(
@@ -59,7 +59,7 @@ class ApiSpec : ShouldSpec({
 
         withCleanDatabase {
             withTestApplication {
-                val response = client.post("/candidates") {
+                val response = client.post("/versions") {
                     contentType(ContentType.Application.Json)
                     setBody(request)
                 }
