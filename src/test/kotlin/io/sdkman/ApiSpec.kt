@@ -62,6 +62,8 @@ class ApiSpec : ShouldSpec({
                 val response = client.post("/versions") {
                     contentType(ContentType.Application.Json)
                     setBody(request)
+                    // testuser:password123 base64 encoded
+                    header("Authorization", "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM=")
                 }
                 response.status shouldBe HttpStatusCode.NoContent
             }

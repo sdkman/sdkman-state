@@ -8,12 +8,13 @@ import io.sdkman.repos.CandidateVersionsRepository
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 
 fun Application.module() {
-    val dbConfig = configureAppConfig(environment).databaseConfig
+    val appConfig = configureAppConfig(environment)
 
-    configureDatabaseMigration(dbConfig)
-    configureDatabase(dbConfig)
+    configureDatabaseMigration(appConfig.databaseConfig)
+    configureDatabase(appConfig.databaseConfig)
 
     configureHTTP()
     configureSerialization()
+    configureBasicAuthentication(appConfig.apiAuthenticationConfig)
     configureRouting(CandidateVersionsRepository())
 }
