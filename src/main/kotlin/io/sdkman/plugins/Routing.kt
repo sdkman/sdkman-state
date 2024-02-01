@@ -6,11 +6,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.sdkman.domain.CandidateVersion
+import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
-import io.sdkman.repos.CandidateVersionsRepository
+import io.sdkman.repos.VersionsRepository
 
-fun Application.configureRouting(repo: CandidateVersionsRepository) {
+fun Application.configureRouting(repo: VersionsRepository) {
     routing {
         get("/versions/{candidate}") {
             val candidate = call.parameters["candidate"] ?: throw IllegalArgumentException("Candidate not found")
@@ -19,7 +19,7 @@ fun Application.configureRouting(repo: CandidateVersionsRepository) {
         }
         authenticate("auth-basic") {
             post("/versions") {
-                call.receive<CandidateVersion>().let { version ->
+                call.receive<Version>().let { version ->
                     repo.create(version)
                 }.also {
                     call.respond(HttpStatusCode.NoContent)

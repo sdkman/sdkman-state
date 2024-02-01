@@ -1,6 +1,6 @@
 package io.sdkman.repos
 
-import io.sdkman.domain.CandidateVersion
+import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
@@ -12,9 +12,9 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
-class CandidateVersionsRepository {
+class VersionsRepository {
 
-    private object CandidateVersions : IntIdTable(name = "versions") {
+    private object Versions : IntIdTable(name = "versions") {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
         val vendor = varchar("vendor", length = 10)
@@ -29,26 +29,26 @@ class CandidateVersionsRepository {
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 
-    suspend fun read(candidate: String): List<CandidateVersion> = dbQuery {
-        CandidateVersions.select { CandidateVersions.candidate eq candidate }
+    suspend fun read(candidate: String): List<Version> = dbQuery {
+        Versions.select { Versions.candidate eq candidate }
             .map {
-                CandidateVersion(
-                    candidate = it[CandidateVersions.candidate],
-                    version = it[CandidateVersions.version],
-                    vendor = it[CandidateVersions.vendor],
-                    platform = it[CandidateVersions.platform],
-                    url = it[CandidateVersions.url],
-                    visible = it[CandidateVersions.visible],
-                    md5sum = it[CandidateVersions.md5sum],
-                    sha256sum = it[CandidateVersions.sha256sum],
-                    sha512sum = it[CandidateVersions.sha512sum],
+                Version(
+                    candidate = it[Versions.candidate],
+                    version = it[Versions.version],
+                    vendor = it[Versions.vendor],
+                    platform = it[Versions.platform],
+                    url = it[Versions.url],
+                    visible = it[Versions.visible],
+                    md5sum = it[Versions.md5sum],
+                    sha256sum = it[Versions.sha256sum],
+                    sha512sum = it[Versions.sha512sum],
                 )
             }
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
-    fun create(cv: CandidateVersion) = transaction {
-        CandidateVersions.insert {
+    fun create(cv: Version) = transaction {
+        Versions.insert {
             it[candidate] = cv.candidate
             it[version] = cv.version
             it[vendor] = cv.vendor
@@ -62,7 +62,7 @@ class CandidateVersionsRepository {
     }
 
     fun delete(version: UniqueVersion) = transaction {
-        CandidateVersions.deleteWhere {
+        Versions.deleteWhere {
             (candidate eq version.candidate) and
                     (this.version eq version.version) and
                     (vendor eq version.vendor) and

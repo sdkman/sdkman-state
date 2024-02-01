@@ -1,11 +1,12 @@
 package io.sdkman.support
 
+import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 
-fun CandidateVersion.toJson() = Json.encodeToJsonElement<CandidateVersion>(this)
+fun Version.toJson() = Json.encodeToJsonElement<Version>(this)
 
-fun CandidateVersion.toJsonString() = this.toJson().toString()
+fun Version.toJsonString() = this.toJson().toString()
 
 fun UniqueVersion.toJsonString() = Json.encodeToJsonElement(this).toString()

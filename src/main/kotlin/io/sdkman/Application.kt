@@ -3,7 +3,7 @@ package io.sdkman
 import io.ktor.server.application.*
 import io.sdkman.config.configureAppConfig
 import io.sdkman.plugins.*
-import io.sdkman.repos.CandidateVersionsRepository
+import io.sdkman.repos.VersionsRepository
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 
@@ -16,5 +16,5 @@ fun Application.module() {
     configureHTTP()
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
-    configureRouting(CandidateVersionsRepository())
+    configureRouting(VersionsRepository())
 }

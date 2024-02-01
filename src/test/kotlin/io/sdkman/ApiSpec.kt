@@ -6,6 +6,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders.Authorization
+import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.support.*
 import kotlinx.serialization.json.Json
@@ -17,7 +18,7 @@ private const val BasicAuthHeader = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 class ApiSpec : ShouldSpec({
 
     should("GET all versions for a candidate") {
-        val java17linuxArm64 = CandidateVersion(
+        val java17linuxArm64 = Version(
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
@@ -25,7 +26,7 @@ class ApiSpec : ShouldSpec({
             url = "https://java-17.0.1-tem",
             visible = true
         )
-        val java17linuxX64 = CandidateVersion(
+        val java17linuxX64 = Version(
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
@@ -51,7 +52,7 @@ class ApiSpec : ShouldSpec({
     }
 
     should("POST a new version for a candidate, platform and vendor") {
-        val expected = CandidateVersion(
+        val expected = Version(
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
@@ -95,7 +96,7 @@ class ApiSpec : ShouldSpec({
 
         withCleanDatabase {
             insertVersions(
-                CandidateVersion(
+                Version(
                     candidate = candidate,
                     version = version,
                     vendor = vendor,
