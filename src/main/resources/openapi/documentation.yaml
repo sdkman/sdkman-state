@@ -6,7 +6,38 @@ info:
 servers:
 - url: "https://sdkman_state"
 paths:
-  /candidates/{candidate}:
+  /versions:
+    delete:
+      description: ""
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: "#/components/schemas/UniqueVersion"
+        required: true
+      responses:
+        "204":
+          description: "No Content"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+    post:
+      description: ""
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: "#/components/schemas/Version"
+        required: true
+      responses:
+        "204":
+          description: "No Content"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /versions/{candidate}:
     get:
       description: ""
       parameters:
@@ -23,15 +54,33 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/CandidateVersion"
+                  $ref: "#/components/schemas/Version"
 components:
   schemas:
-    CandidateVersion:
+    UniqueVersion:
       type: "object"
       properties:
         candidate:
           type: "string"
         version:
+          type: "string"
+        vendor:
+          type: "string"
+        platform:
+          type: "string"
+      required:
+      - "candidate"
+      - "version"
+      - "vendor"
+      - "platform"
+    Version:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        version:
+          type: "string"
+        vendor:
           type: "string"
         platform:
           type: "string"
@@ -39,8 +88,6 @@ components:
           type: "string"
         visible:
           type: "boolean"
-        vendor:
-          type: "string"
         md5sum:
           type: "string"
         sha256sum:
@@ -50,5 +97,6 @@ components:
       required:
       - "candidate"
       - "version"
+      - "vendor"
       - "platform"
       - "url"
