@@ -7,6 +7,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.domain.CandidateVersion
+import io.sdkman.domain.UniqueVersion
 import io.sdkman.repos.CandidateVersionsRepository
 
 fun Application.configureRouting(repo: CandidateVersionsRepository) {
@@ -20,6 +21,13 @@ fun Application.configureRouting(repo: CandidateVersionsRepository) {
             post("/versions") {
                 call.receive<CandidateVersion>().let { version ->
                     repo.create(version)
+                }.also {
+                    call.respond(HttpStatusCode.NoContent)
+                }
+            }
+            delete("/versions") {
+                call.receive<UniqueVersion>().let {
+                    repo.delete(it)
                 }.also {
                     call.respond(HttpStatusCode.NoContent)
                 }

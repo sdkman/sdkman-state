@@ -1,8 +1,12 @@
 package io.sdkman.repos
 
 import io.sdkman.domain.CandidateVersion
+import io.sdkman.domain.UniqueVersion
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
@@ -54,6 +58,15 @@ class CandidateVersionsRepository {
             it[md5sum] = cv.md5sum
             it[sha256sum] = cv.sha256sum
             it[sha512sum] = cv.sha512sum
+        }
+    }
+
+    fun delete(version: UniqueVersion) = transaction {
+        CandidateVersions.deleteWhere {
+            (candidate eq version.candidate) and
+                    (this.version eq version.version) and
+                    (vendor eq version.vendor) and
+                    (platform eq version.platform)
         }
     }
 }

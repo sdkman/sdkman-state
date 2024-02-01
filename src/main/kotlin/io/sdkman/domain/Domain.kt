@@ -15,3 +15,11 @@ data class CandidateVersion(
     val sha512sum: String?,
 )
 
+@Serializable
+data class UniqueVersion(
+    val candidate: String,
+    val version: String,
+    val vendor: String,
+    val platform: String,
+)
+
