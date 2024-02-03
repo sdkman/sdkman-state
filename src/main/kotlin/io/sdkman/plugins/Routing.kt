@@ -1,5 +1,7 @@
 package io.sdkman.plugins
 
+import arrow.core.getOrElse
+import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -13,24 +15,29 @@ import io.sdkman.repos.VersionsRepository
 fun Application.configureRouting(repo: VersionsRepository) {
     routing {
         get("/versions/{candidate}") {
-            val candidate = call.parameters["candidate"] ?: throw IllegalArgumentException("Candidate not found")
-            val versions = repo.read(candidate)
-            call.respond(HttpStatusCode.OK, versions)
+            call.parameters["candidate"].toOption().map { candidate ->
+                val versions = repo.read(candidate)
+                call.respond(HttpStatusCode.OK, versions)
+            }.getOrElse {
+                throw IllegalArgumentException("Candidate not found")
+            }
         }
         authenticate("auth-basic") {
             post("/versions") {
-                call.receive<Version>().let { version ->
-                    repo.create(version)
-                }.also {
-                    call.respond(HttpStatusCode.NoContent)
-                }
+                call.receive<Version>()
+                    .toOption()
+                    .map { repo.create(it) }
+                    .map {
+                        call.respond(HttpStatusCode.NoContent)
+                    }
             }
             delete("/versions") {
-                call.receive<UniqueVersion>().let {
-                    repo.delete(it)
-                }.also {
-                    call.respond(HttpStatusCode.NoContent)
-                }
+                call.receive<UniqueVersion>()
+                    .toOption()
+                    .map { repo.delete(it) }
+                    .map {
+                        call.respond(HttpStatusCode.NoContent)
+                    }
             }
         }
     }

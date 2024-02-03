@@ -1,5 +1,8 @@
 package io.sdkman.support
 
+import arrow.core.Option
+import arrow.core.firstOrNone
+import arrow.core.toOption
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -35,9 +38,9 @@ fun insertVersions(vararg cvs: Version) = transaction {
             it[vendor] = cv.vendor
             it[url] = cv.url
             it[visible] = cv.visible
-            it[md5sum] = cv.md5sum
-            it[sha256sum] = cv.sha256sum
-            it[sha512sum] = cv.sha512sum
+            it[md5sum] = cv.md5sum.getOrNull()
+            it[sha256sum] = cv.sha256sum.getOrNull()
+            it[sha512sum] = cv.sha512sum.getOrNull()
         }
     }
 }
@@ -47,7 +50,7 @@ private fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }
 
-fun selectVersion(candidate: String, version: String, vendor: String, platform: String): Version? =
+fun selectVersion(candidate: String, version: String, vendor: String, platform: String): Option<Version> =
     dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
@@ -62,11 +65,11 @@ fun selectVersion(candidate: String, version: String, vendor: String, platform: 
                 platform = it[Versions.platform],
                 url = it[Versions.url],
                 visible = it[Versions.visible],
-                md5sum = it[Versions.md5sum],
-                sha256sum = it[Versions.sha256sum],
-                sha512sum = it[Versions.sha512sum]
+                md5sum = it[Versions.md5sum].toOption(),
+                sha256sum = it[Versions.sha256sum].toOption(),
+                sha512sum = it[Versions.sha512sum].toOption()
             )
-        }.firstOrNull()
+        }.firstOrNone()
     }
 
 private fun initialisePostgres() =

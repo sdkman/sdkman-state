@@ -1,6 +1,14 @@
+@file:UseSerializers(
+    OptionSerializer::class
+)
+
 package io.sdkman.domain
 
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.serialization.OptionSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 
 @Serializable
 data class Version(
@@ -10,9 +18,9 @@ data class Version(
     val platform: String,
     val url: String,
     val visible: Boolean,
-    val md5sum: String? = null,
-    val sha256sum: String? = null,
-    val sha512sum: String? = null,
+    val md5sum: Option<String> = None,
+    val sha256sum: Option<String> = None,
+    val sha512sum: Option<String> = None,
 )
 
 @Serializable

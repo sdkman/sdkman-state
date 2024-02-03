@@ -1,5 +1,7 @@
 package io.sdkman
 
+import arrow.core.None
+import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
@@ -59,7 +61,7 @@ class ApiSpec : ShouldSpec({
             platform = "MACOS_64",
             url = "https://java-17.0.1-tem",
             visible = true,
-            md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e"
+            md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
         )
         val requestBody = expected.toJsonString()
 
@@ -77,7 +79,7 @@ class ApiSpec : ShouldSpec({
                 version = expected.version,
                 vendor = expected.vendor,
                 platform = expected.platform
-            ) shouldBe expected
+            ) shouldBe expected.some()
         }
     }
 
@@ -103,7 +105,7 @@ class ApiSpec : ShouldSpec({
                     platform = platform,
                     url = "https://java-17.0.1-tem",
                     visible = true,
-                    md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e"
+                    md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
                 )
             )
             withTestApplication {
@@ -114,7 +116,7 @@ class ApiSpec : ShouldSpec({
                 }
                 response.status shouldBe HttpStatusCode.NoContent
             }
-            selectVersion(candidate, version, vendor, platform) shouldBe null
+            selectVersion(candidate, version, vendor, platform) shouldBe None
         }
     }
 })

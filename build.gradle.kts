@@ -5,6 +5,7 @@ val logback_version: String by project
 val postgres_version: String by project
 val flyway_version: String by project
 val exposed_version: String by project
+val arrow_version: String by project
 val kotest_version: String by project
 
 plugins {
@@ -36,6 +37,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm")
     implementation("io.ktor:ktor-server-netty-jvm")
     implementation("io.ktor:ktor-server-auth-jvm")
+    implementation("io.arrow-kt:arrow-core:$arrow_version")
+    implementation("io.arrow-kt:arrow-core-serialization:$arrow_version")
     implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
     implementation("ch.qos.logback:logback-classic:$logback_version")

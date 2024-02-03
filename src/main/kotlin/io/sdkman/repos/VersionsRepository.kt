@@ -1,5 +1,6 @@
 package io.sdkman.repos
 
+import arrow.core.toOption
 import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
 import kotlinx.coroutines.Dispatchers
@@ -9,6 +10,7 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -39,15 +41,15 @@ class VersionsRepository {
                     platform = it[Versions.platform],
                     url = it[Versions.url],
                     visible = it[Versions.visible],
-                    md5sum = it[Versions.md5sum],
-                    sha256sum = it[Versions.sha256sum],
-                    sha512sum = it[Versions.sha512sum],
+                    md5sum = it[Versions.md5sum].toOption(),
+                    sha256sum = it[Versions.sha256sum].toOption(),
+                    sha512sum = it[Versions.sha512sum].toOption(),
                 )
             }
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
-    fun create(cv: Version) = transaction {
+    fun create(cv: Version): InsertStatement<Number> = transaction {
         Versions.insert {
             it[candidate] = cv.candidate
             it[version] = cv.version
@@ -55,13 +57,13 @@ class VersionsRepository {
             it[platform] = cv.platform
             it[url] = cv.url
             it[visible] = cv.visible
-            it[md5sum] = cv.md5sum
-            it[sha256sum] = cv.sha256sum
-            it[sha512sum] = cv.sha512sum
+            it[md5sum] = cv.md5sum.getOrNull()
+            it[sha256sum] = cv.sha256sum.getOrNull()
+            it[sha512sum] = cv.sha512sum.getOrNull()
         }
     }
 
-    fun delete(version: UniqueVersion) = transaction {
+    fun delete(version: UniqueVersion): Int = transaction {
         Versions.deleteWhere {
             (candidate eq version.candidate) and
                     (this.version eq version.version) and
