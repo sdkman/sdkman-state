@@ -1,6 +1,4 @@
-@file:UseSerializers(
-    OptionSerializer::class
-)
+@file:UseSerializers(OptionSerializer::class)
 
 package io.sdkman.domain
 
