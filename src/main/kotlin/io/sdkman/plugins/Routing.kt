@@ -27,17 +27,13 @@ fun Application.configureRouting(repo: VersionsRepository) {
                 call.receive<Version>()
                     .toOption()
                     .map { repo.create(it) }
-                    .map {
-                        call.respond(HttpStatusCode.NoContent)
-                    }
+                    .map { call.respond(HttpStatusCode.NoContent) }
             }
             delete("/versions") {
                 call.receive<UniqueVersion>()
                     .toOption()
                     .map { repo.delete(it) }
-                    .map {
-                        call.respond(HttpStatusCode.NoContent)
-                    }
+                    .map { call.respond(HttpStatusCode.NoContent) }
             }
         }
     }
