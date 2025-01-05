@@ -13,7 +13,7 @@ fun Application.module() {
     configureDatabaseMigration(appConfig.databaseConfig)
     configureDatabase(appConfig.databaseConfig)
 
-    configureHTTP()
+    configureHTTP(appConfig.apiCacheConfig)
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
     configureRouting(VersionsRepository())

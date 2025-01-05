@@ -6,7 +6,13 @@ data class DatabaseConfig(val host: String, val port: Int, val username: String,
 
 data class ApiAuthenticationConfig(val username: String, val password: String)
 
-data class ApplicationConfig(val databaseConfig: DatabaseConfig, val apiAuthenticationConfig: ApiAuthenticationConfig)
+data class ApiCacheConfig(val maxAgeSeconds: Int)
+
+data class ApplicationConfig(
+    val databaseConfig: DatabaseConfig,
+    val apiAuthenticationConfig: ApiAuthenticationConfig,
+    val apiCacheConfig: ApiCacheConfig
+)
 
 fun configureAppConfig(environment: ApplicationEnvironment): ApplicationConfig {
     val host: String = environment.config.property("database.host").getString()
@@ -15,8 +21,10 @@ fun configureAppConfig(environment: ApplicationEnvironment): ApplicationConfig {
     val password: String = environment.config.property("database.password").getString()
     val apiUsername: String = environment.config.property("api.username").getString()
     val apiPassword: String = environment.config.property("api.password").getString()
+    val cacheMaxAgeSeconds: Int = environment.config.property("api.cache.control").getString().toInt()
     return ApplicationConfig(
         DatabaseConfig(host, port, username, password),
-        ApiAuthenticationConfig(apiUsername, apiPassword)
+        ApiAuthenticationConfig(apiUsername, apiPassword),
+        ApiCacheConfig(cacheMaxAgeSeconds)
     )
 }
