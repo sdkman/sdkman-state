@@ -5,11 +5,8 @@ import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -31,39 +28,30 @@ class VersionsRepository {
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
 
+    private fun Query.asVersions(): List<Version> =
+        this.map {
+            Version(
+                candidate = it[Versions.candidate],
+                version = it[Versions.version],
+                vendor = it[Versions.vendor],
+                platform = it[Versions.platform],
+                url = it[Versions.url],
+                visible = it[Versions.visible],
+                md5sum = it[Versions.md5sum].toOption(),
+                sha256sum = it[Versions.sha256sum].toOption(),
+                sha512sum = it[Versions.sha512sum].toOption(),
+            )
+        }
+
     suspend fun read(candidate: String): List<Version> = dbQuery {
         Versions.select { Versions.candidate eq candidate }
-            .map {
-                Version(
-                    candidate = it[Versions.candidate],
-                    version = it[Versions.version],
-                    vendor = it[Versions.vendor],
-                    platform = it[Versions.platform],
-                    url = it[Versions.url],
-                    visible = it[Versions.visible],
-                    md5sum = it[Versions.md5sum].toOption(),
-                    sha256sum = it[Versions.sha256sum].toOption(),
-                    sha512sum = it[Versions.sha512sum].toOption(),
-                )
-            }
+            .asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
     suspend fun read(candidate: String, platform: String): List<Version> = dbQuery {
         Versions.select { (Versions.candidate eq candidate) and (Versions.platform eq platform) }
-            .map {
-                Version(
-                    candidate = it[Versions.candidate],
-                    version = it[Versions.version],
-                    vendor = it[Versions.vendor],
-                    platform = it[Versions.platform],
-                    url = it[Versions.url],
-                    visible = it[Versions.visible],
-                    md5sum = it[Versions.md5sum].toOption(),
-                    sha256sum = it[Versions.sha256sum].toOption(),
-                    sha512sum = it[Versions.sha512sum].toOption(),
-                )
-            }
+            .asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
