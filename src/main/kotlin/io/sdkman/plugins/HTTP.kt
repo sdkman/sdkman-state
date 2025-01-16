@@ -21,7 +21,7 @@ fun Application.configureHTTP(apiCacheConfig: ApiCacheConfig) {
         }
     }
     install(CachingHeaders) {
-        options { call, content ->
+        options { _, content ->
             when (content.contentType?.withoutParameters()) {
                 ContentType.Application.Json -> CachingOptions(
                     cacheControl = CacheControl.MaxAge(maxAgeSeconds = apiCacheConfig.maxAgeSeconds),
