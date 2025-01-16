@@ -8,8 +8,8 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders.Authorization
-import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
+import io.sdkman.domain.Version
 import io.sdkman.support.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -28,24 +28,135 @@ class ApiSpec : ShouldSpec({
             url = "https://java-17.0.1-tem",
             visible = true
         )
+        val java21linuxArm64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = "LINUX_ARM64",
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
         val java17linuxX64 = Version(
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "LINUX_X64",
-            url = "https://java-17.0.1-tem-",
+            platform = "LINUX_64",
+            url = "https://java-17.0.1-tem",
+            visible = true
+        )
+        val java21linuxX64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = "LINUX_64",
+            url = "https://java-21.0.1-tem",
             visible = true
         )
 
         withCleanDatabase {
-            insertVersions(java17linuxArm64, java17linuxX64)
+            insertVersions(java17linuxArm64, java21linuxArm64, java17linuxX64, java21linuxX64)
             withTestApplication {
                 client.get("/versions/java").apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
                         listOf(
-                            java17linuxArm64.toJson(),
                             java17linuxX64.toJson(),
+                            java17linuxArm64.toJson(),
+                            java21linuxX64.toJson(),
+                            java21linuxArm64.toJson(),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    should("GET all versions for a universal candidate") {
+        val java17universal = Version(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = "UNIVERSAL",
+            url = "https://java-17.0.1-tem",
+            visible = true
+        )
+        val java21universal = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = "UNIVERSAL",
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
+
+        withCleanDatabase {
+            insertVersions(java17universal, java21universal)
+            withTestApplication {
+                client.get("/versions/java/universal").apply {
+                    status shouldBe HttpStatusCode.OK
+                    Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
+                        listOf(
+                            java17universal.toJson(),
+                            java21universal.toJson(),
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    should("GET all versions for a multi-platform candidate") {
+        val java17linuxArm64 = Version(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = "LINUX_ARM64",
+            url = "https://java-17.0.1-tem",
+            visible = true
+        )
+        val java21linuxArm64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = "LINUX_ARM64",
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
+        val java17linuxX64 = Version(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = "LINUX_64",
+            url = "https://java-17.0.1-tem",
+            visible = true
+        )
+        val java21linuxX64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = "LINUX_64",
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
+
+        withCleanDatabase {
+            insertVersions(java17linuxArm64, java21linuxArm64, java17linuxX64, java21linuxX64)
+            withTestApplication {
+                client.get("/versions/java/linuxarm64").apply {
+                    status shouldBe HttpStatusCode.OK
+                    Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
+                        listOf(
+                            java17linuxArm64.toJson(),
+                            java21linuxArm64.toJson(),
+                        )
+                    )
+                }
+                client.get("/versions/java/linuxx64").apply {
+                    status shouldBe HttpStatusCode.OK
+                    Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
+                        listOf(
+                            java17linuxX64.toJson(),
+                            java21linuxX64.toJson(),
                         )
                     )
                 }
@@ -54,7 +165,7 @@ class ApiSpec : ShouldSpec({
     }
 
     should("POST a new version for a candidate, platform and vendor") {
-        val expected = Version(
+        val version = Version(
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
@@ -63,7 +174,7 @@ class ApiSpec : ShouldSpec({
             visible = true,
             md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
         )
-        val requestBody = expected.toJsonString()
+        val requestBody = version.toJsonString()
 
         withCleanDatabase {
             withTestApplication {
@@ -75,11 +186,11 @@ class ApiSpec : ShouldSpec({
                 response.status shouldBe HttpStatusCode.NoContent
             }
             selectVersion(
-                candidate = expected.candidate,
-                version = expected.version,
-                vendor = expected.vendor,
-                platform = expected.platform
-            ) shouldBe expected.some()
+                candidate = version.candidate,
+                version = version.version,
+                vendor = version.vendor,
+                platform = version.platform
+            ) shouldBe version.some()
         }
     }
 

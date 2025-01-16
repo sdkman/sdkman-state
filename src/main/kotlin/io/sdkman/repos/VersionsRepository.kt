@@ -1,8 +1,8 @@
 package io.sdkman.repos
 
 import arrow.core.toOption
-import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
+import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -33,6 +33,24 @@ class VersionsRepository {
 
     suspend fun read(candidate: String): List<Version> = dbQuery {
         Versions.select { Versions.candidate eq candidate }
+            .map {
+                Version(
+                    candidate = it[Versions.candidate],
+                    version = it[Versions.version],
+                    vendor = it[Versions.vendor],
+                    platform = it[Versions.platform],
+                    url = it[Versions.url],
+                    visible = it[Versions.visible],
+                    md5sum = it[Versions.md5sum].toOption(),
+                    sha256sum = it[Versions.sha256sum].toOption(),
+                    sha512sum = it[Versions.sha512sum].toOption(),
+                )
+            }
+            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
+    }
+
+    suspend fun read(candidate: String, platform: String): List<Version> = dbQuery {
+        Versions.select { (Versions.candidate eq candidate) and (Versions.platform eq platform) }
             .map {
                 Version(
                     candidate = it[Versions.candidate],
