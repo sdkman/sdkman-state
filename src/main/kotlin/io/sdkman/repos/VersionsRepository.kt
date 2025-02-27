@@ -1,6 +1,7 @@
 package io.sdkman.repos
 
 import arrow.core.toOption
+import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ class VersionsRepository {
                 candidate = it[Versions.candidate],
                 version = it[Versions.version],
                 vendor = it[Versions.vendor],
-                platform = it[Versions.platform],
+                platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible],
                 md5sum = it[Versions.md5sum].toOption(),
@@ -49,8 +50,8 @@ class VersionsRepository {
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
-    suspend fun read(candidate: String, platform: String): List<Version> = dbQuery {
-        Versions.select { (Versions.candidate eq candidate) and (Versions.platform eq platform) }
+    suspend fun read(candidate: String, platform: Platform): List<Version> = dbQuery {
+        Versions.select { (Versions.candidate eq candidate) and (Versions.platform eq platform.name) }
             .asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
@@ -60,7 +61,7 @@ class VersionsRepository {
             it[candidate] = cv.candidate
             it[version] = cv.version
             it[vendor] = cv.vendor
-            it[platform] = cv.platform
+            it[platform] = cv.platform.name
             it[url] = cv.url
             it[visible] = cv.visible
             it[md5sum] = cv.md5sum.getOrNull()
@@ -74,7 +75,7 @@ class VersionsRepository {
             (candidate eq version.candidate) and
                     (this.version eq version.version) and
                     (vendor eq version.vendor) and
-                    (platform eq version.platform)
+                    (platform eq version.platform.name)
         }
     }
 }

@@ -3,6 +3,7 @@ package io.sdkman.support
 import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.toOption
+import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -34,7 +35,7 @@ fun insertVersions(vararg cvs: Version) = transaction {
         Versions.insert {
             it[candidate] = cv.candidate
             it[version] = cv.version
-            it[platform] = cv.platform
+            it[platform] = cv.platform.name
             it[vendor] = cv.vendor
             it[url] = cv.url
             it[visible] = cv.visible
@@ -50,19 +51,19 @@ private fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }
 
-fun selectVersion(candidate: String, version: String, vendor: String, platform: String): Option<Version> =
+fun selectVersion(candidate: String, version: String, vendor: String, platform: Platform): Option<Version> =
     dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     (Versions.vendor eq vendor) and
-                    (Versions.platform eq platform)
+                    (Versions.platform eq platform.name)
         }.map {
             Version(
                 candidate = it[Versions.candidate],
                 version = it[Versions.version],
                 vendor = it[Versions.vendor],
-                platform = it[Versions.platform],
+                platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible],
                 md5sum = it[Versions.md5sum].toOption(),
@@ -86,10 +87,8 @@ private fun initialisePostgres() =
         ).load().migrate()
     }
 
-private fun deleteVersions() = transaction { Versions.deleteAll() }
-
 fun withCleanDatabase(fn: () -> Unit) {
     initialisePostgres()
-    deleteVersions()
+    transaction { Versions.deleteAll() }
     fn()
 }

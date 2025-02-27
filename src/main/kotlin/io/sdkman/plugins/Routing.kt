@@ -17,8 +17,8 @@ import io.sdkman.repos.VersionsRepository
 fun Application.configureRouting(repo: VersionsRepository) {
     routing {
         get("/versions/{candidate}") {
-            call.parameters["candidate"].toOption().map { candidate ->
-                val versions = repo.read(candidate)
+            call.parameters["candidate"].toOption().map { candidateId ->
+                val versions = repo.read(candidateId)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 throw IllegalArgumentException("Candidate not found")
@@ -26,9 +26,9 @@ fun Application.configureRouting(repo: VersionsRepository) {
         }
         get("/versions/{candidate}/{platform}") {
             option {
-                val candidate = call.parameters["candidate"].toOption().bind()
-                val platform = call.parameters["platform"].toOption().bind()
-                val versions = repo.read(candidate, Platform.entries.first { it.platformId == platform }.name)
+                val candidateId = call.parameters["candidate"].toOption().bind()
+                val platformId = call.parameters["platform"].toOption().bind()
+                val versions = repo.read(candidateId, Platform.findByPlatformId(platformId))
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 throw IllegalArgumentException("Candidate or platform not found")

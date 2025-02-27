@@ -8,6 +8,8 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders.Authorization
+import io.ktor.util.*
+import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import io.sdkman.support.*
@@ -24,7 +26,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "LINUX_ARM64",
+            platform = Platform.LINUX_ARM64,
             url = "https://java-17.0.1-tem",
             visible = true
         )
@@ -32,7 +34,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "21.0.1",
             vendor = "tem",
-            platform = "LINUX_ARM64",
+            platform = Platform.LINUX_ARM64,
             url = "https://java-21.0.1-tem",
             visible = true
         )
@@ -40,7 +42,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "LINUX_64",
+            platform = Platform.LINUX_X64,
             url = "https://java-17.0.1-tem",
             visible = true
         )
@@ -48,7 +50,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "21.0.1",
             vendor = "tem",
-            platform = "LINUX_64",
+            platform = Platform.LINUX_X64,
             url = "https://java-21.0.1-tem",
             visible = true
         )
@@ -76,7 +78,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "UNIVERSAL",
+            platform = Platform.UNIVERSAL,
             url = "https://java-17.0.1-tem",
             visible = true
         )
@@ -84,7 +86,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "21.0.1",
             vendor = "tem",
-            platform = "UNIVERSAL",
+            platform = Platform.UNIVERSAL,
             url = "https://java-21.0.1-tem",
             visible = true
         )
@@ -110,7 +112,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "LINUX_ARM64",
+            platform = Platform.LINUX_ARM64,
             url = "https://java-17.0.1-tem",
             visible = true
         )
@@ -118,7 +120,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "21.0.1",
             vendor = "tem",
-            platform = "LINUX_ARM64",
+            platform = Platform.LINUX_ARM64,
             url = "https://java-21.0.1-tem",
             visible = true
         )
@@ -126,7 +128,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "LINUX_64",
+            platform = Platform.LINUX_X64,
             url = "https://java-17.0.1-tem",
             visible = true
         )
@@ -134,7 +136,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "21.0.1",
             vendor = "tem",
-            platform = "LINUX_64",
+            platform = Platform.LINUX_X64,
             url = "https://java-21.0.1-tem",
             visible = true
         )
@@ -169,7 +171,7 @@ class ApiSpec : ShouldSpec({
             candidate = "java",
             version = "17.0.1",
             vendor = "tem",
-            platform = "MACOS_64",
+            platform = Platform.MAC_X64,
             url = "https://java-17.0.1-tem",
             visible = true,
             md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
@@ -198,7 +200,7 @@ class ApiSpec : ShouldSpec({
         val candidate = "java"
         val version = "17.0.1"
         val vendor = "tem"
-        val platform = "MACOS_64"
+        val platform = Platform.MAC_X64
 
         val requestBody = UniqueVersion(
             candidate = candidate,

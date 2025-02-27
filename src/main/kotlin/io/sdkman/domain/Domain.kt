@@ -4,6 +4,8 @@ package io.sdkman.domain
 
 import arrow.core.None
 import arrow.core.Option
+import arrow.core.firstOrNone
+import arrow.core.getOrElse
 import arrow.core.serialization.OptionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -13,7 +15,7 @@ data class Version(
     val candidate: String,
     val version: String,
     val vendor: String,
-    val platform: String,
+    val platform: Platform,
     val url: String,
     val visible: Boolean,
     val md5sum: Option<String> = None,
@@ -26,7 +28,7 @@ data class UniqueVersion(
     val candidate: String,
     val version: String,
     val vendor: String,
-    val platform: String,
+    val platform: Platform,
 )
 
 enum class Platform(val platformId: String) {
@@ -39,5 +41,10 @@ enum class Platform(val platformId: String) {
     MAC_ARM64("darwinarm64"),
     WINDOWS_X64("windowsx64"),
     UNIVERSAL("universal");
+
+    companion object {
+        fun findByPlatformId(platformId: String): Platform =
+            Platform.entries.firstOrNone { it.platformId == platformId }.getOrElse { UNIVERSAL }
+    }
 }
 
