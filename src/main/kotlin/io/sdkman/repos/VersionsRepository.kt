@@ -1,5 +1,7 @@
 package io.sdkman.repos
 
+import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
@@ -44,15 +46,20 @@ class VersionsRepository {
             )
         }
 
-    suspend fun read(candidate: String): List<Version> = dbQuery {
-        Versions.select { Versions.candidate eq candidate }
-            .asVersions()
+    suspend fun read(candidate: String, visible: Option<Boolean>): List<Version> = dbQuery {
+        Versions.select {
+            Versions.candidate eq candidate and
+                    visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
+        }.asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
-    suspend fun read(candidate: String, platform: Platform): List<Version> = dbQuery {
-        Versions.select { (Versions.candidate eq candidate) and (Versions.platform eq platform.name) }
-            .asVersions()
+    suspend fun read(candidate: String, platform: Platform, visible: Option<Boolean>): List<Version> = dbQuery {
+        Versions.select {
+            (Versions.candidate eq candidate) and
+                    (Versions.platform eq platform.name) and
+                    visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
+        }.asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 

@@ -1,8 +1,7 @@
 package io.sdkman.plugins
 
-import arrow.core.getOrElse
+import arrow.core.*
 import arrow.core.raise.option
-import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -15,10 +14,20 @@ import io.sdkman.domain.Version
 import io.sdkman.repos.VersionsRepository
 
 fun Application.configureRouting(repo: VersionsRepository) {
+
+    fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
+        when (this.queryParameters["visible"].toOption()) {
+            Some("all") -> None
+            Some("false") -> Some(false)
+            Some("true") -> Some(true)
+            else -> Some(true)
+        }
+
     routing {
         get("/versions/{candidate}") {
             call.parameters["candidate"].toOption().map { candidateId ->
-                val versions = repo.read(candidateId)
+                val visible = call.request.visibleQueryParam()
+                val versions = repo.read(candidateId, visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 throw IllegalArgumentException("Candidate not found")
@@ -28,7 +37,8 @@ fun Application.configureRouting(repo: VersionsRepository) {
             option {
                 val candidateId = call.parameters["candidate"].toOption().bind()
                 val platformId = call.parameters["platform"].toOption().bind()
-                val versions = repo.read(candidateId, Platform.findByPlatformId(platformId))
+                val visible = call.request.visibleQueryParam()
+                val versions = repo.read(candidateId, Platform.findByPlatformId(platformId), visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 throw IllegalArgumentException("Candidate or platform not found")

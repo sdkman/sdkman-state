@@ -72,6 +72,45 @@ class ApiSpec : ShouldSpec({
         }
     }
 
+    should("GET versions based on visibility for a candidate") {
+        val java17linuxArm64 = Version(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = Platform.LINUX_ARM64,
+            url = "https://java-17.0.1-tem",
+            visible = false
+        )
+        val java21linuxArm64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = Platform.LINUX_ARM64,
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
+
+        listOf(
+            "true" to listOf(java21linuxArm64),
+            "false" to listOf(java17linuxArm64),
+            "all" to listOf(java17linuxArm64, java21linuxArm64)
+        ).forEach { (visible, versions) ->
+            withCleanDatabase {
+                insertVersions(java17linuxArm64, java21linuxArm64)
+                withTestApplication {
+                    client.get("/versions/java") {
+                        url {
+                            parameters.append("visible", visible)
+                        }
+                    }.apply {
+                        status shouldBe HttpStatusCode.OK
+                        Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(versions.map { it.toJson() })
+                    }
+                }
+            }
+        }
+    }
+
     should("GET all versions for a universal candidate") {
         val java17universal = Version(
             candidate = "java",
@@ -160,6 +199,45 @@ class ApiSpec : ShouldSpec({
                             java21linuxX64.toJson(),
                         )
                     )
+                }
+            }
+        }
+    }
+
+    should("GET versions based on visibility for a platform specified candidate") {
+        val java17linuxX64 = Version(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "tem",
+            platform = Platform.UNIVERSAL,
+            url = "https://java-17.0.1-tem",
+            visible = false
+        )
+        val java21linuxX64 = Version(
+            candidate = "java",
+            version = "21.0.1",
+            vendor = "tem",
+            platform = Platform.UNIVERSAL,
+            url = "https://java-21.0.1-tem",
+            visible = true
+        )
+
+        listOf(
+            "true" to listOf(java21linuxX64),
+            "false" to listOf(java17linuxX64),
+            "all" to listOf(java17linuxX64, java21linuxX64)
+        ).forEach { (visible, versions) ->
+            withCleanDatabase {
+                insertVersions(java17linuxX64, java21linuxX64)
+                withTestApplication {
+                    client.get("/versions/java/universal") {
+                        url {
+                            parameters.append("visible", visible)
+                        }
+                    }.apply {
+                        status shouldBe HttpStatusCode.OK
+                        Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(versions.map { it.toJson() })
+                    }
                 }
             }
         }
