@@ -29,7 +29,15 @@ data class UniqueVersion(
     val platform: String,
 )
 
-enum class Platform(val slug: String) {
-    LINUX_ARM64("linuxarm64"), LINUX_64("linuxx64"), UNIVERSAL("universal");
+enum class Platform(val platformId: String) {
+    LINUX_X32("linuxx32"),
+    LINUX_X64("linuxx64"),
+    LINUX_ARM32HF("linuxarm32hf"),
+    LINUX_ARM32SF("linuxarm32sf"),
+    LINUX_ARM64("linuxarm64"),
+    MAC_X64("darwinx64"),
+    MAC_ARM64("darwinarm64"),
+    WINDOWS_X64("windowsx64"),
+    UNIVERSAL("universal");
 }
 

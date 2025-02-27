@@ -28,7 +28,7 @@ fun Application.configureRouting(repo: VersionsRepository) {
             option {
                 val candidate = call.parameters["candidate"].toOption().bind()
                 val platform = call.parameters["platform"].toOption().bind()
-                val versions = repo.read(candidate, Platform.entries.first { it.slug == platform }.name)
+                val versions = repo.read(candidate, Platform.entries.first { it.platformId == platform }.name)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 throw IllegalArgumentException("Candidate or platform not found")
