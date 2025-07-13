@@ -1,10 +1,10 @@
-openapi: "3.0.3"
+openapi: "3.1.0"
 info:
-  title: "sdkman_state API"
-  description: "sdkman_state API"
+  title: "State API"
+  description: "The SDKMAN! State API"
   version: "1.0.0"
 servers:
-- url: "https://sdkman_state"
+- url: "https://state.sdkman.io"
 paths:
   /versions:
     delete:
@@ -46,6 +46,16 @@ paths:
         required: true
         schema:
           type: "string"
+      - name: "platform"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      - name: "vendor"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
       responses:
         "200":
           description: "OK"
@@ -55,6 +65,49 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/Version"
+  /versions/{candidate}/{version}:
+    get:
+      description: ""
+      parameters:
+      - name: "candidate"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      - name: "version"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+      - name: "platform"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      - name: "vendor"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      responses:
+        "404":
+          description: "Not Found"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Version"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
 components:
   schemas:
     UniqueVersion:
@@ -68,6 +121,16 @@ components:
           type: "string"
         platform:
           type: "string"
+          enum:
+          - "LINUX_X32"
+          - "LINUX_X64"
+          - "LINUX_ARM32HF"
+          - "LINUX_ARM32SF"
+          - "LINUX_ARM64"
+          - "MAC_X64"
+          - "MAC_ARM64"
+          - "WINDOWS_X64"
+          - "UNIVERSAL"
       required:
       - "candidate"
       - "version"
@@ -84,6 +147,16 @@ components:
           type: "string"
         platform:
           type: "string"
+          enum:
+          - "LINUX_X32"
+          - "LINUX_X64"
+          - "LINUX_ARM32HF"
+          - "LINUX_ARM32SF"
+          - "LINUX_ARM64"
+          - "MAC_X64"
+          - "MAC_ARM64"
+          - "WINDOWS_X64"
+          - "UNIVERSAL"
         url:
           type: "string"
         visible:
@@ -100,3 +173,7 @@ components:
       - "vendor"
       - "platform"
       - "url"
+      - "visible"
+      - "md5sum"
+      - "sha256sum"
+      - "sha512sum"
