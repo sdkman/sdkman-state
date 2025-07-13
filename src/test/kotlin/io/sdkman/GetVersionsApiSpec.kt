@@ -20,7 +20,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxArm64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-17.0.1-tem",
             visible = true
@@ -28,7 +28,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxArm64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -36,7 +36,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxX64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.1-tem",
             visible = true
@@ -44,7 +44,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxX64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_X64,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -72,7 +72,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxArm64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-17.0.1-tem",
             visible = false
@@ -80,7 +80,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxArm64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -111,7 +111,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17universal = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.UNIVERSAL,
             url = "https://java-17.0.1-tem",
             visible = true
@@ -119,7 +119,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21universal = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.UNIVERSAL,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -147,7 +147,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxArm64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-17.0.1-tem",
             visible = true
@@ -155,7 +155,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxArm64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_ARM64,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -163,7 +163,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxX64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.1-tem",
             visible = true
@@ -171,7 +171,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxX64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.LINUX_X64,
             url = "https://java-21.0.1-tem",
             visible = true
@@ -210,7 +210,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java17linuxX64 = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.UNIVERSAL,
             url = "https://java-17.0.1-tem",
             visible = false
@@ -218,7 +218,7 @@ class GetVersionsApiSpec : ShouldSpec({
         val java21linuxX64 = Version(
             candidate = "java",
             version = "21.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.UNIVERSAL,
             url = "https://java-21.0.1-tem",
             visible = true

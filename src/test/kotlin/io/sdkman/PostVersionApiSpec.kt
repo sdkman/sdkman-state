@@ -22,7 +22,7 @@ class PostVersionApiSpec : ShouldSpec({
         val version = Version(
             candidate = "java",
             version = "17.0.1",
-            vendor = "tem",
+            vendor = "temurin",
             platform = Platform.MAC_X64,
             url = "https://java-17.0.1-tem",
             visible = true,

@@ -19,7 +19,7 @@ class DeleteVersionApiSpec : ShouldSpec({
     should("DELETE a version for a candidate, platform and vendor") {
         val candidate = "java"
         val version = "17.0.1"
-        val vendor = "tem"
+        val vendor = "temurin"
         val platform = Platform.MAC_X64
 
         val requestBody = UniqueVersion(
