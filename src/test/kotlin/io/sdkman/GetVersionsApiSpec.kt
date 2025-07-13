@@ -128,7 +128,9 @@ class GetVersionsApiSpec : ShouldSpec({
         withCleanDatabase {
             insertVersions(java17universal, java21universal)
             withTestApplication {
-                client.get("/versions/java/universal").apply {
+                client.get("/versions/java") {
+                    url { parameters.append("platform", "universal") }
+                }.apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
                         listOf(
@@ -178,7 +180,9 @@ class GetVersionsApiSpec : ShouldSpec({
         withCleanDatabase {
             insertVersions(java17linuxArm64, java21linuxArm64, java17linuxX64, java21linuxX64)
             withTestApplication {
-                client.get("/versions/java/linuxarm64").apply {
+                client.get("/versions/java") {
+                    url { parameters.append("platform", "linuxarm64") }
+                }.apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
                         listOf(
@@ -187,7 +191,9 @@ class GetVersionsApiSpec : ShouldSpec({
                         )
                     )
                 }
-                client.get("/versions/java/linuxx64").apply {
+                client.get("/versions/java") {
+                    url { parameters.append("platform", "linuxx64") }
+                }.apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe JsonArray(
                         listOf(
@@ -226,8 +232,9 @@ class GetVersionsApiSpec : ShouldSpec({
             withCleanDatabase {
                 insertVersions(java17linuxX64, java21linuxX64)
                 withTestApplication {
-                    client.get("/versions/java/universal") {
+                    client.get("/versions/java") {
                         url {
+                            parameters.append("platform", "universal")
                             parameters.append("visible", visible)
                         }
                     }.apply {

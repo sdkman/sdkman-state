@@ -1,6 +1,7 @@
 package io.sdkman.repos
 
 import arrow.core.Option
+import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.domain.Platform
@@ -46,21 +47,34 @@ class VersionsRepository {
             )
         }
 
-    suspend fun read(candidate: String, visible: Option<Boolean>): List<Version> = dbQuery {
+    suspend fun read(
+        candidate: String,
+        platform: Option<Platform>,
+        vendor: Option<String>,
+        visible: Option<Boolean>
+    ): List<Version> = dbQuery {
         Versions.select {
-            Versions.candidate eq candidate and
+            (Versions.candidate eq candidate) and
+                    platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
+                    vendor.map { Versions.vendor eq it }.getOrElse { Op.TRUE } and
                     visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
         }.asVersions()
             .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
     }
 
-    suspend fun read(candidate: String, platform: Platform, visible: Option<Boolean>): List<Version> = dbQuery {
+    suspend fun read(
+        candidate: String,
+        version: String,
+        platform: Platform,
+        vendor: String
+    ): Option<Version> = dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
+                    (Versions.version eq version) and
                     (Versions.platform eq platform.name) and
-                    visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
+                    (Versions.vendor eq vendor)
         }.asVersions()
-            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
+            .firstOrNone()
     }
 
     fun create(cv: Version): InsertStatement<Number> = transaction {
