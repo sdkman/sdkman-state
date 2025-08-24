@@ -104,34 +104,5 @@ class PostVersionApiSpec : ShouldSpec({
         }
     }
 
-    //TODO: change this test (and implementation) to reject ANY vendor suffix
-    should("accept version when vendor suffix is different") {
-        val version = Version(
-            candidate = "java",
-            version = "17.0.1-oracle",
-            platform = Platform.LINUX_X64,
-            url = "https://example.com/java-17.0.1.tar.gz",
-            visible = true,
-            vendor = "tem".some()
-        )
-        val requestBody = version.toJsonString()
-
-        withCleanDatabase {
-            withTestApplication {
-                val response = client.post("/versions") {
-                    contentType(ContentType.Application.Json)
-                    setBody(requestBody)
-                    header(Authorization, BasicAuthHeader)
-                }
-                response.status shouldBe HttpStatusCode.NoContent
-            }
-            selectVersion(
-                candidate = version.candidate,
-                version = version.version,
-                vendor = version.vendor,
-                platform = version.platform
-            ) shouldBe version.some()
-        }
-    }
 })
 

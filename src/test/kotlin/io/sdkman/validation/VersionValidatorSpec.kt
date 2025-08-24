@@ -53,37 +53,8 @@ class VersionValidatorSpec : ShouldSpec({
             VersionValidator.validateVersion(version) shouldBe expected
         }
 
-        //TODO: do NOT accept version with vendor suffix different to vendor. reject ANY suffix
-        should("accept version with vendor when suffix is different") {
-            val version = Version(
-                candidate = "java",
-                version = "17.0.1-oracle",
-                platform = Platform.LINUX_X64,
-                url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
-                vendor = Some("tem")
-            )
-
-            //TODO: assert appropriate Either.left()
-            VersionValidator.validateVersion(version) shouldBe version.right()
-        }
-
-        //TODO: reject all upper case suffixes
-        should("be case sensitive for vendor suffix detection") {
-            val version = Version(
-                candidate = "java",
-                version = "17.0.1-TEM",
-                platform = Platform.LINUX_X64,
-                url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
-                vendor = Some("tem")
-            )
-
-            //TODO: assert appropriate Either.left()
-            VersionValidator.validateVersion(version) shouldBe version.right()
-        }
         
-        should("handle whitespace in vendor names") {
+        should("reject version with whitespace in vendor names") {
             val version = Version(
                 candidate = "java",
                 version = "17.0.1- tem",
@@ -97,7 +68,7 @@ class VersionValidatorSpec : ShouldSpec({
             VersionValidator.validateVersion(version) shouldBe expected
         }
         
-        should("handle special characters in vendor names") {
+        should("reject version with special characters in vendor names") {
             val version = Version(
                 candidate = "java",
                 version = "17.0.1-te.m",

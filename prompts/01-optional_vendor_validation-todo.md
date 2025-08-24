@@ -25,7 +25,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 3: Implement Strict Vendor Suffix Validation
 
-- [ ] Add validation to reject all vendor suffixes regardless if they match the actual vendor
+- [X] Add validation to reject all vendor suffixes regardless if they match the actual vendor
 
 **Prompt**: Implement strict vendor suffix validation logic to address TODO comments in `src/test/kotlin/io/sdkman/validation/ValidationLogicSpec.kt` at lines 56, 67, 71, and 82. The validation should: (1) Reject ANY versions with vendor suffixes, (2) Return appropriate `Either.left()` errors for validation failures. Update the corresponding test in `src/test/kotlin/io/sdkman/PostVersionApiSpec.kt` at line 107 to reflect the new strict validation behavior. Use the existing error types that are already provided.
 

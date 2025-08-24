@@ -11,25 +11,21 @@ data class VendorSuffixError(val version: String, val vendor: String) : Validati
 
 object VersionValidator {
     
+    private val vendorSuffixPattern = Regex("-.+")
+    
     fun validateVersion(version: Version): Either<ValidationError, Version> =
-        version.vendor
-            .map { vendor ->
-                if (version.version.endsWith("-$vendor")) {
-                    VendorSuffixError(version.version, vendor).left()
-                } else {
-                    version.right()
-                }
-            }
-            .getOrElse { version.right() }
+        if (version.version.contains(vendorSuffixPattern)) {
+            val suffix = version.version.substringAfterLast('-')
+            VendorSuffixError(version.version, suffix).left()
+        } else {
+            version.right()
+        }
     
     fun validateUniqueVersion(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> =
-        uniqueVersion.vendor
-            .map { vendor ->
-                if (uniqueVersion.version.endsWith("-$vendor")) {
-                    VendorSuffixError(uniqueVersion.version, vendor).left()
-                } else {
-                    uniqueVersion.right()
-                }
-            }
-            .getOrElse { uniqueVersion.right() }
+        if (uniqueVersion.version.contains(vendorSuffixPattern)) {
+            val suffix = uniqueVersion.version.substringAfterLast('-')
+            VendorSuffixError(uniqueVersion.version, suffix).left()
+        } else {
+            uniqueVersion.right()
+        }
 }
