@@ -1,7 +1,6 @@
 package io.sdkman.validation
 
 import arrow.core.*
-import arrow.core.raise.either
 import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
 

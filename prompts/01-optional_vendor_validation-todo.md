@@ -16,21 +16,21 @@ Consider the following rules during execution of the tasks:
 
 ### Task 2: Refactor Validation Logic to Use Functional Programming
 
-- [X] Improve ValidationLogic.kt to follow functional programming best practices
+- [X] Improve VersionValidator.kt to follow functional programming best practices
 
-**Prompt**: Refactor the validation logic in `src/main/kotlin/io/sdkman/validation/ValidationLogic.kt` to address four TODO comments: (1) Consider renaming the object at line 12 to something more descriptive, (2) Replace `fold` with `map` and `getOrElse` at line 16 as per Kotlin rules, (3) Never raise errors but return `Either.left()` directly at line 21, and (4) Return `Either.right()` for success cases at line 24. Ensure the refactored code follows the functional programming guidelines in rules/kotlin.md.
+**Prompt**: Refactor the validation logic in `src/main/kotlin/io/sdkman/validation/VersionValidator.kt` to address four TODO comments: (1) Consider renaming the object at line 12 to something more descriptive, (2) Replace `fold` with `map` and `getOrElse` at line 16 as per Kotlin rules, (3) Never raise errors but return `Either.left()` directly at line 21, and (4) Return `Either.right()` for success cases at line 24. Ensure the refactored code follows the functional programming guidelines in rules/kotlin.md.
 
 **Files affected**:
-- `src/main/kotlin/io/sdkman/validation/ValidationLogic.kt`
+- `src/main/kotlin/io/sdkman/validation/VersionValidator.kt`
 
 ### Task 3: Implement Strict Vendor Suffix Validation
 
 - [ ] Add validation to reject all vendor suffixes regardless if they match the actual vendor
 
-**Prompt**: Implement strict vendor suffix validation logic to address TODO comments in `src/test/kotlin/io/sdkman/validation/ValidationLogicSpec.kt` at lines 56, 67, 71, and 82. The validation should: (1) Reject ANY versions with vendor suffixes, (2) Reject all uppercase vendors, (3) Return appropriate `Either.left()` errors for validation failures. Update the corresponding test in `src/test/kotlin/io/sdkman/PostVersionApiSpec.kt` at line 107 to reflect the new strict validation behavior.
+**Prompt**: Implement strict vendor suffix validation logic to address TODO comments in `src/test/kotlin/io/sdkman/validation/ValidationLogicSpec.kt` at lines 56, 67, 71, and 82. The validation should: (1) Reject ANY versions with vendor suffixes, (2) Return appropriate `Either.left()` errors for validation failures. Update the corresponding test in `src/test/kotlin/io/sdkman/PostVersionApiSpec.kt` at line 107 to reflect the new strict validation behavior. Use the existing error types that are already provided.
 
 **Files affected**:
-- `src/main/kotlin/io/sdkman/validation/ValidationLogic.kt`
+- `src/main/kotlin/io/sdkman/validation/VersionValidator.kt`
 - `src/test/kotlin/io/sdkman/validation/ValidationLogicSpec.kt`
 - `src/test/kotlin/io/sdkman/PostVersionApiSpec.kt`
 
