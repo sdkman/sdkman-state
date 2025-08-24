@@ -34,7 +34,8 @@ fun Application.configureRouting(repo: VersionsRepository) {
     routing {
         get("/versions/{candidate}") {
             option {
-                val candidateId = call.parameters["candidate"].toOption().bind()
+                val candidateId = call.parameters["candidate"].toOption()
+                    .filter { it.isNotBlank() }.bind()
                 val visible = call.request.visibleQueryParam()
                 val platform = call.request.queryParameters["platform"].toOption()
                     .map { Platform.findByPlatformId(it) }
@@ -42,13 +43,15 @@ fun Application.configureRouting(repo: VersionsRepository) {
                 val versions = repo.read(candidateId, platform, vendor, visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
-                throw IllegalArgumentException("Candidate or platform not found")
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
         get("/versions/{candidate}/{version}") {
             option {
-                val candidateId = call.parameters["candidate"].toOption().bind()
-                val versionId = call.parameters["version"].toOption().bind()
+                val candidateId = call.parameters["candidate"].toOption()
+                    .filter { it.isNotBlank() }.bind()
+                val versionId = call.parameters["version"].toOption()
+                    .filter { it.isNotBlank() }.bind()
                 val platform = call.request.queryParameters["platform"].toOption()
                     .map { Platform.findByPlatformId(it) }
                     .getOrElse { Platform.UNIVERSAL }

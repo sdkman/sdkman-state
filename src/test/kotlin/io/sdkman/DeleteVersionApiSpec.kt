@@ -14,8 +14,6 @@ import io.sdkman.support.*
 // testuser:password123 base64 encoded
 private const val BasicAuthHeader = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-//TODO: Add a test for deleting a version for a candidate with platform and NO vendor
-//TODO: Add a test for UniqueVersion validation failure
 class DeleteVersionApiSpec : ShouldSpec({
 
     should("DELETE a version for a candidate, platform and vendor") {
@@ -52,6 +50,170 @@ class DeleteVersionApiSpec : ShouldSpec({
                 response.status shouldBe HttpStatusCode.NoContent
             }
             selectVersion(candidate, version, vendor.some(), platform) shouldBe None
+        }
+    }
+
+    should("DELETE a version for a candidate with platform and NO vendor") {
+        val candidate = "scala"
+        val version = "3.1.2"
+        val platform = Platform.LINUX_X64
+
+        val requestBody = UniqueVersion(
+            candidate = candidate,
+            version = version,
+            vendor = None,
+            platform = platform,
+        ).toJsonString()
+
+        withCleanDatabase {
+            insertVersions(
+                Version(
+                    candidate = candidate,
+                    version = version,
+                    platform = platform,
+                    url = "https://scala-3.1.2-linux-x64",
+                    visible = true,
+                    vendor = None
+                )
+            )
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.NoContent
+            }
+            selectVersion(candidate, version, None, platform) shouldBe None
+        }
+    }
+
+    should("return BAD_REQUEST for UniqueVersion validation failure") {
+        val invalidRequestBody = """{"candidate":"","version":"1.0.0","vendor":null,"platform":"UNIVERSAL"}"""
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(invalidRequestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+            }
+        }
+    }
+
+    should("return UNAUTHORIZED when deleting without authentication") {
+        val requestBody = UniqueVersion(
+            candidate = "java",
+            version = "17.0.1",
+            vendor = "temurin".some(),
+            platform = Platform.MAC_X64
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                }
+                response.status shouldBe HttpStatusCode.Unauthorized
+            }
+        }
+    }
+
+    should("return BAD_REQUEST for UniqueVersion with empty candidate field") {
+        val invalidRequestBody = UniqueVersion(
+            candidate = "",
+            version = "1.0.0",
+            vendor = None,
+            platform = Platform.UNIVERSAL
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(invalidRequestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+            }
+        }
+    }
+
+    should("return BAD_REQUEST for UniqueVersion with empty version field") {
+        val invalidRequestBody = UniqueVersion(
+            candidate = "java",
+            version = "",
+            vendor = None,
+            platform = Platform.UNIVERSAL
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(invalidRequestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+            }
+        }
+    }
+
+    should("return BAD_REQUEST for UniqueVersion with vendor suffix in version") {
+        val invalidRequestBody = UniqueVersion(
+            candidate = "java",
+            version = "17.0.1-temurin",
+            vendor = "temurin".some(),
+            platform = Platform.MAC_X64
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(invalidRequestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+            }
+        }
+    }
+
+    should("return NO_CONTENT when attempting to delete non-existent version") {
+        val requestBody = UniqueVersion(
+            candidate = "nonexistent",
+            version = "1.0.0",
+            vendor = None,
+            platform = Platform.UNIVERSAL
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.NoContent
+            }
+        }
+    }
+
+    should("return BAD_REQUEST for malformed JSON in delete request") {
+        val malformedJson = """{"candidate":"java","version":}"""
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(malformedJson)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+            }
         }
     }
 })
