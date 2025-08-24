@@ -14,10 +14,10 @@ import kotlinx.serialization.UseSerializers
 data class Version(
     val candidate: String,
     val version: String,
-    val vendor: String,
     val platform: Platform,
     val url: String,
     val visible: Boolean,
+    val vendor: Option<String> = None,
     val md5sum: Option<String> = None,
     val sha256sum: Option<String> = None,
     val sha512sum: Option<String> = None,
@@ -27,7 +27,7 @@ data class Version(
 data class UniqueVersion(
     val candidate: String,
     val version: String,
-    val vendor: String,
+    val vendor: Option<String>,
     val platform: Platform,
 )
 

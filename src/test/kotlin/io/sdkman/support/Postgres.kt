@@ -21,7 +21,7 @@ const val dbPassword = "postgres"
 private object Versions : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
     val version = varchar("version", length = 25)
-    val vendor = varchar("vendor", length = 10)
+    val vendor = varchar("vendor", length = 10).nullable()
     val platform = varchar("platform", length = 15)
     val url = varchar("url", length = 500)
     val visible = bool("visible")
@@ -36,7 +36,7 @@ fun insertVersions(vararg cvs: Version) = transaction {
             it[candidate] = cv.candidate
             it[version] = cv.version
             it[platform] = cv.platform.name
-            it[vendor] = cv.vendor
+            it[vendor] = cv.vendor.getOrNull()
             it[url] = cv.url
             it[visible] = cv.visible
             it[md5sum] = cv.md5sum.getOrNull()
@@ -51,18 +51,18 @@ private fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }
 
-fun selectVersion(candidate: String, version: String, vendor: String, platform: Platform): Option<Version> =
+fun selectVersion(candidate: String, version: String, vendor: Option<String>, platform: Platform): Option<Version> =
     dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
-                    (Versions.vendor eq vendor) and
+                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it }) and
                     (Versions.platform eq platform.name)
         }.map {
             Version(
                 candidate = it[Versions.candidate],
                 version = it[Versions.version],
-                vendor = it[Versions.vendor],
+                vendor = it[Versions.vendor].toOption(),
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible],

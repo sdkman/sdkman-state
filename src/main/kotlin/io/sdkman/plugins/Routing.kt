@@ -12,6 +12,14 @@ import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.validation.ValidationLogic
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ErrorResponse(
+    val error: String,
+    val message: String
+)
 
 fun Application.configureRouting(repo: VersionsRepository) {
 
@@ -44,7 +52,7 @@ fun Application.configureRouting(repo: VersionsRepository) {
                 val platform = call.request.queryParameters["platform"].toOption()
                     .map { Platform.findByPlatformId(it) }
                     .getOrElse { Platform.UNIVERSAL }
-                val vendor = call.request.queryParameters["vendor"].toOption().getOrElse { "NONE" }
+                val vendor = call.request.queryParameters["vendor"].toOption()
                 val maybeVersion = repo.read(
                     candidate = candidateId,
                     version = versionId,
@@ -59,16 +67,25 @@ fun Application.configureRouting(repo: VersionsRepository) {
         }
         authenticate("auth-basic") {
             post("/versions") {
-                call.receive<Version>()
-                    .toOption()
-                    .map { repo.create(it) }
-                    .map { call.respond(HttpStatusCode.NoContent) }
+                val version = call.receive<Version>()
+                //TODO: use a pattern match instead using `when`
+                ValidationLogic.validateVersion(version).fold(
+                    { error -> 
+                        val errorResponse = ErrorResponse("Validation failed", error.message)
+                        call.respond(HttpStatusCode.BadRequest, errorResponse)
+                    },
+                    { validVersion ->
+                        repo.create(validVersion)
+                        call.respond(HttpStatusCode.NoContent)
+                    }
+                )
             }
+            //TODO: add better error handling with `Either`, and add appropriate tests
             delete("/versions") {
-                call.receive<UniqueVersion>()
-                    .toOption()
-                    .map { repo.delete(it) }
-                    .map { call.respond(HttpStatusCode.NoContent) }
+                //TODO: handle validation error of UniqueVersion
+                val uniqueVersion = call.receive<UniqueVersion>()
+                repo.delete(uniqueVersion)
+                call.respond(HttpStatusCode.NoContent)
             }
         }
     }

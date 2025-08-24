@@ -14,6 +14,8 @@ import io.sdkman.support.*
 // testuser:password123 base64 encoded
 private const val BasicAuthHeader = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
+//TODO: Add a test for deleting a version for a candidate with platform and NO vendor
+//TODO: Add a test for UniqueVersion validation failure
 class DeleteVersionApiSpec : ShouldSpec({
 
     should("DELETE a version for a candidate, platform and vendor") {
@@ -25,7 +27,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val requestBody = UniqueVersion(
             candidate = candidate,
             version = version,
-            vendor = vendor,
+            vendor = vendor.some(),
             platform = platform,
         ).toJsonString()
 
@@ -34,10 +36,10 @@ class DeleteVersionApiSpec : ShouldSpec({
                 Version(
                     candidate = candidate,
                     version = version,
-                    vendor = vendor,
                     platform = platform,
                     url = "https://java-17.0.1-tem",
                     visible = true,
+                    vendor = vendor.some(),
                     md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
                 )
             )
@@ -49,7 +51,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                 }
                 response.status shouldBe HttpStatusCode.NoContent
             }
-            selectVersion(candidate, version, vendor, platform) shouldBe None
+            selectVersion(candidate, version, vendor.some(), platform) shouldBe None
         }
     }
 })

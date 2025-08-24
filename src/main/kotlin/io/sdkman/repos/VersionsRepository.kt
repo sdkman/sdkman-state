@@ -20,7 +20,7 @@ class VersionsRepository {
     private object Versions : IntIdTable(name = "versions") {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
-        val vendor = varchar("vendor", length = 10)
+        val vendor = varchar("vendor", length = 10).nullable()
         val platform = varchar("platform", length = 15)
         val url = varchar("url", length = 500)
         val visible = bool("visible")
@@ -37,10 +37,10 @@ class VersionsRepository {
             Version(
                 candidate = it[Versions.candidate],
                 version = it[Versions.version],
-                vendor = it[Versions.vendor],
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible],
+                vendor = it[Versions.vendor].toOption(),
                 md5sum = it[Versions.md5sum].toOption(),
                 sha256sum = it[Versions.sha256sum].toOption(),
                 sha512sum = it[Versions.sha512sum].toOption(),
@@ -56,23 +56,23 @@ class VersionsRepository {
         Versions.select {
             (Versions.candidate eq candidate) and
                     platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
-                    vendor.map { Versions.vendor eq it }.getOrElse { Op.TRUE } and
+                    vendor.fold({ Op.TRUE }, { Versions.vendor eq it }) and
                     visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
         }.asVersions()
-            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor }, { it.platform }))
+            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor.getOrNull() }, { it.platform }))
     }
 
     suspend fun read(
         candidate: String,
         version: String,
         platform: Platform,
-        vendor: String
+        vendor: Option<String>
     ): Option<Version> = dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     (Versions.platform eq platform.name) and
-                    (Versions.vendor eq vendor)
+                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })
         }.asVersions()
             .firstOrNone()
     }
@@ -81,7 +81,7 @@ class VersionsRepository {
         Versions.insert {
             it[candidate] = cv.candidate
             it[version] = cv.version
-            it[vendor] = cv.vendor
+            it[vendor] = cv.vendor.getOrNull()
             it[platform] = cv.platform.name
             it[url] = cv.url
             it[visible] = cv.visible
@@ -93,10 +93,14 @@ class VersionsRepository {
 
     fun delete(version: UniqueVersion): Int = transaction {
         Versions.deleteWhere {
-            (candidate eq version.candidate) and
+            val baseCondition = (candidate eq version.candidate) and
                     (this.version eq version.version) and
-                    (vendor eq version.vendor) and
                     (platform eq version.platform.name)
+            
+            version.vendor.fold(
+                { baseCondition and (vendor eq null) },
+                { vendorValue -> baseCondition and (vendor eq vendorValue) }
+            )
         }
     }
 }

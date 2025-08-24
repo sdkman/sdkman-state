@@ -1,5 +1,6 @@
 package io.sdkman
 
+import arrow.core.None
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
@@ -14,6 +15,8 @@ import io.sdkman.support.withTestApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
+//TODO: add a test for a platform-specific version
+//TODO: add a test for a version with NO vendor
 class GetVersionApiSpec : ShouldSpec({
 
     should("GET a UNIVERSAL version for a candidate") {
@@ -23,7 +26,7 @@ class GetVersionApiSpec : ShouldSpec({
             platform = Platform.UNIVERSAL,
             url = "https://kotlin-2.1.0-tem",
             visible = true,
-            vendor = "NONE"
+            vendor = None
         )
 
         withCleanDatabase {
