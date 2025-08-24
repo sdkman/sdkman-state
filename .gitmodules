@@ -1,0 +1,3 @@
+[submodule "prompts/library"]
+	path = prompts/library
+	url = git@github.com:sdkman/prompt-library.git
