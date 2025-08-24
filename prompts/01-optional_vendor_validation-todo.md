@@ -7,7 +7,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 1: Improve Error Handling and Pattern Matching in Routing
 
-- [ ] Replace conditional logic with pattern matching and implement proper error handling
+- [X] Replace conditional logic with pattern matching and implement proper error handling
 
 **Prompt**: Update the routing logic in `src/main/kotlin/io/sdkman/plugins/Routing.kt` to address three TODO comments: (1) Replace the conditional logic at line 71 with proper pattern matching using `when`, (2) Add better error handling with `Either` type at line 83 and include appropriate tests, and (3) Handle validation errors for UniqueVersion at line 85. The implementation should follow functional programming principles using Arrow's Either type and provide appropriate HTTP error responses.
 

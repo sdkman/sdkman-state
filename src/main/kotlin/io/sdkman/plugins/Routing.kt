@@ -68,24 +68,27 @@ fun Application.configureRouting(repo: VersionsRepository) {
         authenticate("auth-basic") {
             post("/versions") {
                 val version = call.receive<Version>()
-                //TODO: use a pattern match instead using `when`
-                ValidationLogic.validateVersion(version).fold(
-                    { error -> 
-                        val errorResponse = ErrorResponse("Validation failed", error.message)
-                        call.respond(HttpStatusCode.BadRequest, errorResponse)
-                    },
-                    { validVersion ->
+                ValidationLogic.validateVersion(version)
+                    .map { validVersion ->
                         repo.create(validVersion)
                         call.respond(HttpStatusCode.NoContent)
                     }
-                )
+                    .getOrElse { error ->
+                        val errorResponse = ErrorResponse("Validation failed", error.message)
+                        call.respond(HttpStatusCode.BadRequest, errorResponse)
+                    }
             }
-            //TODO: add better error handling with `Either`, and add appropriate tests
             delete("/versions") {
-                //TODO: handle validation error of UniqueVersion
                 val uniqueVersion = call.receive<UniqueVersion>()
-                repo.delete(uniqueVersion)
-                call.respond(HttpStatusCode.NoContent)
+                ValidationLogic.validateUniqueVersion(uniqueVersion)
+                    .map { validUniqueVersion ->
+                        repo.delete(validUniqueVersion)
+                        call.respond(HttpStatusCode.NoContent)
+                    }
+                    .getOrElse { error ->
+                        val errorResponse = ErrorResponse("Validation failed", error.message)
+                        call.respond(HttpStatusCode.BadRequest, errorResponse)
+                    }
             }
         }
     }

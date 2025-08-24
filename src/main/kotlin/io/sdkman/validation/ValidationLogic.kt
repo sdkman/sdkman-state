@@ -3,6 +3,7 @@ package io.sdkman.validation
 import arrow.core.*
 import arrow.core.raise.either
 import io.sdkman.domain.Version
+import io.sdkman.domain.UniqueVersion
 
 sealed class ValidationError(val message: String)
 data class VendorSuffixError(val version: String, val vendor: String) : ValidationError(
@@ -23,6 +24,19 @@ object ValidationLogic {
                 } else {
                     //TODO: return an `Either.right()`
                     version
+                }
+            }
+        )
+    }
+    
+    fun validateUniqueVersion(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> = either {
+        uniqueVersion.vendor.fold(
+            ifEmpty = { uniqueVersion },
+            ifSome = { vendor ->
+                if (uniqueVersion.version.endsWith("-$vendor")) {
+                    raise(VendorSuffixError(uniqueVersion.version, vendor))
+                } else {
+                    uniqueVersion
                 }
             }
         )
