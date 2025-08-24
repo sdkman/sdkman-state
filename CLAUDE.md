@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 SDKMAN State API is a Kotlin-based Ktor application that manages SDKMAN candidate and version state through a JSON API. It serves as both a backend for native Rust components and an admin API for the datastore, supporting GET, POST, PATCH, and DELETE operations on candidates and versions.
 
+## MCP Integration
+
+This project uses the Gradle MCP server for enhanced Gradle operations. Always use the gradle-mcp when available for any Gradle-related tasks including:
+- Building and testing
+- Dependency management
+- Task execution
+- Project analysis
+
 ## Build and Development Commands
 
 ### Build and Test
