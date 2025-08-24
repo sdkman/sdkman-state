@@ -65,4 +65,4 @@ The following workflow applies when executing this TODO list:
 - **Ask me to review the task once you have completed and then WAIT FOR ME**
 - Mark the TODO item as complete with [X]
 - Commit the change to Git when I've approved and/or amended the code
-- Move on to the next task
+- HALT execution
