@@ -10,35 +10,27 @@ data class VendorSuffixError(val version: String, val vendor: String) : Validati
     "Version '$version' should not contain vendor '$vendor' suffix"
 )
 
-//TODO: Consider renaming this to something better
-object ValidationLogic {
+object VersionValidator {
     
-    fun validateVersion(version: Version): Either<ValidationError, Version> = either {
-        //TODO: prefer using `map` and `getOrElse` over `fold` as per the rule kotlin.md
-        version.vendor.fold(
-            ifEmpty = { version },
-            ifSome = { vendor ->
+    fun validateVersion(version: Version): Either<ValidationError, Version> =
+        version.vendor
+            .map { vendor ->
                 if (version.version.endsWith("-$vendor")) {
-                    //TODO: never raise errors, take it directly to an `Either.left()`
-                    raise(VendorSuffixError(version.version, vendor))
+                    VendorSuffixError(version.version, vendor).left()
                 } else {
-                    //TODO: return an `Either.right()`
-                    version
+                    version.right()
                 }
             }
-        )
-    }
+            .getOrElse { version.right() }
     
-    fun validateUniqueVersion(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> = either {
-        uniqueVersion.vendor.fold(
-            ifEmpty = { uniqueVersion },
-            ifSome = { vendor ->
+    fun validateUniqueVersion(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> =
+        uniqueVersion.vendor
+            .map { vendor ->
                 if (uniqueVersion.version.endsWith("-$vendor")) {
-                    raise(VendorSuffixError(uniqueVersion.version, vendor))
+                    VendorSuffixError(uniqueVersion.version, vendor).left()
                 } else {
-                    uniqueVersion
+                    uniqueVersion.right()
                 }
             }
-        )
-    }
+            .getOrElse { uniqueVersion.right() }
 }

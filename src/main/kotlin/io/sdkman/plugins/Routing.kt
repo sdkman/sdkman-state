@@ -12,7 +12,7 @@ import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import io.sdkman.repos.VersionsRepository
-import io.sdkman.validation.ValidationLogic
+import io.sdkman.validation.VersionValidator
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -68,7 +68,7 @@ fun Application.configureRouting(repo: VersionsRepository) {
         authenticate("auth-basic") {
             post("/versions") {
                 val version = call.receive<Version>()
-                ValidationLogic.validateVersion(version)
+                VersionValidator.validateVersion(version)
                     .map { validVersion ->
                         repo.create(validVersion)
                         call.respond(HttpStatusCode.NoContent)
@@ -80,7 +80,7 @@ fun Application.configureRouting(repo: VersionsRepository) {
             }
             delete("/versions") {
                 val uniqueVersion = call.receive<UniqueVersion>()
-                ValidationLogic.validateUniqueVersion(uniqueVersion)
+                VersionValidator.validateUniqueVersion(uniqueVersion)
                     .map { validUniqueVersion ->
                         repo.delete(validUniqueVersion)
                         call.respond(HttpStatusCode.NoContent)

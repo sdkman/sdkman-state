@@ -9,7 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 
-class ValidationLogicSpec : ShouldSpec({
+class VersionValidatorSpec : ShouldSpec({
 
     context("validateVersion") {
         
@@ -23,7 +23,7 @@ class ValidationLogicSpec : ShouldSpec({
                 vendor = None
             )
             
-            ValidationLogic.validateVersion(version) shouldBe version.right()
+            VersionValidator.validateVersion(version) shouldBe version.right()
         }
         
         should("accept version with vendor when version does not contain vendor suffix") {
@@ -36,7 +36,7 @@ class ValidationLogicSpec : ShouldSpec({
                 vendor = Some("tem")
             )
             
-            ValidationLogic.validateVersion(version) shouldBe version.right()
+            VersionValidator.validateVersion(version) shouldBe version.right()
         }
         
         should("reject version with vendor when version contains vendor suffix") {
@@ -50,7 +50,7 @@ class ValidationLogicSpec : ShouldSpec({
             )
             
             val expected = VendorSuffixError("17.0.1-tem", "tem").left()
-            ValidationLogic.validateVersion(version) shouldBe expected
+            VersionValidator.validateVersion(version) shouldBe expected
         }
 
         //TODO: do NOT accept version with vendor suffix different to vendor. reject ANY suffix
@@ -65,7 +65,7 @@ class ValidationLogicSpec : ShouldSpec({
             )
 
             //TODO: assert appropriate Either.left()
-            ValidationLogic.validateVersion(version) shouldBe version.right()
+            VersionValidator.validateVersion(version) shouldBe version.right()
         }
 
         //TODO: reject all upper case suffixes
@@ -80,7 +80,7 @@ class ValidationLogicSpec : ShouldSpec({
             )
 
             //TODO: assert appropriate Either.left()
-            ValidationLogic.validateVersion(version) shouldBe version.right()
+            VersionValidator.validateVersion(version) shouldBe version.right()
         }
         
         should("handle whitespace in vendor names") {
@@ -94,7 +94,7 @@ class ValidationLogicSpec : ShouldSpec({
             )
             
             val expected = VendorSuffixError("17.0.1- tem", " tem").left()
-            ValidationLogic.validateVersion(version) shouldBe expected
+            VersionValidator.validateVersion(version) shouldBe expected
         }
         
         should("handle special characters in vendor names") {
@@ -108,7 +108,7 @@ class ValidationLogicSpec : ShouldSpec({
             )
             
             val expected = VendorSuffixError("17.0.1-te.m", "te.m").left()
-            ValidationLogic.validateVersion(version) shouldBe expected
+            VersionValidator.validateVersion(version) shouldBe expected
         }
     }
 })

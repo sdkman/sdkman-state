@@ -16,7 +16,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 2: Refactor Validation Logic to Use Functional Programming
 
-- [ ] Improve ValidationLogic.kt to follow functional programming best practices
+- [X] Improve ValidationLogic.kt to follow functional programming best practices
 
 **Prompt**: Refactor the validation logic in `src/main/kotlin/io/sdkman/validation/ValidationLogic.kt` to address four TODO comments: (1) Consider renaming the object at line 12 to something more descriptive, (2) Replace `fold` with `map` and `getOrElse` at line 16 as per Kotlin rules, (3) Never raise errors but return `Either.left()` directly at line 21, and (4) Return `Either.right()` for success cases at line 24. Ensure the refactored code follows the functional programming guidelines in rules/kotlin.md.
 
