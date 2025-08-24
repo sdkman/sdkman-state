@@ -40,7 +40,7 @@ class PostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.NoContent
+                response.status shouldBe HttpStatusCode.Created
             }
             selectVersion(
                 candidate = version.candidate,
@@ -69,7 +69,7 @@ class PostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.NoContent
+                response.status shouldBe HttpStatusCode.Created
             }
             selectVersion(
                 candidate = version.candidate,
@@ -101,6 +101,137 @@ class PostVersionApiSpec : ShouldSpec({
                 response.status shouldBe HttpStatusCode.BadRequest
                 response.bodyAsText() shouldContain "Version '17.0.1-tem' should not contain vendor 'tem' suffix"
             }
+        }
+    }
+
+    //TODO: Move this into a new IdempotentVersionPostApiSpec
+    should("POST be idempotent - same version posted twice should succeed with 201") {
+        val version = Version(
+            candidate = "java",
+            version = "17.0.2",
+            platform = Platform.LINUX_X64,
+            url = "https://java-17.0.2-original",
+            visible = true,
+            vendor = "temurin".some(),
+            md5sum = "original-hash".some()
+        )
+        val requestBody = version.toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                // First POST
+                val response1 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response1.status shouldBe HttpStatusCode.Created
+
+                // Second POST (idempotent)
+                val response2 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response2.status shouldBe HttpStatusCode.Created
+            }
+            // Verify version exists in database
+            selectVersion(
+                candidate = version.candidate,
+                version = version.version,
+                vendor = version.vendor,
+                platform = version.platform
+            ) shouldBe version.some()
+        }
+    }
+
+    //TODO: Move this into a new IdempotentVersionPostApiSpec
+    should("POST overwrite existing version with different data") {
+        val originalVersion = Version(
+            candidate = "java",
+            version = "17.0.3",
+            platform = Platform.LINUX_X64,
+            url = "https://java-17.0.3-original",
+            visible = true,
+            vendor = "temurin".some(),
+            md5sum = "original-hash".some()
+        )
+
+        val updatedVersion = Version(
+            candidate = "java",
+            version = "17.0.3",
+            platform = Platform.LINUX_X64,
+            url = "https://java-17.0.3-updated",
+            visible = false,
+            vendor = "temurin".some(),
+            sha256sum = "updated-hash".some()
+        )
+
+        withCleanDatabase {
+            withTestApplication {
+                // First POST
+                val response1 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(originalVersion.toJsonString())
+                    header(Authorization, BasicAuthHeader)
+                }
+                response1.status shouldBe HttpStatusCode.Created
+
+                // Second POST with different data (overwrite)
+                val response2 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(updatedVersion.toJsonString())
+                    header(Authorization, BasicAuthHeader)
+                }
+                response2.status shouldBe HttpStatusCode.Created
+            }
+            // Verify the updated version is stored
+            selectVersion(
+                candidate = updatedVersion.candidate,
+                version = updatedVersion.version,
+                vendor = updatedVersion.vendor,
+                platform = updatedVersion.platform
+            ) shouldBe updatedVersion.some()
+        }
+    }
+
+    //TODO: Move this into a new IdempotentVersionPostApiSpec
+    should("POST be idempotent for version without vendor") {
+        val version = Version(
+            candidate = "scala",
+            version = "3.2.0",
+            platform = Platform.UNIVERSAL,
+            url = "https://scala-3.2.0",
+            visible = true,
+            vendor = None
+        )
+        val requestBody = version.toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                // First POST
+                val response1 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response1.status shouldBe HttpStatusCode.Created
+
+                // Second POST (idempotent)
+                val response2 = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response2.status shouldBe HttpStatusCode.Created
+            }
+            // Verify version exists in database
+            selectVersion(
+                candidate = version.candidate,
+                version = version.version,
+                vendor = version.vendor,
+                platform = version.platform
+            ) shouldBe version.some()
         }
     }
 

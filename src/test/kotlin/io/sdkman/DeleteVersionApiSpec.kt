@@ -182,7 +182,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         }
     }
 
-    should("return NO_CONTENT when attempting to delete non-existent version") {
+    should("return NOT_FOUND when attempting to delete non-existent version") {
         val requestBody = UniqueVersion(
             candidate = "nonexistent",
             version = "1.0.0",
@@ -197,7 +197,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.NoContent
+                response.status shouldBe HttpStatusCode.NotFound
             }
         }
     }
@@ -213,6 +213,63 @@ class DeleteVersionApiSpec : ShouldSpec({
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
                 response.status shouldBe HttpStatusCode.BadRequest
+            }
+        }
+    }
+
+    should("return 204 NO_CONTENT for successful deletion of existing version") {
+        val candidate = "kotlin"
+        val version = "1.9.0"
+        val vendor = "jetbrains"
+        val platform = Platform.LINUX_X64
+
+        val requestBody = UniqueVersion(
+            candidate = candidate,
+            version = version,
+            vendor = vendor.some(),
+            platform = platform,
+        ).toJsonString()
+
+        withCleanDatabase {
+            insertVersions(
+                Version(
+                    candidate = candidate,
+                    version = version,
+                    platform = platform,
+                    url = "https://kotlin-1.9.0-linux",
+                    visible = true,
+                    vendor = vendor.some(),
+                    sha256sum = "kotlin-hash".some()
+                )
+            )
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.NoContent
+            }
+            selectVersion(candidate, version, vendor.some(), platform) shouldBe None
+        }
+    }
+
+    should("return 404 NOT_FOUND when attempting to delete non-existent version with vendor") {
+        val requestBody = UniqueVersion(
+            candidate = "gradle",
+            version = "8.0.0",
+            vendor = "gradle-inc".some(),
+            platform = Platform.UNIVERSAL
+        ).toJsonString()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.NotFound
             }
         }
     }

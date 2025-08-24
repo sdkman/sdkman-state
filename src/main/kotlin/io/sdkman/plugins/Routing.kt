@@ -74,7 +74,11 @@ fun Application.configureRouting(repo: VersionsRepository) {
                 VersionValidator.validateVersion(version)
                     .map { validVersion ->
                         repo.create(validVersion)
-                        call.respond(HttpStatusCode.NoContent)
+                            .map { call.respond(HttpStatusCode.Created) }
+                            .getOrElse { error ->
+                                val errorResponse = ErrorResponse("Database error", error)
+                                call.respond(HttpStatusCode.InternalServerError, errorResponse)
+                            }
                     }
                     .getOrElse { error ->
                         val errorResponse = ErrorResponse("Validation failed", error.message)
@@ -85,8 +89,10 @@ fun Application.configureRouting(repo: VersionsRepository) {
                 val uniqueVersion = call.receive<UniqueVersion>()
                 VersionValidator.validateUniqueVersion(uniqueVersion)
                     .map { validUniqueVersion ->
-                        repo.delete(validUniqueVersion)
-                        call.respond(HttpStatusCode.NoContent)
+                        when (repo.delete(validUniqueVersion)) {
+                            1 -> call.respond(HttpStatusCode.NoContent)
+                            0 -> call.respond(HttpStatusCode.NotFound)
+                        }
                     }
                     .getOrElse { error ->
                         val errorResponse = ErrorResponse("Validation failed", error.message)

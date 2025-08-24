@@ -4,6 +4,8 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.toOption
+import arrow.core.Either
+import arrow.core.right
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
@@ -11,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -77,18 +78,39 @@ class VersionsRepository {
             .firstOrNone()
     }
 
-    fun create(cv: Version): InsertStatement<Number> = transaction {
-        Versions.insert {
-            it[candidate] = cv.candidate
-            it[version] = cv.version
-            it[vendor] = cv.vendor.getOrNull()
-            it[platform] = cv.platform.name
-            it[url] = cv.url
-            it[visible] = cv.visible
-            it[md5sum] = cv.md5sum.getOrNull()
-            it[sha256sum] = cv.sha256sum.getOrNull()
-            it[sha512sum] = cv.sha512sum.getOrNull()
-        }
+    fun create(cv: Version): Either<String, Unit> = transaction {
+        Versions.select {
+            (Versions.candidate eq cv.candidate) and
+                    (Versions.version eq cv.version) and
+                    (cv.vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })) and
+                    (Versions.platform eq cv.platform.name)
+        }.firstOrNone()
+            .map {
+                Versions.update({
+                    (Versions.candidate eq cv.candidate) and
+                            (Versions.version eq cv.version) and
+                            (cv.vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })) and
+                            (Versions.platform eq cv.platform.name)
+                }) {
+                    it[url] = cv.url
+                    it[visible] = cv.visible
+                    it[md5sum] = cv.md5sum.getOrNull()
+                    it[sha256sum] = cv.sha256sum.getOrNull()
+                    it[sha512sum] = cv.sha512sum.getOrNull()
+                }.let { Unit.right() }
+            }.getOrElse {
+                Versions.insert {
+                    it[candidate] = cv.candidate
+                    it[version] = cv.version
+                    it[vendor] = cv.vendor.getOrNull()
+                    it[platform] = cv.platform.name
+                    it[url] = cv.url
+                    it[visible] = cv.visible
+                    it[md5sum] = cv.md5sum.getOrNull()
+                    it[sha256sum] = cv.sha256sum.getOrNull()
+                    it[sha512sum] = cv.sha512sum.getOrNull()
+                }.let { Unit.right() }
+            }
     }
 
     fun delete(version: UniqueVersion): Int = transaction {
@@ -96,7 +118,7 @@ class VersionsRepository {
             val baseCondition = (candidate eq version.candidate) and
                     (this.version eq version.version) and
                     (platform eq version.platform.name)
-            
+
             version.vendor.fold(
                 { baseCondition and (vendor eq null) },
                 { vendorValue -> baseCondition and (vendor eq vendorValue) }
