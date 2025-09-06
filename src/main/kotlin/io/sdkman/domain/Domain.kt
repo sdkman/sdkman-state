@@ -2,6 +2,7 @@
 
 package io.sdkman.domain
 
+import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.firstOrNone
@@ -46,5 +47,19 @@ enum class Platform(val platformId: String) {
         fun findByPlatformId(platformId: String): Platform =
             Platform.entries.firstOrNone { it.platformId == platformId }.getOrElse { UNIVERSAL }
     }
+}
+
+data class DatabaseFailure(
+    override val message: String, 
+    override val cause: Throwable
+): Throwable()
+
+enum class HealthStatus {
+    SUCCESS,
+    FAILURE
+}
+
+interface HealthRepository {
+    suspend fun checkDatabaseConnection(): Either<DatabaseFailure, Unit>
 }
 

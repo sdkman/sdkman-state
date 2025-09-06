@@ -16,5 +16,7 @@ fun Application.module() {
     configureHTTP(appConfig.apiCacheConfig)
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
+
+    //TODO: Instantiate the HealthRepository here and inject
     configureRouting(VersionsRepository())
 }

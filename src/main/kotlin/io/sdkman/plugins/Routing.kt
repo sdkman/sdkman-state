@@ -8,9 +8,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
+import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.validation.VersionValidator
 import kotlinx.serialization.Serializable
@@ -21,7 +23,16 @@ data class ErrorResponse(
     val message: String
 )
 
+@Serializable
+data class HealthCheckResponse(
+    val status: HealthStatus,
+    val message: String? = null
+)
+
+//TODO: Inject HealthRepository by interface
 fun Application.configureRouting(repo: VersionsRepository) {
+    //TODO: use dependency injection like VersionRepository
+    val healthRepo = HealthRepositoryImpl()
 
     fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
         when (this.queryParameters["visible"].toOption()) {
@@ -32,6 +43,23 @@ fun Application.configureRouting(repo: VersionsRepository) {
         }
 
     routing {
+        get("/meta/health") {
+            healthRepo.checkDatabaseConnection()
+                .fold(
+                    { failure ->
+                        call.respond(
+                            HttpStatusCode.ServiceUnavailable,
+                            HealthCheckResponse(HealthStatus.FAILURE, failure.message)
+                        )
+                    },
+                    {
+                        call.respond(
+                            HttpStatusCode.OK,
+                            HealthCheckResponse(HealthStatus.SUCCESS, null)
+                        )
+                    }
+                )
+        }
         get("/versions/{candidate}") {
             option {
                 val candidateId = call.parameters["candidate"].toOption()
