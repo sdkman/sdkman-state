@@ -16,7 +16,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 2: Optimize HealthRepository Database Query
 
-- [ ] Replace versions table usage with proper SELECT 1 query for health checks
+- [X] Replace versions table usage with proper SELECT 1 query for health checks
 
 **Prompt**: Optimize the HealthRepository implementation to address the TODO comment in `src/main/kotlin/io/sdkman/repos/HealthRepository.kt` at line 13. Replace the current approach that uses the versions table with a proper `SELECT 1` query using Exposed SQL strings as documented at https://www.jetbrains.com/help/exposed/working-with-sql-strings.html. The health check should not depend on any application tables and should use a simple database connectivity test instead.
 
