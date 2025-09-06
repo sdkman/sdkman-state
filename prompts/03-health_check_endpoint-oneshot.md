@@ -22,12 +22,11 @@ Implement a deep health check endpoint that validates the service's connectivity
 ## Domain
 
 ```kotlin
-// Health check response model
-data class HealthCheckResponse(
-    val status: HealthStatus,
-    //This field to be excluded if None
-    val message: Option<String> = None
-)
+// Database failure domain model
+data class DatabaseFailure(
+    override val message: String, 
+    override val cause: Throwable
+): Throwable()
 
 enum class HealthStatus {
     SUCCESS,
@@ -36,8 +35,18 @@ enum class HealthStatus {
 
 // Repository interface for health checks
 interface HealthRepository {
-    suspend fun checkDatabaseConnection(): Boolean
+    suspend fun checkDatabaseConnection(): Either<DatabaseFailure, Unit>
 }
+```
+
+Health check response DTO (lives in routing layer, not domain):
+
+```kotlin
+@Serializable
+data class HealthCheckResponse(
+    val status: HealthStatus,
+    val message: String?
+)
 ```
 
 ## Testing Considerations
@@ -56,6 +65,10 @@ interface HealthRepository {
 - Leverage existing database connection setup from `plugins/Databases.kt`
 - Keep implementation simple and focused on core functionality
 - Follow existing architectural patterns and code organization
+- HealthCheckResponse is a DTO that should live in the routing layer, not the domain
+- Use Either<DatabaseFailure, Unit> pattern for repository return types
+- Implement SELECT 1 query using proper Exposed SQL syntax (not using VersionsRepository)
+- Never use nullable types - always use Arrow Either or Option
 
 ## Specification by Example
 
@@ -104,6 +117,28 @@ Feature: Health Check Endpoint
     And the response body should contain an error message
 ```
 
+## Repository Implementation Example
+
+```kotlin
+class HealthRepositoryImpl : HealthRepository {
+    
+    private suspend fun <T> dbQuery(block: suspend () -> T): T =
+        newSuspendedTransaction(Dispatchers.IO) { block() }
+
+    override fun checkDatabaseConnection(): Either<DatabaseFailure, Unit> = Either.try {
+        dbQuery {
+            // Execute SELECT 1 using Exposed SQL syntax
+            exec("SELECT 1") { rs ->
+                rs.next() && rs.getInt(1) == 1
+            }
+            Unit
+        }
+    }.mapLeft {
+        // transform exception
+    }
+}
+```
+
 ## Extra Considerations
 
 - Keep the database query lightweight (`SELECT 1`) to minimize resource usage
@@ -111,6 +146,8 @@ Feature: Health Check Endpoint
 - Ensure the endpoint responds quickly (within reasonable timeout limits)
 - Follow existing error handling patterns in the codebase
 - Use existing database connection configuration and connection pool
+- Repository should return Either<DatabaseFailure, Unit> and handle all exceptions
+- Routing handler should map Either results to appropriate HTTP status codes
 
 ## Verification
 
