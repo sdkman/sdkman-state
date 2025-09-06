@@ -6,7 +6,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 1: Implement Dependency Injection for HealthRepository
 
-- [ ] Refactor dependency injection to properly inject HealthRepository interface
+- [X] Refactor dependency injection to properly inject HealthRepository interface
 
 **Prompt**: Refactor the dependency injection pattern for HealthRepository to follow the same pattern as VersionsRepository. Address the TODO comments in `src/main/kotlin/io/sdkman/Application.kt` at line 20, `src/main/kotlin/io/sdkman/plugins/Routing.kt` at line 32, and line 34. The changes should: (1) Instantiate the HealthRepository in the Application.kt file and pass it to configureRouting function, (2) Update the configureRouting function signature to accept HealthRepository by interface rather than instantiating HealthRepositoryImpl directly, and (3) Remove the direct instantiation of HealthRepositoryImpl from the routing configuration. Follow the existing dependency injection pattern used for VersionsRepository.
 

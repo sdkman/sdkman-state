@@ -12,7 +12,7 @@ import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
-import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.domain.HealthRepository
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.validation.VersionValidator
 import kotlinx.serialization.Serializable
@@ -29,10 +29,7 @@ data class HealthCheckResponse(
     val message: String? = null
 )
 
-//TODO: Inject HealthRepository by interface
-fun Application.configureRouting(repo: VersionsRepository) {
-    //TODO: use dependency injection like VersionRepository
-    val healthRepo = HealthRepositoryImpl()
+fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRepository) {
 
     fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
         when (this.queryParameters["visible"].toOption()) {

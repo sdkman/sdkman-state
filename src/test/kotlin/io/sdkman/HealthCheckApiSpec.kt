@@ -16,6 +16,7 @@ import io.sdkman.plugins.HealthCheckResponse
 import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.support.withCleanDatabase
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.fail
@@ -28,7 +29,7 @@ class HealthCheckApiSpec : ShouldSpec({
                 application {
                     val dbConfig = configureAppConfig(environment).databaseConfig
                     configureDatabase(dbConfig)
-                    configureRouting(VersionsRepository())
+                    configureRouting(VersionsRepository(), HealthRepositoryImpl())
                 }
 
                 client.get("/meta/health").apply {
@@ -50,7 +51,7 @@ class HealthCheckApiSpec : ShouldSpec({
                 val dbConfig = configureAppConfig(environment).databaseConfig
                 val badDbConfig = dbConfig.copy(port = 9999)
                 configureDatabase(badDbConfig)
-                configureRouting(VersionsRepository())
+                configureRouting(VersionsRepository(), HealthRepositoryImpl())
             }
 
             client.get("/meta/health").apply {
