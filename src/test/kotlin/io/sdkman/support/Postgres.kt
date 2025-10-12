@@ -10,8 +10,10 @@ import kotlinx.coroutines.runBlocking
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
 
 const val dbHost = "localhost"
 const val dbPort = 5432
@@ -28,6 +30,7 @@ private object Versions : IntIdTable(name = "versions") {
     val md5sum = varchar("md5_sum", length = 32).nullable()
     val sha256sum = varchar("sha_256_sum", length = 64).nullable()
     val sha512sum = varchar("sha_512_sum", length = 128).nullable()
+    val lastUpdatedAt = timestamp("last_updated_at")
 }
 
 fun insertVersions(vararg cvs: Version) = transaction {
@@ -73,6 +76,18 @@ fun selectVersion(candidate: String, version: String, vendor: Option<String>, pl
         }.firstOrNone()
     }
 
+fun selectLastUpdatedAt(candidate: String, version: String, vendor: Option<String>, platform: Platform): Instant? =
+    dbQuery {
+        Versions.select {
+            (Versions.candidate eq candidate) and
+                    (Versions.version eq version) and
+                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it }) and
+                    (Versions.platform eq platform.name)
+        }.map {
+            it[Versions.lastUpdatedAt]
+        }.firstOrNull()
+    }
+
 private fun initialisePostgres() =
     Database.connect(
         url = "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2",
@@ -87,8 +102,8 @@ private fun initialisePostgres() =
         ).load().migrate()
     }
 
-fun withCleanDatabase(fn: () -> Unit) {
+fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()
     transaction { Versions.deleteAll() }
-    fn()
+    runBlocking { fn() }
 }

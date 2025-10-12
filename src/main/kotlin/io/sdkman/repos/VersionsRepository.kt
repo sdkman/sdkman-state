@@ -13,8 +13,10 @@ import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.javatime.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.Instant
 
 class VersionsRepository {
 
@@ -28,6 +30,7 @@ class VersionsRepository {
         val md5sum = varchar("md5_sum", length = 32).nullable()
         val sha256sum = varchar("sha_256_sum", length = 64).nullable()
         val sha512sum = varchar("sha_512_sum", length = 128).nullable()
+        val lastUpdatedAt = timestamp("last_updated_at")
     }
 
     private suspend fun <T> dbQuery(block: suspend () -> T): T =
@@ -97,6 +100,7 @@ class VersionsRepository {
                     it[md5sum] = cv.md5sum.getOrNull()
                     it[sha256sum] = cv.sha256sum.getOrNull()
                     it[sha512sum] = cv.sha512sum.getOrNull()
+                    it[lastUpdatedAt] = Instant.now()
                 }.let { Unit.right() }
             }.getOrElse {
                 Versions.insert {
