@@ -96,6 +96,10 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
         authenticate("auth-basic") {
             post("/versions") {
                 val version = call.receive<Version>()
+                application.log.info(
+                    "Received POST for new version release: candidate=${version.candidate}, " +
+                    "version=${version.version}, platform=${version.platform}, vendor=${version.vendor.getOrElse { "none" }}"
+                )
                 VersionValidator.validateVersion(version)
                     .map { validVersion ->
                         repo.create(validVersion)
