@@ -43,7 +43,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response1.status shouldBe HttpStatusCode.Companion.Created
+                response1.status shouldBe HttpStatusCode.NoContent
 
                 // Second POST (idempotent)
                 val response2 = client.post("/versions") {
@@ -51,7 +51,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response2.status shouldBe HttpStatusCode.Companion.Created
+                response2.status shouldBe HttpStatusCode.NoContent
             }
             // Verify version exists in database
             selectVersion(
@@ -92,7 +92,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(originalVersion.toJsonString())
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response1.status shouldBe HttpStatusCode.Companion.Created
+                response1.status shouldBe HttpStatusCode.NoContent
 
                 // Second POST with different data (overwrite)
                 val response2 = client.post("/versions") {
@@ -100,7 +100,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(updatedVersion.toJsonString())
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response2.status shouldBe HttpStatusCode.Companion.Created
+                response2.status shouldBe HttpStatusCode.NoContent
             }
             // Verify the updated version is stored
             selectVersion(
@@ -131,7 +131,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response1.status shouldBe HttpStatusCode.Companion.Created
+                response1.status shouldBe HttpStatusCode.NoContent
 
                 // Second POST (idempotent)
                 val response2 = client.post("/versions") {
@@ -139,7 +139,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response2.status shouldBe HttpStatusCode.Companion.Created
+                response2.status shouldBe HttpStatusCode.NoContent
             }
             // Verify version exists in database
             selectVersion(

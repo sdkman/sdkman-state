@@ -40,7 +40,7 @@ class PostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.Created
+                response.status shouldBe HttpStatusCode.NoContent
             }
             selectVersion(
                 candidate = version.candidate,
@@ -69,7 +69,7 @@ class PostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.Created
+                response.status shouldBe HttpStatusCode.NoContent
             }
             selectVersion(
                 candidate = version.candidate,

@@ -103,7 +103,7 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                 VersionValidator.validateVersion(version)
                     .map { validVersion ->
                         repo.create(validVersion)
-                            .map { call.respond(HttpStatusCode.Created) }
+                            .map { call.respond(HttpStatusCode.NoContent) }
                             .getOrElse { error ->
                                 val errorResponse = ErrorResponse("Database error", error)
                                 call.respond(HttpStatusCode.InternalServerError, errorResponse)
