@@ -19,6 +19,9 @@ jobs:
       - name: Log in to DigitalOcean Docker Registry
         run: |
           doctl registry login
+      - name: Run tests
+        run: |
+          ./gradlew test
       - name: Build and publish Docker image locally
         run: |
           ./gradlew publishImageToLocalRegistry
