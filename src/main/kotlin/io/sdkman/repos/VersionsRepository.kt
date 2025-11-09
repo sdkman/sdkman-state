@@ -43,7 +43,7 @@ class VersionsRepository {
                 version = it[Versions.version],
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
-                visible = it[Versions.visible],
+                visible = it[Versions.visible].toOption(),
                 vendor = it[Versions.vendor].toOption(),
                 md5sum = it[Versions.md5sum].toOption(),
                 sha256sum = it[Versions.sha256sum].toOption(),
@@ -82,6 +82,8 @@ class VersionsRepository {
     }
 
     fun create(cv: Version): Either<String, Unit> = transaction {
+        val visible = cv.visible.getOrElse { true }
+
         Versions.select {
             (Versions.candidate eq cv.candidate) and
                     (Versions.version eq cv.version) and
@@ -96,7 +98,7 @@ class VersionsRepository {
                             (Versions.platform eq cv.platform.name)
                 }) {
                     it[url] = cv.url
-                    it[visible] = cv.visible
+                    it[this.visible] = visible
                     it[md5sum] = cv.md5sum.getOrNull()
                     it[sha256sum] = cv.sha256sum.getOrNull()
                     it[sha512sum] = cv.sha512sum.getOrNull()
@@ -109,7 +111,7 @@ class VersionsRepository {
                     it[vendor] = cv.vendor.getOrNull()
                     it[platform] = cv.platform.name
                     it[url] = cv.url
-                    it[visible] = cv.visible
+                    it[this.visible] = visible
                     it[md5sum] = cv.md5sum.getOrNull()
                     it[sha256sum] = cv.sha256sum.getOrNull()
                     it[sha512sum] = cv.sha512sum.getOrNull()

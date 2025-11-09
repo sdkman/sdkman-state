@@ -29,7 +29,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             version = "17.0.2",
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.2-original",
-            visible = true,
+            visible = true.some(),
             vendor = "temurin".some(),
             md5sum = "original-hash".some()
         )
@@ -69,7 +69,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             version = "17.0.3",
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.3-original",
-            visible = true,
+            visible = true.some(),
             vendor = "temurin".some(),
             md5sum = "original-hash".some()
         )
@@ -79,7 +79,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             version = "17.0.3",
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.3-updated",
-            visible = false,
+            visible = false.some(),
             vendor = "temurin".some(),
             sha256sum = "updated-hash".some()
         )
@@ -118,7 +118,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             version = "3.2.0",
             platform = Platform.UNIVERSAL,
             url = "https://scala-3.2.0",
-            visible = true,
+            visible = true.some(),
             vendor = None
         )
         val requestBody = version.toJsonString()

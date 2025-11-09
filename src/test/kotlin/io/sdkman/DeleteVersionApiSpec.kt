@@ -36,7 +36,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     version = version,
                     platform = platform,
                     url = "https://java-17.0.1-tem",
-                    visible = true,
+                    visible = true.some(),
                     vendor = vendor.some(),
                     md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
                 )
@@ -72,7 +72,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     version = version,
                     platform = platform,
                     url = "https://scala-3.1.2-linux-x64",
-                    visible = true,
+                    visible = true.some(),
                     vendor = None
                 )
             )
@@ -237,7 +237,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     version = version,
                     platform = platform,
                     url = "https://kotlin-1.9.0-linux",
-                    visible = true,
+                    visible = true.some(),
                     vendor = vendor.some(),
                     sha256sum = "kotlin-hash".some()
                 )

@@ -25,7 +25,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "21.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-21.0.1",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some(),
                 md5sum = "abc123".some()
             )
@@ -51,7 +51,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "3.3.1",
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
-                visible = true,
+                visible = true.some(),
                 vendor = None
             )
 
@@ -76,14 +76,14 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "1.9.0",
                 platform = Platform.UNIVERSAL,
                 url = "https://kotlin-1.9.0-original",
-                visible = true,
+                visible = true.some(),
                 vendor = "jetbrains".some(),
                 md5sum = "original-hash".some()
             )
 
             val updatedVersion = originalVersion.copy(
                 url = "https://kotlin-1.9.0-updated",
-                visible = false,
+                visible = false.some(),
                 md5sum = None,
                 sha256sum = "new-hash".some()
             )
@@ -109,7 +109,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "4.0.0",
                 platform = Platform.UNIVERSAL,
                 url = "https://groovy-4.0.0-original",
-                visible = true,
+                visible = true.some(),
                 vendor = None
             )
 
@@ -153,7 +153,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
             val version2 = Version(
@@ -161,7 +161,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "21.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-21.0.1",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
 
@@ -189,7 +189,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-linux",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
             val macVersion = Version(
@@ -197,7 +197,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.MAC_ARM64,
                 url = "https://java-17.0.1-mac",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
 
@@ -224,7 +224,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-temurin",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
             val zulu = Version(
@@ -232,7 +232,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-zulu",
-                visible = true,
+                visible = true.some(),
                 vendor = "zulu".some()
             )
 
@@ -259,7 +259,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
             val hiddenVersion = Version(
@@ -267,7 +267,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "18.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-18.0.1",
-                visible = false,
+                visible = false.some(),
                 vendor = "temurin".some()
             )
 
@@ -321,7 +321,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "1.9.0",
                 platform = Platform.UNIVERSAL,
                 url = "https://kotlin-1.9.0",
-                visible = true,
+                visible = true.some(),
                 vendor = "jetbrains".some()
             )
 
@@ -346,7 +346,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "3.3.1",
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
-                visible = true,
+                visible = true.some(),
                 vendor = None
             )
 
@@ -388,7 +388,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
-                visible = true,
+                visible = true.some(),
                 vendor = "temurin".some()
             )
 
@@ -422,7 +422,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 version = "3.3.1",
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
-                visible = true,
+                visible = true.some(),
                 vendor = None
             )
 

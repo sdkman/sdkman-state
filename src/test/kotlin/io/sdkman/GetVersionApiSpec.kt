@@ -24,7 +24,7 @@ class GetVersionApiSpec : ShouldSpec({
             version = "2.1.0",
             platform = Platform.UNIVERSAL,
             url = "https://kotlin-2.1.0-tem",
-            visible = true,
+            visible = true.some(),
             vendor = None
         )
 
@@ -45,7 +45,7 @@ class GetVersionApiSpec : ShouldSpec({
             version = "21.0.1",
             platform = Platform.MAC_X64,
             url = "https://java-21.0.1-mac-x64",
-            visible = true,
+            visible = true.some(),
             vendor = "temurin".some()
         )
 
@@ -66,7 +66,7 @@ class GetVersionApiSpec : ShouldSpec({
             version = "3.1.2",
             platform = Platform.UNIVERSAL,
             url = "https://scala-3.1.2",
-            visible = true,
+            visible = true.some(),
             vendor = None
         )
 

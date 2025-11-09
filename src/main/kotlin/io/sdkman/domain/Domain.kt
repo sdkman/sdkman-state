@@ -17,7 +17,7 @@ data class Version(
     val version: String,
     val platform: Platform,
     val url: String,
-    val visible: Boolean,
+    val visible: Option<Boolean> = None,
     val vendor: Option<String> = None,
     val md5sum: Option<String> = None,
     val sha256sum: Option<String> = None,

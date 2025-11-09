@@ -4,6 +4,7 @@ import arrow.core.None
 import arrow.core.Some
 import arrow.core.left
 import arrow.core.right
+import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.sdkman.domain.Platform
@@ -19,7 +20,7 @@ class VersionValidatorSpec : ShouldSpec({
                 version = "3.9.0",
                 platform = Platform.UNIVERSAL,
                 url = "https://example.com/maven-3.9.0.zip",
-                visible = true,
+                visible = true.some(),
                 vendor = None
             )
             
@@ -32,7 +33,7 @@ class VersionValidatorSpec : ShouldSpec({
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
+                visible = true.some(),
                 vendor = Some("tem")
             )
             
@@ -45,7 +46,7 @@ class VersionValidatorSpec : ShouldSpec({
                 version = "17.0.1-tem",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
+                visible = true.some(),
                 vendor = Some("tem")
             )
             
@@ -60,7 +61,7 @@ class VersionValidatorSpec : ShouldSpec({
                 version = "17.0.1- tem",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
+                visible = true.some(),
                 vendor = Some(" tem")
             )
             
@@ -74,7 +75,7 @@ class VersionValidatorSpec : ShouldSpec({
                 version = "17.0.1-te.m",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
-                visible = true,
+                visible = true.some(),
                 vendor = Some("te.m")
             )
             

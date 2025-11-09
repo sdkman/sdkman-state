@@ -2,6 +2,7 @@ package io.sdkman.support
 
 import arrow.core.Option
 import arrow.core.firstOrNone
+import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
@@ -41,7 +42,7 @@ fun insertVersions(vararg cvs: Version) = transaction {
             it[platform] = cv.platform.name
             it[vendor] = cv.vendor.getOrNull()
             it[url] = cv.url
-            it[visible] = cv.visible
+            it[visible] = cv.visible.getOrElse { true }
             it[md5sum] = cv.md5sum.getOrNull()
             it[sha256sum] = cv.sha256sum.getOrNull()
             it[sha512sum] = cv.sha512sum.getOrNull()
@@ -68,7 +69,7 @@ fun selectVersion(candidate: String, version: String, vendor: Option<String>, pl
                 vendor = it[Versions.vendor].toOption(),
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
-                visible = it[Versions.visible],
+                visible = it[Versions.visible].toOption(),
                 md5sum = it[Versions.md5sum].toOption(),
                 sha256sum = it[Versions.sha256sum].toOption(),
                 sha512sum = it[Versions.sha512sum].toOption()

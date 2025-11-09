@@ -27,7 +27,7 @@ class PostVersionApiSpec : ShouldSpec({
             version = "17.0.1",
             platform = Platform.MAC_X64,
             url = "https://java-17.0.1-tem",
-            visible = true,
+            visible = true.some(),
             vendor = "temurin".some(),
             md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
         )
@@ -57,7 +57,7 @@ class PostVersionApiSpec : ShouldSpec({
             version = "3.9.0",
             platform = Platform.UNIVERSAL,
             url = "https://example.com/maven-3.9.0.zip",
-            visible = true,
+            visible = true.some(),
             vendor = None
         )
         val requestBody = version.toJsonString()
@@ -86,7 +86,7 @@ class PostVersionApiSpec : ShouldSpec({
             version = "17.0.1-tem",
             platform = Platform.LINUX_X64,
             url = "https://example.com/java-17.0.1.tar.gz",
-            visible = true,
+            visible = true.some(),
             vendor = "tem".some()
         )
         val requestBody = version.toJsonString()
