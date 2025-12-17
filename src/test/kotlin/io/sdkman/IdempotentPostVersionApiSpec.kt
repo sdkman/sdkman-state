@@ -11,6 +11,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.support.selectVersion
@@ -30,7 +31,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.2-original",
             visible = true.some(),
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             md5sum = "original-hash".some()
         )
         val requestBody = version.toJsonString()
@@ -57,7 +58,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }
@@ -70,7 +71,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.3-original",
             visible = true.some(),
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             md5sum = "original-hash".some()
         )
 
@@ -80,7 +81,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             platform = Platform.LINUX_X64,
             url = "https://java-17.0.3-updated",
             visible = false.some(),
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             sha256sum = "updated-hash".some()
         )
 
@@ -106,20 +107,20 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             selectVersion(
                 candidate = updatedVersion.candidate,
                 version = updatedVersion.version,
-                vendor = updatedVersion.vendor,
+                distribution = updatedVersion.distribution,
                 platform = updatedVersion.platform
             ) shouldBe updatedVersion.some()
         }
     }
 
-    should("POST be idempotent for version without vendor") {
+    should("POST be idempotent for version without distribution") {
         val version = Version(
             candidate = "scala",
             version = "3.2.0",
             platform = Platform.UNIVERSAL,
             url = "https://scala-3.2.0",
             visible = true.some(),
-            vendor = None
+            distribution = None
         )
         val requestBody = version.toJsonString()
 
@@ -145,7 +146,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }

@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders.Authorization
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.support.selectVersion
@@ -26,7 +27,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             platform = Platform.LINUX_X64,
             url = "https://example.com/java-17.0.1.tar.gz",
             visible = true.some(),
-            vendor = "temurin".some()
+            distribution = Distribution.TEMURIN.some()
         )
         val requestBody = version.toJsonString()
 
@@ -42,7 +43,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }
@@ -55,7 +56,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             platform = Platform.LINUX_X64,
             url = "https://example.com/java-17.0.2.tar.gz",
             visible = false.some(),
-            vendor = "temurin".some()
+            distribution = Distribution.TEMURIN.some()
         )
         val requestBody = version.toJsonString()
 
@@ -71,7 +72,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }
@@ -99,7 +100,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             val storedVersion = selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             )
             storedVersion shouldBe version.copy(visible = true.some()).some()
@@ -139,7 +140,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             selectVersion(
                 candidate = initialVersion.candidate,
                 version = initialVersion.version,
-                vendor = initialVersion.vendor,
+                distribution = initialVersion.distribution,
                 platform = initialVersion.platform
             ) shouldBe initialVersion.copy(visible = false.some()).some()
         }
@@ -178,7 +179,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             selectVersion(
                 candidate = initialVersion.candidate,
                 version = initialVersion.version,
-                vendor = initialVersion.vendor,
+                distribution = initialVersion.distribution,
                 platform = initialVersion.platform
             ) shouldBe initialVersion.copy(visible = true.some()).some()
         }
@@ -217,7 +218,7 @@ class PostVersionVisibilitySpec : ShouldSpec({
             selectVersion(
                 candidate = initialVersion.candidate,
                 version = initialVersion.version,
-                vendor = initialVersion.vendor,
+                distribution = initialVersion.distribution,
                 platform = initialVersion.platform
             ) shouldBe initialVersion.copy(visible = true.some()).some()
         }

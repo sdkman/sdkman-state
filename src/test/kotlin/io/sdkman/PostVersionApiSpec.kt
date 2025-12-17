@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.HttpHeaders.Authorization
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.support.selectVersion
@@ -21,14 +22,14 @@ private const val BasicAuthHeader = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 class PostVersionApiSpec : ShouldSpec({
 
-    should("POST a new version for a candidate, platform and vendor") {
+    should("POST a new version for a candidate, platform and distribution") {
         val version = Version(
             candidate = "java",
             version = "17.0.1",
             platform = Platform.MAC_X64,
             url = "https://java-17.0.1-tem",
             visible = true.some(),
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
         )
         val requestBody = version.toJsonString()
@@ -45,20 +46,20 @@ class PostVersionApiSpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }
     }
 
-    should("POST a new version without vendor") {
+    should("POST a new version without distribution") {
         val version = Version(
             candidate = "maven",
             version = "3.9.0",
             platform = Platform.UNIVERSAL,
             url = "https://example.com/maven-3.9.0.zip",
             visible = true.some(),
-            vendor = None
+            distribution = None
         )
         val requestBody = version.toJsonString()
 
@@ -74,20 +75,20 @@ class PostVersionApiSpec : ShouldSpec({
             selectVersion(
                 candidate = version.candidate,
                 version = version.version,
-                vendor = version.vendor,
+                distribution = version.distribution,
                 platform = version.platform
             ) shouldBe version.some()
         }
     }
 
-    should("return 400 Bad Request when version contains vendor suffix") {
+    should("return 400 Bad Request when version contains distribution suffix") {
         val version = Version(
             candidate = "java",
             version = "17.0.1-tem",
             platform = Platform.LINUX_X64,
             url = "https://example.com/java-17.0.1.tar.gz",
             visible = true.some(),
-            vendor = "tem".some()
+            distribution = Distribution.TEMURIN.some()
         )
         val requestBody = version.toJsonString()
 
@@ -99,7 +100,32 @@ class PostVersionApiSpec : ShouldSpec({
                     header(Authorization, BasicAuthHeader)
                 }
                 response.status shouldBe HttpStatusCode.BadRequest
-                response.bodyAsText() shouldContain "Version '17.0.1-tem' should not contain vendor 'tem' suffix"
+                response.bodyAsText() shouldContain "Version '17.0.1-tem' should not contain distribution 'tem' suffix"
+            }
+        }
+    }
+
+    should("return 400 Bad Request when distribution value is invalid") {
+        val requestBody = """
+            {
+                "candidate": "java",
+                "version": "17.0.1",
+                "platform": "LINUX_X64",
+                "url": "https://example.com/java.tar.gz",
+                "visible": true,
+                "distribution": "INVALID_DISTRO"
+            }
+        """.trimIndent()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+                response.bodyAsText() shouldContain "Invalid request"
             }
         }
     }

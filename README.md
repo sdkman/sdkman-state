@@ -129,19 +129,19 @@ ORDER BY downloads DESC;
 
 ### Vendor Popularity Comparison by Platform (Java Distributions)
 ```sql
-SELECT vendor,
+SELECT distribution,
        platform,
        COUNT(*) as downloads,
        COUNT(DISTINCT DATE_TRUNC('day', timestamp)) as days_active
 FROM audit
 WHERE candidate = 'java'
   AND platform = 'LINUX_X64'
-  AND vendor IS NOT NULL
+  AND distribution IS NOT NULL
   AND timestamp > NOW() - INTERVAL '6 months'
-GROUP BY vendor, platform
+GROUP BY distribution, platform
 ORDER BY downloads DESC;
 ```
-*Uses index:* `idx_audit_candidate_platform_vendor_timestamp`
+*Uses index:* `idx_audit_candidate_platform_distribution_timestamp`
 
 ### Most Active Users by Host (Top 20)
 ```sql

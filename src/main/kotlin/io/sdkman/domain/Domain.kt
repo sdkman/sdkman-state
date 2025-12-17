@@ -18,7 +18,7 @@ data class Version(
     val platform: Platform,
     val url: String,
     val visible: Option<Boolean> = None,
-    val vendor: Option<String> = None,
+    val distribution: Option<Distribution> = None,
     val md5sum: Option<String> = None,
     val sha256sum: Option<String> = None,
     val sha512sum: Option<String> = None,
@@ -28,9 +28,29 @@ data class Version(
 data class UniqueVersion(
     val candidate: String,
     val version: String,
-    val vendor: Option<String>,
+    val distribution: Option<Distribution>,
     val platform: Platform,
 )
+
+@Serializable
+enum class Distribution {
+    BISHENG,
+    CORRETTO,
+    GRAALCE,
+    GRAALVM,
+    JETBRAINS,
+    KONA,
+    LIBERICA,
+    LIBERICA_NIK,
+    MANDREL,
+    MICROSOFT,
+    OPENJDK,
+    ORACLE,
+    SAP_MACHINE,
+    SEMERU,
+    TEMURIN,
+    ZULU
+}
 
 enum class Platform(val platformId: String) {
     LINUX_X32("linuxx32"),

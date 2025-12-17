@@ -4,8 +4,11 @@ import arrow.core.None
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
@@ -16,16 +19,16 @@ private const val BasicAuthHeader = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 class DeleteVersionApiSpec : ShouldSpec({
 
-    should("DELETE a version for a candidate, platform and vendor") {
+    should("DELETE a version for a candidate, platform and distribution") {
         val candidate = "java"
         val version = "17.0.1"
-        val vendor = "temurin"
+        val distribution = Distribution.TEMURIN
         val platform = Platform.MAC_X64
 
         val requestBody = UniqueVersion(
             candidate = candidate,
             version = version,
-            vendor = vendor.some(),
+            distribution = distribution.some(),
             platform = platform,
         ).toJsonString()
 
@@ -37,7 +40,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     platform = platform,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
-                    vendor = vendor.some(),
+                    distribution = distribution.some(),
                     md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some()
                 )
             )
@@ -49,11 +52,11 @@ class DeleteVersionApiSpec : ShouldSpec({
                 }
                 response.status shouldBe HttpStatusCode.NoContent
             }
-            selectVersion(candidate, version, vendor.some(), platform) shouldBe None
+            selectVersion(candidate, version, distribution.some(), platform) shouldBe None
         }
     }
 
-    should("DELETE a version for a candidate with platform and NO vendor") {
+    should("DELETE a version for a candidate with platform and NO distribution") {
         val candidate = "scala"
         val version = "3.1.2"
         val platform = Platform.LINUX_X64
@@ -61,7 +64,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val requestBody = UniqueVersion(
             candidate = candidate,
             version = version,
-            vendor = None,
+            distribution =None,
             platform = platform,
         ).toJsonString()
 
@@ -73,7 +76,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     platform = platform,
                     url = "https://scala-3.1.2-linux-x64",
                     visible = true.some(),
-                    vendor = None
+                    distribution =None
                 )
             )
             withTestApplication {
@@ -89,7 +92,7 @@ class DeleteVersionApiSpec : ShouldSpec({
     }
 
     should("return BAD_REQUEST for UniqueVersion validation failure") {
-        val invalidRequestBody = """{"candidate":"","version":"1.0.0","vendor":null,"platform":"UNIVERSAL"}"""
+        val invalidRequestBody = """{"candidate":"","version":"1.0.0","distribution":null,"platform":"UNIVERSAL"}"""
 
         withCleanDatabase {
             withTestApplication {
@@ -107,7 +110,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val requestBody = UniqueVersion(
             candidate = "java",
             version = "17.0.1",
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             platform = Platform.MAC_X64
         ).toJsonString()
 
@@ -126,7 +129,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val invalidRequestBody = UniqueVersion(
             candidate = "",
             version = "1.0.0",
-            vendor = None,
+            distribution =None,
             platform = Platform.UNIVERSAL
         ).toJsonString()
 
@@ -146,7 +149,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val invalidRequestBody = UniqueVersion(
             candidate = "java",
             version = "",
-            vendor = None,
+            distribution =None,
             platform = Platform.UNIVERSAL
         ).toJsonString()
 
@@ -162,11 +165,11 @@ class DeleteVersionApiSpec : ShouldSpec({
         }
     }
 
-    should("return BAD_REQUEST for UniqueVersion with vendor suffix in version") {
+    should("return BAD_REQUEST for UniqueVersion with distribution suffix in version") {
         val invalidRequestBody = UniqueVersion(
             candidate = "java",
             version = "17.0.1-temurin",
-            vendor = "temurin".some(),
+            distribution = Distribution.TEMURIN.some(),
             platform = Platform.MAC_X64
         ).toJsonString()
 
@@ -186,7 +189,7 @@ class DeleteVersionApiSpec : ShouldSpec({
         val requestBody = UniqueVersion(
             candidate = "nonexistent",
             version = "1.0.0",
-            vendor = None,
+            distribution =None,
             platform = Platform.UNIVERSAL
         ).toJsonString()
 
@@ -220,13 +223,13 @@ class DeleteVersionApiSpec : ShouldSpec({
     should("return 204 NO_CONTENT for successful deletion of existing version") {
         val candidate = "kotlin"
         val version = "1.9.0"
-        val vendor = "jetbrains"
+        val distribution = Distribution.JETBRAINS
         val platform = Platform.LINUX_X64
 
         val requestBody = UniqueVersion(
             candidate = candidate,
             version = version,
-            vendor = vendor.some(),
+            distribution = distribution.some(),
             platform = platform,
         ).toJsonString()
 
@@ -238,7 +241,7 @@ class DeleteVersionApiSpec : ShouldSpec({
                     platform = platform,
                     url = "https://kotlin-1.9.0-linux",
                     visible = true.some(),
-                    vendor = vendor.some(),
+                    distribution = distribution.some(),
                     sha256sum = "kotlin-hash".some()
                 )
             )
@@ -250,15 +253,15 @@ class DeleteVersionApiSpec : ShouldSpec({
                 }
                 response.status shouldBe HttpStatusCode.NoContent
             }
-            selectVersion(candidate, version, vendor.some(), platform) shouldBe None
+            selectVersion(candidate, version, distribution.some(), platform) shouldBe None
         }
     }
 
-    should("return 404 NOT_FOUND when attempting to delete non-existent version with vendor") {
+    should("return 404 NOT_FOUND when attempting to delete non-existent version with distribution") {
         val requestBody = UniqueVersion(
             candidate = "gradle",
             version = "8.0.0",
-            vendor = "gradle-inc".some(),
+            distribution = Distribution.GRAALVM.some(),
             platform = Platform.UNIVERSAL
         ).toJsonString()
 
@@ -270,6 +273,29 @@ class DeleteVersionApiSpec : ShouldSpec({
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
                 response.status shouldBe HttpStatusCode.NotFound
+            }
+        }
+    }
+
+    should("return 400 Bad Request when distribution value is invalid") {
+        val requestBody = """
+            {
+                "candidate": "java",
+                "version": "17.0.1",
+                "distribution": "INVALID_DISTRO",
+                "platform": "LINUX_X64"
+            }
+        """.trimIndent()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.delete("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(HttpHeaders.Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+                response.bodyAsText() shouldContain "Invalid request"
             }
         }
     }

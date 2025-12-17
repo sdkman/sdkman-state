@@ -7,6 +7,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.support.insertVersions
@@ -25,7 +26,7 @@ class GetVersionApiSpec : ShouldSpec({
             platform = Platform.UNIVERSAL,
             url = "https://kotlin-2.1.0-tem",
             visible = true.some(),
-            vendor = None
+            distribution = None
         )
 
         withCleanDatabase {
@@ -46,13 +47,13 @@ class GetVersionApiSpec : ShouldSpec({
             platform = Platform.MAC_X64,
             url = "https://java-21.0.1-mac-x64",
             visible = true.some(),
-            vendor = "temurin".some()
+            distribution = Distribution.TEMURIN.some()
         )
 
         withCleanDatabase {
             insertVersions(java21MacX64)
             withTestApplication {
-                client.get("/versions/java/21.0.1?platform=darwinx64&vendor=temurin").apply {
+                client.get("/versions/java/21.0.1?platform=darwinx64&distribution=TEMURIN").apply {
                     status shouldBe HttpStatusCode.OK
                     Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe java21MacX64.toJson()
                 }
@@ -60,14 +61,14 @@ class GetVersionApiSpec : ShouldSpec({
         }
     }
 
-    should("GET a version with NO vendor for a candidate") {
+    should("GET a version with NO distribution for a candidate") {
         val scala312Universal = Version(
             candidate = "scala",
             version = "3.1.2",
             platform = Platform.UNIVERSAL,
             url = "https://scala-3.1.2",
             visible = true.some(),
-            vendor = None
+            distribution = None
         )
 
         withCleanDatabase {
@@ -84,14 +85,14 @@ class GetVersionApiSpec : ShouldSpec({
     should("return NOT_FOUND when platform-specific version does not exist") {
         withCleanDatabase {
             withTestApplication {
-                client.get("/versions/java/21.0.1?platform=darwinx64&vendor=temurin").apply {
+                client.get("/versions/java/21.0.1?platform=darwinx64&distribution=TEMURIN").apply {
                     status shouldBe HttpStatusCode.NotFound
                 }
             }
         }
     }
 
-    should("return NOT_FOUND when version with NO vendor does not exist") {
+    should("return NOT_FOUND when version with NO distribution does not exist") {
         withCleanDatabase {
             withTestApplication {
                 client.get("/versions/scala/3.1.2").apply {

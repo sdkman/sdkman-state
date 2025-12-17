@@ -7,6 +7,7 @@ import arrow.core.right
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 
@@ -14,72 +15,71 @@ class VersionValidatorSpec : ShouldSpec({
 
     context("validateVersion") {
         
-        should("accept version with no vendor") {
+        should("accept version with no distribution") {
             val version = Version(
                 candidate = "maven",
                 version = "3.9.0",
                 platform = Platform.UNIVERSAL,
                 url = "https://example.com/maven-3.9.0.zip",
                 visible = true.some(),
-                vendor = None
+                distribution = None
             )
-            
+
             VersionValidator.validateVersion(version) shouldBe version.right()
         }
         
-        should("accept version with vendor when version does not contain vendor suffix") {
+        should("accept version with distribution when version does not contain distribution suffix") {
             val version = Version(
                 candidate = "java",
                 version = "17.0.1",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
                 visible = true.some(),
-                vendor = Some("tem")
+                distribution = Distribution.TEMURIN.some()
             )
-            
+
             VersionValidator.validateVersion(version) shouldBe version.right()
         }
         
-        should("reject version with vendor when version contains vendor suffix") {
+        should("reject version with distribution when version contains distribution suffix") {
             val version = Version(
                 candidate = "java",
                 version = "17.0.1-tem",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
                 visible = true.some(),
-                vendor = Some("tem")
+                distribution = Distribution.TEMURIN.some()
             )
-            
-            val expected = VendorSuffixError("17.0.1-tem", "tem").left()
+
+            val expected = DistributionSuffixError("17.0.1-tem", "tem").left()
             VersionValidator.validateVersion(version) shouldBe expected
         }
 
-        
-        should("reject version with whitespace in vendor names") {
+        should("reject version with tem suffix when using TEMURIN distribution") {
             val version = Version(
                 candidate = "java",
-                version = "17.0.1- tem",
+                version = "17.0.1-tem",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
                 visible = true.some(),
-                vendor = Some(" tem")
+                distribution = Distribution.TEMURIN.some()
             )
-            
-            val expected = VendorSuffixError("17.0.1- tem", " tem").left()
+
+            val expected = DistributionSuffixError("17.0.1-tem", "tem").left()
             VersionValidator.validateVersion(version) shouldBe expected
         }
-        
-        should("reject version with special characters in vendor names") {
+
+        should("reject version with temurin suffix when using TEMURIN distribution") {
             val version = Version(
                 candidate = "java",
-                version = "17.0.1-te.m",
+                version = "17.0.1-temurin",
                 platform = Platform.LINUX_X64,
                 url = "https://example.com/java-17.0.1.tar.gz",
                 visible = true.some(),
-                vendor = Some("te.m")
+                distribution = Distribution.TEMURIN.some()
             )
-            
-            val expected = VendorSuffixError("17.0.1-te.m", "te.m").left()
+
+            val expected = DistributionSuffixError("17.0.1-temurin", "temurin").left()
             VersionValidator.validateVersion(version) shouldBe expected
         }
     }

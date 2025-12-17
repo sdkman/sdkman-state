@@ -8,6 +8,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
@@ -39,6 +40,9 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
             else -> Some(true)
         }
 
+    fun String.toDistribution(): Option<Distribution> =
+        Distribution.entries.firstOrNone { it.name == this }
+
     routing {
         get("/meta/health") {
             healthRepo.checkDatabaseConnection()
@@ -64,8 +68,9 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                 val visible = call.request.visibleQueryParam()
                 val platform = call.request.queryParameters["platform"].toOption()
                     .map { Platform.findByPlatformId(it) }
-                val vendor = call.request.queryParameters["vendor"].toOption()
-                val versions = repo.read(candidateId, platform, vendor, visible)
+                val distribution = call.request.queryParameters["distribution"].toOption()
+                    .flatMap { it.toDistribution() }
+                val versions = repo.read(candidateId, platform, distribution, visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 call.respond(HttpStatusCode.BadRequest)
@@ -80,12 +85,13 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                 val platform = call.request.queryParameters["platform"].toOption()
                     .map { Platform.findByPlatformId(it) }
                     .getOrElse { Platform.UNIVERSAL }
-                val vendor = call.request.queryParameters["vendor"].toOption()
+                val distribution = call.request.queryParameters["distribution"].toOption()
+                    .flatMap { it.toDistribution() }
                 val maybeVersion = repo.read(
                     candidate = candidateId,
                     version = versionId,
                     platform = platform,
-                    vendor = vendor
+                    distribution = distribution
                 )
                 maybeVersion.fold(
                     { call.respond(HttpStatusCode.NotFound) },
@@ -95,38 +101,48 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
         }
         authenticate("auth-basic") {
             post("/versions") {
-                val version = call.receive<Version>()
-                application.log.info(
-                    "Received POST for new version release: candidate=${version.candidate}, " +
-                    "version=${version.version}, platform=${version.platform}, vendor=${version.vendor.getOrElse { "none" }}"
-                )
-                VersionValidator.validateVersion(version)
-                    .map { validVersion ->
-                        repo.create(validVersion)
-                            .map { call.respond(HttpStatusCode.NoContent) }
-                            .getOrElse { error ->
-                                val errorResponse = ErrorResponse("Database error", error)
-                                call.respond(HttpStatusCode.InternalServerError, errorResponse)
-                            }
+                Either.catch { call.receive<Version>() }
+                    .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
+                    .flatMap { version ->
+                        application.log.info(
+                            "Received POST for new version release: candidate=${version.candidate}, " +
+                            "version=${version.version}, platform=${version.platform}, distribution=${version.distribution.getOrElse { "none" }}"
+                        )
+                        VersionValidator.validateVersion(version)
                     }
-                    .getOrElse { error ->
-                        val errorResponse = ErrorResponse("Validation failed", error.message)
-                        call.respond(HttpStatusCode.BadRequest, errorResponse)
-                    }
+                    .fold(
+                        { error ->
+                            val errorResponse = ErrorResponse("Validation failed", error.message)
+                            call.respond(HttpStatusCode.BadRequest, errorResponse)
+                        },
+                        { validVersion ->
+                            repo.create(validVersion)
+                                .map { call.respond(HttpStatusCode.NoContent) }
+                                .getOrElse { error ->
+                                    val errorResponse = ErrorResponse("Database error", error)
+                                    call.respond(HttpStatusCode.InternalServerError, errorResponse)
+                                }
+                        }
+                    )
             }
             delete("/versions") {
-                val uniqueVersion = call.receive<UniqueVersion>()
-                VersionValidator.validateUniqueVersion(uniqueVersion)
-                    .map { validUniqueVersion ->
-                        when (repo.delete(validUniqueVersion)) {
-                            1 -> call.respond(HttpStatusCode.NoContent)
-                            0 -> call.respond(HttpStatusCode.NotFound)
+                Either.catch { call.receive<UniqueVersion>() }
+                    .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
+                    .flatMap { uniqueVersion ->
+                        VersionValidator.validateUniqueVersion(uniqueVersion)
+                    }
+                    .fold(
+                        { error ->
+                            val errorResponse = ErrorResponse("Validation failed", error.message)
+                            call.respond(HttpStatusCode.BadRequest, errorResponse)
+                        },
+                        { validUniqueVersion ->
+                            when (repo.delete(validUniqueVersion)) {
+                                1 -> call.respond(HttpStatusCode.NoContent)
+                                0 -> call.respond(HttpStatusCode.NotFound)
+                            }
                         }
-                    }
-                    .getOrElse { error ->
-                        val errorResponse = ErrorResponse("Validation failed", error.message)
-                        call.respond(HttpStatusCode.BadRequest, errorResponse)
-                    }
+                    )
             }
         }
     }

@@ -8,6 +8,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
@@ -26,7 +27,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-21.0.1",
                 visible = true.some(),
-                vendor = "temurin".some(),
+                distribution = Distribution.TEMURIN.some(),
                 md5sum = "abc123".some()
             )
 
@@ -38,13 +39,13 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = version.candidate,
                     version = version.version,
                     platform = version.platform,
-                    vendor = version.vendor
+                    distribution = version.distribution
                 )
                 retrieved shouldBe version.some()
             }
         }
 
-        should("insert a version without vendor") {
+        should("insert a version without distribution") {
             val repo = VersionsRepository()
             val version = Version(
                 candidate = "scala",
@@ -52,7 +53,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
                 visible = true.some(),
-                vendor = None
+                distribution = None
             )
 
             withCleanDatabase {
@@ -63,7 +64,7 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = version.candidate,
                     version = version.version,
                     platform = version.platform,
-                    vendor = version.vendor
+                    distribution = version.distribution
                 )
                 retrieved shouldBe version.some()
             }
@@ -77,7 +78,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://kotlin-1.9.0-original",
                 visible = true.some(),
-                vendor = "jetbrains".some(),
+                distribution = Distribution.JETBRAINS.some(),
                 md5sum = "original-hash".some()
             )
 
@@ -96,7 +97,7 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = updatedVersion.candidate,
                     version = updatedVersion.version,
                     platform = updatedVersion.platform,
-                    vendor = updatedVersion.vendor
+                    distribution = updatedVersion.distribution
                 )
                 retrieved shouldBe updatedVersion.some()
             }
@@ -110,7 +111,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://groovy-4.0.0-original",
                 visible = true.some(),
-                vendor = None
+                distribution = None
             )
 
             withCleanDatabase {
@@ -119,11 +120,11 @@ class VersionsRepositorySpec : ShouldSpec({
                 val firstTimestamp = selectLastUpdatedAt(
                     candidate = version.candidate,
                     version = version.version,
-                    vendor = version.vendor,
+                    distribution = version.distribution,
                     platform = version.platform
                 )
 
-                firstTimestamp shouldNotBe null
+                firstTimestamp.isSome() shouldBe true
 
                 // Wait to ensure timestamp difference
                 delay(100)
@@ -135,12 +136,12 @@ class VersionsRepositorySpec : ShouldSpec({
                 val secondTimestamp = selectLastUpdatedAt(
                     candidate = version.candidate,
                     version = version.version,
-                    vendor = version.vendor,
+                    distribution = version.distribution,
                     platform = version.platform
                 )
 
-                secondTimestamp shouldNotBe null
-                secondTimestamp!! shouldNotBe firstTimestamp
+                secondTimestamp.isSome() shouldBe true
+                secondTimestamp shouldNotBe firstTimestamp
             }
         }
     }
@@ -154,7 +155,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
             val version2 = Version(
                 candidate = "java",
@@ -162,7 +163,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-21.0.1",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
 
             withCleanDatabase {
@@ -172,7 +173,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val versions = repo.read(
                     candidate = "java",
                     platform = None,
-                    vendor = None,
+                    distribution = None,
                     visible = None
                 )
 
@@ -190,7 +191,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-linux",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
             val macVersion = Version(
                 candidate = "java",
@@ -198,7 +199,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.MAC_ARM64,
                 url = "https://java-17.0.1-mac",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
 
             withCleanDatabase {
@@ -208,7 +209,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val versions = repo.read(
                     candidate = "java",
                     platform = Platform.LINUX_X64.some(),
-                    vendor = None,
+                    distribution = None,
                     visible = None
                 )
 
@@ -217,7 +218,7 @@ class VersionsRepositorySpec : ShouldSpec({
             }
         }
 
-        should("filter versions by vendor") {
+        should("filter versions by distribution") {
             val repo = VersionsRepository()
             val temurinVersion = Version(
                 candidate = "java",
@@ -225,7 +226,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-temurin",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
             val zulu = Version(
                 candidate = "java",
@@ -233,7 +234,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1-zulu",
                 visible = true.some(),
-                vendor = "zulu".some()
+                distribution = Distribution.ZULU.some()
             )
 
             withCleanDatabase {
@@ -243,7 +244,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val versions = repo.read(
                     candidate = "java",
                     platform = None,
-                    vendor = "temurin".some(),
+                    distribution = Distribution.TEMURIN.some(),
                     visible = None
                 )
 
@@ -260,7 +261,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
             val hiddenVersion = Version(
                 candidate = "java",
@@ -268,7 +269,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-18.0.1",
                 visible = false.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
 
             withCleanDatabase {
@@ -278,7 +279,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val visibleVersions = repo.read(
                     candidate = "java",
                     platform = None,
-                    vendor = None,
+                    distribution = None,
                     visible = true.some()
                 )
 
@@ -288,7 +289,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val hiddenVersions = repo.read(
                     candidate = "java",
                     platform = None,
-                    vendor = None,
+                    distribution = None,
                     visible = false.some()
                 )
 
@@ -304,7 +305,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val versions = repo.read(
                     candidate = "nonexistent",
                     platform = None,
-                    vendor = None,
+                    distribution = None,
                     visible = None
                 )
 
@@ -314,7 +315,7 @@ class VersionsRepositorySpec : ShouldSpec({
     }
 
     context("read specific version") {
-        should("retrieve a specific version by candidate, version, platform, and vendor") {
+        should("retrieve a specific version by candidate, version, platform, and distribution") {
             val repo = VersionsRepository()
             val version = Version(
                 candidate = "kotlin",
@@ -322,7 +323,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://kotlin-1.9.0",
                 visible = true.some(),
-                vendor = "jetbrains".some()
+                distribution = Distribution.JETBRAINS.some()
             )
 
             withCleanDatabase {
@@ -332,14 +333,14 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = "kotlin",
                     version = "1.9.0",
                     platform = Platform.UNIVERSAL,
-                    vendor = "jetbrains".some()
+                    distribution = Distribution.JETBRAINS.some()
                 )
 
                 retrieved shouldBe version.some()
             }
         }
 
-        should("retrieve a version without vendor") {
+        should("retrieve a version without distribution") {
             val repo = VersionsRepository()
             val version = Version(
                 candidate = "scala",
@@ -347,7 +348,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
                 visible = true.some(),
-                vendor = None
+                distribution = None
             )
 
             withCleanDatabase {
@@ -357,7 +358,7 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = "scala",
                     version = "3.3.1",
                     platform = Platform.UNIVERSAL,
-                    vendor = None
+                    distribution = None
                 )
 
                 retrieved shouldBe version.some()
@@ -372,7 +373,7 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = "nonexistent",
                     version = "1.0.0",
                     platform = Platform.UNIVERSAL,
-                    vendor = None
+                    distribution = None
                 )
 
                 retrieved shouldBe None
@@ -381,7 +382,7 @@ class VersionsRepositorySpec : ShouldSpec({
     }
 
     context("delete") {
-        should("delete an existing version with vendor") {
+        should("delete an existing version with distribution") {
             val repo = VersionsRepository()
             val version = Version(
                 candidate = "java",
@@ -389,7 +390,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.LINUX_X64,
                 url = "https://java-17.0.1",
                 visible = true.some(),
-                vendor = "temurin".some()
+                distribution = Distribution.TEMURIN.some()
             )
 
             withCleanDatabase {
@@ -398,7 +399,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val uniqueVersion = UniqueVersion(
                     candidate = version.candidate,
                     version = version.version,
-                    vendor = version.vendor,
+                    distribution = version.distribution,
                     platform = version.platform
                 )
 
@@ -409,13 +410,13 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = version.candidate,
                     version = version.version,
                     platform = version.platform,
-                    vendor = version.vendor
+                    distribution = version.distribution
                 )
                 retrieved shouldBe None
             }
         }
 
-        should("delete an existing version without vendor") {
+        should("delete an existing version without distribution") {
             val repo = VersionsRepository()
             val version = Version(
                 candidate = "scala",
@@ -423,7 +424,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 platform = Platform.UNIVERSAL,
                 url = "https://scala-3.3.1",
                 visible = true.some(),
-                vendor = None
+                distribution = None
             )
 
             withCleanDatabase {
@@ -432,7 +433,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val uniqueVersion = UniqueVersion(
                     candidate = version.candidate,
                     version = version.version,
-                    vendor = version.vendor,
+                    distribution = version.distribution,
                     platform = version.platform
                 )
 
@@ -443,7 +444,7 @@ class VersionsRepositorySpec : ShouldSpec({
                     candidate = version.candidate,
                     version = version.version,
                     platform = version.platform,
-                    vendor = version.vendor
+                    distribution = version.distribution
                 )
                 retrieved shouldBe None
             }
@@ -456,7 +457,7 @@ class VersionsRepositorySpec : ShouldSpec({
                 val uniqueVersion = UniqueVersion(
                     candidate = "nonexistent",
                     version = "1.0.0",
-                    vendor = None,
+                    distribution = None,
                     platform = Platform.UNIVERSAL
                 )
 

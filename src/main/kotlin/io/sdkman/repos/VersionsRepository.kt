@@ -6,6 +6,7 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import arrow.core.Either
 import arrow.core.right
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
@@ -23,7 +24,7 @@ class VersionsRepository {
     private object Versions : IntIdTable(name = "versions") {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
-        val vendor = varchar("vendor", length = 10).nullable()
+        val distribution = varchar("distribution", length = 20).nullable()
         val platform = varchar("platform", length = 15)
         val url = varchar("url", length = 500)
         val visible = bool("visible")
@@ -44,7 +45,7 @@ class VersionsRepository {
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible].toOption(),
-                vendor = it[Versions.vendor].toOption(),
+                distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
                 md5sum = it[Versions.md5sum].toOption(),
                 sha256sum = it[Versions.sha256sum].toOption(),
                 sha512sum = it[Versions.sha512sum].toOption(),
@@ -54,29 +55,29 @@ class VersionsRepository {
     suspend fun read(
         candidate: String,
         platform: Option<Platform>,
-        vendor: Option<String>,
+        distribution: Option<Distribution>,
         visible: Option<Boolean>
     ): List<Version> = dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
-                    vendor.fold({ Op.TRUE }, { Versions.vendor eq it }) and
+                    distribution.fold({ Op.TRUE }, { Versions.distribution eq it.name }) and
                     visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
         }.asVersions()
-            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.vendor.getOrNull() }, { it.platform }))
+            .sortedWith(compareBy({ it.candidate }, { it.version }, { it.distribution.getOrNull() }, { it.platform }))
     }
 
     suspend fun read(
         candidate: String,
         version: String,
         platform: Platform,
-        vendor: Option<String>
+        distribution: Option<Distribution>
     ): Option<Version> = dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     (Versions.platform eq platform.name) and
-                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })
+                    distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })
         }.asVersions()
             .firstOrNone()
     }
@@ -87,14 +88,14 @@ class VersionsRepository {
         Versions.select {
             (Versions.candidate eq cv.candidate) and
                     (Versions.version eq cv.version) and
-                    (cv.vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })) and
+                    (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
                     (Versions.platform eq cv.platform.name)
         }.firstOrNone()
             .map {
                 Versions.update({
                     (Versions.candidate eq cv.candidate) and
                             (Versions.version eq cv.version) and
-                            (cv.vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it })) and
+                            (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
                             (Versions.platform eq cv.platform.name)
                 }) {
                     it[url] = cv.url
@@ -108,7 +109,7 @@ class VersionsRepository {
                 Versions.insert {
                     it[candidate] = cv.candidate
                     it[version] = cv.version
-                    it[vendor] = cv.vendor.getOrNull()
+                    it[distribution] = cv.distribution.map { it.name }.getOrNull()
                     it[platform] = cv.platform.name
                     it[url] = cv.url
                     it[this.visible] = visible
@@ -125,9 +126,9 @@ class VersionsRepository {
                     (this.version eq version.version) and
                     (platform eq version.platform.name)
 
-            version.vendor.fold(
-                { baseCondition and (vendor eq null) },
-                { vendorValue -> baseCondition and (vendor eq vendorValue) }
+            version.distribution.fold(
+                { baseCondition and (distribution eq null) },
+                { distributionValue -> baseCondition and (distribution eq distributionValue.name) }
             )
         }
     }

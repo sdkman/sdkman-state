@@ -4,6 +4,7 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,7 @@ const val dbPassword = "postgres"
 private object Versions : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
     val version = varchar("version", length = 25)
-    val vendor = varchar("vendor", length = 10).nullable()
+    val distribution = varchar("distribution", length = 20).nullable()
     val platform = varchar("platform", length = 15)
     val url = varchar("url", length = 500)
     val visible = bool("visible")
@@ -40,7 +41,7 @@ fun insertVersions(vararg cvs: Version) = transaction {
             it[candidate] = cv.candidate
             it[version] = cv.version
             it[platform] = cv.platform.name
-            it[vendor] = cv.vendor.getOrNull()
+            it[distribution] = cv.distribution.map { it.name }.getOrNull()
             it[url] = cv.url
             it[visible] = cv.visible.getOrElse { true }
             it[md5sum] = cv.md5sum.getOrNull()
@@ -55,18 +56,18 @@ private fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }
 
-fun selectVersion(candidate: String, version: String, vendor: Option<String>, platform: Platform): Option<Version> =
+fun selectVersion(candidate: String, version: String, distribution: Option<Distribution>, platform: Platform): Option<Version> =
     dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
-                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it }) and
+                    distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
                     (Versions.platform eq platform.name)
         }.map {
             Version(
                 candidate = it[Versions.candidate],
                 version = it[Versions.version],
-                vendor = it[Versions.vendor].toOption(),
+                distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
                 platform = Platform.valueOf(it[Versions.platform]),
                 url = it[Versions.url],
                 visible = it[Versions.visible].toOption(),
@@ -77,16 +78,16 @@ fun selectVersion(candidate: String, version: String, vendor: Option<String>, pl
         }.firstOrNone()
     }
 
-fun selectLastUpdatedAt(candidate: String, version: String, vendor: Option<String>, platform: Platform): Instant? =
+fun selectLastUpdatedAt(candidate: String, version: String, distribution: Option<Distribution>, platform: Platform): Option<Instant> =
     dbQuery {
         Versions.select {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
-                    vendor.fold({ Versions.vendor eq null }, { Versions.vendor eq it }) and
+                    distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
                     (Versions.platform eq platform.name)
         }.map {
             it[Versions.lastUpdatedAt]
-        }.firstOrNull()
+        }.firstOrNone()
     }
 
 private fun initialisePostgres() =
