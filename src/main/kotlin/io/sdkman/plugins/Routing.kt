@@ -103,13 +103,7 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
             post("/versions") {
                 Either.catch { call.receive<Version>() }
                     .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
-                    .flatMap { version ->
-                        application.log.info(
-                            "Received POST for new version release: candidate=${version.candidate}, " +
-                            "version=${version.version}, platform=${version.platform}, distribution=${version.distribution.getOrElse { "none" }}"
-                        )
-                        VersionValidator.validateVersion(version)
-                    }
+                    .flatMap { VersionValidator.validateVersion(it) }
                     .fold(
                         { error ->
                             val errorResponse = ErrorResponse("Validation failed", error.message)
@@ -128,9 +122,7 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
             delete("/versions") {
                 Either.catch { call.receive<UniqueVersion>() }
                     .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
-                    .flatMap { uniqueVersion ->
-                        VersionValidator.validateUniqueVersion(uniqueVersion)
-                    }
+                    .flatMap { VersionValidator.validateUniqueVersion(it) }
                     .fold(
                         { error ->
                             val errorResponse = ErrorResponse("Validation failed", error.message)
