@@ -141,7 +141,7 @@ WHERE candidate = 'java'
 GROUP BY distribution, candidate_platform
 ORDER BY downloads DESC;
 ```
-*Uses index:* `idx_audit_cand_candidate_platform_distribution_timestamp`
+*Uses index:* `idx_audit_candidate_candidate_platform_distribution_timestamp`
 
 ### Most Active Users by Host (Top 20)
 ```sql

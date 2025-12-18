@@ -9,6 +9,7 @@ import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.sdkman.config.configureAppConfig
 import io.sdkman.domain.HealthStatus
@@ -26,6 +27,9 @@ class HealthCheckApiSpec : ShouldSpec({
     should("return SUCCESS status when database is available") {
         withCleanDatabase {
             testApplication {
+                environment {
+                    config = ApplicationConfig("application.conf")
+                }
                 application {
                     val dbConfig = configureAppConfig(environment).databaseConfig
                     configureDatabase(dbConfig)
@@ -47,6 +51,9 @@ class HealthCheckApiSpec : ShouldSpec({
     should("return FAILURE status when database is unavailable") {
         // This test will use a mock repository to simulate database failure
         testApplication {
+            environment {
+                config = ApplicationConfig("application.conf")
+            }
             application {
                 val dbConfig = configureAppConfig(environment).databaseConfig
                 val badDbConfig = dbConfig.copy(port = 9999)
