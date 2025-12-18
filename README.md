@@ -91,7 +91,7 @@ ORDER BY week DESC, downloads DESC;
 ```
 *Uses index:* `idx_audit_candidate_version_timestamp`
 
-### Command-Specific Analytics (Install vs Use)
+### Command-Specific Analytics (Install vs Selfupdate)
 ```sql
 SELECT command, COUNT(*) as count
 FROM audit
@@ -114,34 +114,34 @@ ORDER BY events DESC;
 ```
 *Uses index:* `idx_audit_timestamp_candidate`
 
-### Platform Distribution for a Candidate
+### Client Platform Distribution for a Candidate
 ```sql
-SELECT platform,
+SELECT client_platform,
        COUNT(*) as downloads,
        ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
 FROM audit
 WHERE candidate = 'kotlin'
   AND timestamp > NOW() - INTERVAL '90 days'
-GROUP BY platform
+GROUP BY client_platform
 ORDER BY downloads DESC;
 ```
-*Uses index:* `idx_audit_candidate_platform_timestamp`
+*Uses index:* `idx_audit_candidate_timestamp` (can leverage candidate filter)
 
-### Vendor Popularity Comparison by Platform (Java Distributions)
+### Distribution Popularity Comparison by Candidate Platform (Java Distributions)
 ```sql
 SELECT distribution,
-       platform,
+       candidate_platform,
        COUNT(*) as downloads,
        COUNT(DISTINCT DATE_TRUNC('day', timestamp)) as days_active
 FROM audit
 WHERE candidate = 'java'
-  AND platform = 'LINUX_X64'
+  AND candidate_platform = 'LINUX_X64'
   AND distribution IS NOT NULL
   AND timestamp > NOW() - INTERVAL '6 months'
-GROUP BY distribution, platform
+GROUP BY distribution, candidate_platform
 ORDER BY downloads DESC;
 ```
-*Uses index:* `idx_audit_candidate_platform_distribution_timestamp`
+*Uses index:* `idx_audit_cand_candidate_platform_distribution_timestamp`
 
 ### Most Active Users by Host (Top 20)
 ```sql
