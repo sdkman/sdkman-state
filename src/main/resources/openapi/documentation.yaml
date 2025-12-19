@@ -4,7 +4,8 @@ info:
   description: "sdkman_state API"
   version: "1.0.0"
 servers:
-  - url: "https://sdkman_state"
+  - url: "https://state.sdkman.io"
+  - url: "http://localhost:8080"
 paths:
   /meta/health:
     get:
