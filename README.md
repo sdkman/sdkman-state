@@ -30,6 +30,23 @@ The audience of this API is twofold:
 
 The service will start on port 8080.
 
+## API Documentation
+
+The OpenAPI specification is available at:
+- **Swagger UI**: http://localhost:8080/swagger
+- **Raw OpenAPI YAML**: http://localhost:8080/openapi/documentation.yaml
+
+### Regenerating OpenAPI Documentation
+
+The OpenAPI specification file (`src/main/resources/openapi/documentation.yaml`) is generated using IntelliJ IDEA:
+
+1. Open the project in IntelliJ IDEA
+2. Navigate to **Tools → HTTP Client → Generate OpenAPI Specification**
+3. Select the output location: `src/main/resources/openapi/documentation.yaml`
+4. Generate the specification
+
+*After regeneration, you may need to manually add authentication requirements to POST/DELETE endpoints (see security schemes in the YAML).*
+
 ## Running Tests
 
 ```bash

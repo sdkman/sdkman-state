@@ -1,14 +1,32 @@
 openapi: "3.1.0"
 info:
-  title: "State API"
-  description: "The SDKMAN! State API"
+  title: "sdkman_state API"
+  description: "sdkman_state API"
   version: "1.0.0"
 servers:
-- url: "https://state.sdkman.io"
+  - url: "https://sdkman_state"
 paths:
+  /meta/health:
+    get:
+      description: ""
+      responses:
+        "503":
+          description: "Service Unavailable"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/HealthCheckResponse"
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/HealthCheckResponse"
   /versions:
     delete:
       description: ""
+      security:
+        - basicAuth: []
       requestBody:
         content:
           '*/*':
@@ -16,14 +34,34 @@ paths:
               $ref: "#/components/schemas/UniqueVersion"
         required: true
       responses:
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Example#1:
+                  description: ""
+                  value:
+                    error: "Validation failed"
+                    message: "null"
         "204":
           description: "No Content"
           content:
             '*/*':
               schema:
                 type: "object"
+        "404":
+          description: "Not Found"
+          content:
+            '*/*':
+              schema:
+                type: "object"
     post:
       description: ""
+      security:
+        - basicAuth: []
       requestBody:
         content:
           '*/*':
@@ -31,31 +69,55 @@ paths:
               $ref: "#/components/schemas/Version"
         required: true
       responses:
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Example#1:
+                  description: ""
+                  value:
+                    error: "Validation failed"
+                    message: "null"
         "204":
           description: "No Content"
           content:
             '*/*':
               schema:
                 type: "object"
+        "500":
+          description: "Internal Server Error"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Example#1:
+                  description: ""
+                  value:
+                    error: "Database error"
+                    message: "null"
   /versions/{candidate}:
     get:
       description: ""
       parameters:
-      - name: "candidate"
-        in: "path"
-        required: true
-        schema:
-          type: "string"
-      - name: "platform"
-        in: "query"
-        required: false
-        schema:
-          type: "string"
-      - name: "distribution"
-        in: "query"
-        required: false
-        schema:
-          type: "string"
+        - name: "candidate"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "platform"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "distribution"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
       responses:
         "200":
           description: "OK"
@@ -65,30 +127,36 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/Version"
+        "400":
+          description: "Bad Request"
+          content:
+            '*/*':
+              schema:
+                type: "object"
   /versions/{candidate}/{version}:
     get:
       description: ""
       parameters:
-      - name: "candidate"
-        in: "path"
-        required: true
-        schema:
-          type: "string"
-      - name: "version"
-        in: "path"
-        required: true
-        schema:
-          type: "string"
-      - name: "platform"
-        in: "query"
-        required: false
-        schema:
-          type: "string"
-      - name: "distribution"
-        in: "query"
-        required: false
-        schema:
-          type: "string"
+        - name: "candidate"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "version"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "platform"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "distribution"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
       responses:
         "404":
           description: "Not Found"
@@ -109,7 +177,24 @@ paths:
               schema:
                 type: "object"
 components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
   schemas:
+    HealthCheckResponse:
+      type: "object"
+      properties:
+        status:
+          type: "string"
+          enum:
+            - "SUCCESS"
+            - "FAILURE"
+        message:
+          type: "string"
+          nullable: true
+      required:
+        - "status"
     UniqueVersion:
       type: "object"
       properties:
@@ -119,23 +204,50 @@ components:
           type: "string"
         distribution:
           type: "string"
+          enum:
+            - "BISHENG"
+            - "CORRETTO"
+            - "GRAALCE"
+            - "GRAALVM"
+            - "JETBRAINS"
+            - "KONA"
+            - "LIBERICA"
+            - "LIBERICA_NIK"
+            - "MANDREL"
+            - "MICROSOFT"
+            - "OPENJDK"
+            - "ORACLE"
+            - "SAP_MACHINE"
+            - "SEMERU"
+            - "TEMURIN"
+            - "ZULU"
         platform:
           type: "string"
           enum:
-          - "LINUX_X32"
-          - "LINUX_X64"
-          - "LINUX_ARM32HF"
-          - "LINUX_ARM32SF"
-          - "LINUX_ARM64"
-          - "MAC_X64"
-          - "MAC_ARM64"
-          - "WINDOWS_X64"
-          - "UNIVERSAL"
+            - "LINUX_X32"
+            - "LINUX_X64"
+            - "LINUX_ARM32HF"
+            - "LINUX_ARM32SF"
+            - "LINUX_ARM64"
+            - "MAC_X64"
+            - "MAC_ARM64"
+            - "WINDOWS_X64"
+            - "UNIVERSAL"
       required:
-      - "candidate"
-      - "version"
-      - "distribution"
-      - "platform"
+        - "candidate"
+        - "version"
+        - "distribution"
+        - "platform"
+    ErrorResponse:
+      type: "object"
+      properties:
+        error:
+          type: "string"
+        message:
+          type: "string"
+      required:
+        - "error"
+        - "message"
     Version:
       type: "object"
       properties:
@@ -143,24 +255,41 @@ components:
           type: "string"
         version:
           type: "string"
-        distribution:
-          type: "string"
         platform:
           type: "string"
           enum:
-          - "LINUX_X32"
-          - "LINUX_X64"
-          - "LINUX_ARM32HF"
-          - "LINUX_ARM32SF"
-          - "LINUX_ARM64"
-          - "MAC_X64"
-          - "MAC_ARM64"
-          - "WINDOWS_X64"
-          - "UNIVERSAL"
+            - "LINUX_X32"
+            - "LINUX_X64"
+            - "LINUX_ARM32HF"
+            - "LINUX_ARM32SF"
+            - "LINUX_ARM64"
+            - "MAC_X64"
+            - "MAC_ARM64"
+            - "WINDOWS_X64"
+            - "UNIVERSAL"
         url:
           type: "string"
         visible:
           type: "boolean"
+        distribution:
+          type: "string"
+          enum:
+            - "BISHENG"
+            - "CORRETTO"
+            - "GRAALCE"
+            - "GRAALVM"
+            - "JETBRAINS"
+            - "KONA"
+            - "LIBERICA"
+            - "LIBERICA_NIK"
+            - "MANDREL"
+            - "MICROSOFT"
+            - "OPENJDK"
+            - "ORACLE"
+            - "SAP_MACHINE"
+            - "SEMERU"
+            - "TEMURIN"
+            - "ZULU"
         md5sum:
           type: "string"
         sha256sum:
@@ -168,12 +297,12 @@ components:
         sha512sum:
           type: "string"
       required:
-      - "candidate"
-      - "version"
-      - "distribution"
-      - "platform"
-      - "url"
-      - "visible"
-      - "md5sum"
-      - "sha256sum"
-      - "sha512sum"
+        - "candidate"
+        - "version"
+        - "platform"
+        - "url"
+        - "visible"
+        - "distribution"
+        - "md5sum"
+        - "sha256sum"
+        - "sha512sum"
