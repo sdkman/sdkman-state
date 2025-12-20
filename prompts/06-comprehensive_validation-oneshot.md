@@ -1,31 +1,36 @@
 # Comprehensive Request Validation with Error Accumulation
 
-This feature implements comprehensive validation for the POST /versions endpoint using Arrow's Validated type to accumulate and return all validation errors in a single response, rather than failing fast on the first error encountered.
+This feature implements comprehensive validation for the POST /versions endpoint using Arrow's Either type to accumulate and return all validation errors in a single response, rather than failing fast on the first error encountered.
+
+## Rules
+
+**Before implementing, you MUST read and internalize:**
+- rules/kotlin.md
+- rules/domain-driven-design.md
+- rules/kotest.md
+
+**If this prompt conflicts with the rules, THE RULES WIN.** Update this prompt to align with the rules.
 
 ## Requirements
 
 - Pre-deserialization validation that parses raw JSON and validates each field before constructing the Version object
+- **Convert JSON null/missing values to `Option<A>` immediately at the JSON boundary** (RULE-001 from kotlin.md)
 - All validation errors must be accumulated and returned together in a structured error response
 - Required field validation: candidate, version, platform, url must not be empty
 - Candidate must match one of the allowed values: java, maven, gradle, kotlin, scala, groovy, sbt (exact match, case-sensitive)
 - URL must be a well-formed HTTPS URL validated via regex
 - Platform must be a valid Platform enum value (sent as enum name like LINUX_X64)
-- Distribution, if present, must be a valid Distribution enum value
+- Distribution, if present, must be a valid Distribution enum value (convert to `Option<Distribution>`)
 - Hash field validation (md5sum, sha256sum, sha512sum):
-  - Fields can be completely omitted from JSON (results in None)
-  - If present, must contain valid hash values (not null, not empty string)
+  - Fields can be completely omitted from JSON (results in `None`)
+  - If present in JSON, convert to `Option<String>` immediately
+  - If `Some(hash)`, validate that hash is not empty and matches format
   - MD5: 32 hexadecimal characters
   - SHA256: 64 hexadecimal characters
   - SHA512: 128 hexadecimal characters
   - Case-insensitive hex validation (accept both `abc123` and `ABC123`)
 - Remove the existing distribution suffix validation (allow version strings like `1.0.0-RC1`)
 - Error response structure should include all accumulated validation failures with field names and messages
-
-## Rules
-
-- rules/domain-driven-design.md
-- rules/kotlin.md
-- rules/kotest.md
 
 ## Domain
 
@@ -109,16 +114,33 @@ data class ValidationErrorResponse(
 
 ## Extra Considerations
 
+### Null Safety at JSON Boundary (CRITICAL!)
+- **NEVER use nullable types** (`String?`, `Distribution?`) in validator return types
+- Convert JSON extraction to Option immediately:
+  ```kotlin
+  // ❌ WRONG - Don't use nullable types
+  val candidate: String? = jsonObject["candidate"]?.jsonPrimitive?.content
+
+  // ✅ CORRECT - Convert to Option at boundary
+  val candidate: Option<String> = jsonObject["candidate"]?.jsonPrimitive?.content.toOption()
+  ```
+- Field validators should accept `Option<String>` not `String?`
+- Return types should be `Either<NonEmptyList<ValidationError>, T>` not `Either<NonEmptyList<ValidationError>, T?>`
+
+### Arrow Library Current Best Practices
+- **Check Arrow documentation for current patterns** - some APIs may be deprecated
+- If `Validated` functionality is being merged into `Either`, use `Either`-based accumulation instead
+- Use `Either.zipOrAccumulate` or similar for error accumulation (verify current Arrow API)
+- Follow Arrow's recommended migration paths for any deprecated features
+
+### Other Considerations
 - The validation should happen before Kotlin serialization attempts to deserialize into the Version data class
 - Use kotlinx.serialization's JsonObject to parse raw JSON and extract fields manually
-- Arrow's Validated type should be used to accumulate errors across all field validations
-- The existing VersionValidator.validateVersion should be refactored or replaced to use the new accumulating approach
 - Invalid enum values (Platform, Distribution) should produce clear error messages indicating which values are valid
 - The URL regex should be comprehensive enough to catch common malformed URLs while accepting valid HTTPS URLs
 - Hash validation should allow both uppercase and lowercase hexadecimal characters
-- When optional hash fields are present but invalid (empty string, null, wrong format), they should generate validation errors
 - The error response should maintain consistency with the existing ErrorResponse structure in Routing.kt
-- Integration with the existing POST /versions endpoint at Routing.kt:103-121
+- Integration with the existing POST /versions endpoint
 - Introduce helpers/collaborators to implement validation logic to aid separation of concerns. **Don't implement validation logic inline in Routing!**
 
 ## Testing Considerations
@@ -127,16 +149,16 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 
 ### Happy Path Tests
 - Valid Version with all required fields and no optional fields
-- Valid Version with all required fields and valid optional hash fields
-- Valid Version with distribution field
+- Valid Version with all required fields and valid optional hash fields (as `Some(hash)`)
+- Valid Version with distribution field (as `Some(distribution)`)
 - Valid Version with all possible hash formats (md5sum, sha256sum, sha512sum)
 
 ### Unhappy Path Tests - Required Fields
-- Missing candidate field
+- Missing candidate field (JSON doesn't contain key)
 - Missing version field
 - Missing platform field
 - Missing url field
-- Empty candidate field
+- Empty candidate field (JSON contains `"candidate": ""`)
 - Empty version field
 - Empty url field
 
@@ -148,8 +170,7 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 - Invalid MD5 hash format (wrong length, non-hex characters)
 - Invalid SHA256 hash format
 - Invalid SHA512 hash format
-- Hash fields present but null
-- Hash fields present but empty strings
+- Hash fields present but empty strings (`"md5sum": ""`)
 
 ### Unhappy Path Tests - Multiple Errors
 - Multiple required fields missing simultaneously
@@ -162,21 +183,24 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 - Hash values with mixed case hexadecimal characters
 - Hash values with all uppercase or all lowercase
 - Valid JSON but wrong field types (should produce deserialization errors)
+- JSON null values should convert to `None`, not cause null pointer exceptions
 
 ## Implementation Notes
 
 ### Order of Implementation
-1. Create new validation error domain types in a new file or extend existing validation package
-2. Implement individual field validators using Arrow's Validated
-3. Create a JSON-based request validator that extracts fields from JsonObject
-4. Implement error accumulation logic using Validated.zipOrAccumulate or similar
-5. Update POST /versions endpoint to use new validation
-6. Update error response mapping to convert ValidationError list to ValidationErrorResponse
-7. Write comprehensive Kotest specifications
+1. **Read and internalize rules/kotlin.md** - Understand Option usage and null safety requirements
+2. Create new validation error domain types in a new file or extend existing validation package
+3. Implement individual field validators that accept `Option<String>` and return `Either<NonEmptyList<ValidationError>, T>`
+4. Create a JSON-based request validator that extracts fields from JsonObject and converts to Option immediately
+5. Implement error accumulation logic using Either-based patterns (check Arrow docs for current API)
+6. Update POST /versions endpoint to use new validation
+7. Update error response mapping to convert ValidationError list to ValidationErrorResponse
+8. Write comprehensive Kotest specifications
 
 ### Technology Preferences
-- Use Arrow's `Validated` type for error accumulation (Arrow 1.2.0)
+- **Use Arrow's current error accumulation patterns** (verify whether to use Either.zipOrAccumulate or newer API)
 - Use kotlinx.serialization's JsonObject for pre-deserialization JSON parsing
+- **NEVER use nullable types** - always use `Option<A>` for optional values (RULE-001)
 - Keep individual field validators as separate, testable functions
 - Use functional composition to combine validators
 - Maintain consistency with existing Arrow usage (Either, Option) in the codebase
@@ -188,15 +212,65 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 - Keep routing logic minimal - delegate validation to collaborator and/or validator objects
 
 ### Validation Patterns
-- Each field validator should return `Validated<NonEmptyList<ValidationError>, T>`
-- Use `zipOrAccumulate` or `zip` with `Validated` to combine multiple field validations
-- Convert the final `Validated` to `Either` for integration with existing routing error handling
-- Hash validation regex: `^[0-9a-fA-F]{n}$` where n is the expected length
+
+**CRITICAL: These examples may need updating based on current Arrow API**
+
+```kotlin
+// Convert JSON to Option at boundary
+val candidateOpt: Option<String> = jsonObject["candidate"]?.jsonPrimitive?.content.toOption()
+val md5sumOpt: Option<String> = jsonObject["md5sum"]?.jsonPrimitive?.content.toOption()
+
+// Field validator signature - accepts Option, returns Either
+fun validateCandidate(candidate: Option<String>): Either<NonEmptyList<ValidationError>, String> =
+    candidate.fold(
+        { EmptyFieldError("candidate").nel().left() },
+        { value ->
+            when {
+                value.isBlank() -> EmptyFieldError("candidate").nel().left()
+                value !in ALLOWED_CANDIDATES -> InvalidCandidateError(
+                    candidate = value,
+                    allowedCandidates = ALLOWED_CANDIDATES
+                ).nel().left()
+                else -> value.right()
+            }
+        }
+    )
+
+// Optional field validator - None is valid, Some(empty) is not
+fun validateHash(
+    field: String,
+    hashOpt: Option<String>,
+    expectedLength: Int
+): Either<NonEmptyList<ValidationError>, Option<String>> =
+    hashOpt.fold(
+        { None.right() },  // Missing field is OK
+        { hash ->
+            when {
+                hash.isBlank() -> InvalidOptionalFieldError(field, "field cannot be empty").nel().left()
+                hash.length != expectedLength -> InvalidHashFormatError(field, hash, expectedLength).nel().left()
+                !HEX_PATTERN.matches(hash) -> InvalidHashFormatError(field, hash, expectedLength).nel().left()
+                else -> hash.some().right()
+            }
+        }
+    )
+
+// Error accumulation - verify current Arrow API!
+// This example may need updating if zipOrAccumulate is deprecated
+Either.zipOrAccumulate(
+    validateCandidate(candidateOpt),
+    validateVersion(versionOpt),
+    validatePlatform(platformOpt),
+    validateUrl(urlOpt)
+) { candidate, version, platform, url ->
+    Version(candidate, version, platform, url, /* ... */)
+}
+```
 
 ### Constants
 - Allowed candidates: `listOf("java", "maven", "gradle", "kotlin", "scala", "groovy", "sbt")`
 - HTTPS URL regex pattern (example): `^https://[a-zA-Z0-9.-]+(/.*)?$` (adjust as needed for comprehensive validation)
 - Hash lengths: MD5=32, SHA256=64, SHA512=128
+- Hash validation regex: `^[0-9a-fA-F]{n}$` where n is the expected length
 
 ## Specification by Example
 
@@ -215,6 +289,8 @@ POST /versions
 ```
 Response: `204 No Content`
 
+Internal representation: `distribution = Some(Distribution.TEMURIN)`, `sha256sum = Some("abc123...")`
+
 ### Example: Valid Request with Version Suffix
 ```json
 POST /versions
@@ -226,6 +302,8 @@ POST /versions
 }
 ```
 Response: `204 No Content`
+
+Internal representation: `distribution = None`, `md5sum = None`, etc.
 
 ### Example: Multiple Validation Errors
 ```json
@@ -299,6 +377,8 @@ Response: `400 Bad Request`
 }
 ```
 
+Internal: `candidateOpt = None`, triggers validation error
+
 ### Example: Invalid Hash Formats
 ```json
 POST /versions
@@ -333,8 +413,18 @@ Response: `400 Bad Request`
 }
 ```
 
-## Verification
+Internal: `md5sumOpt = Some("tooshort")`, triggers validation of the Some value
 
+## Verification Checklist
+
+### Architectural Compliance
+- [ ] **NO nullable types used anywhere** - all nullable JSON values converted to `Option<A>` at boundary
+- [ ] All field validators accept `Option<T>` parameters, not `T?`
+- [ ] All return types use `Either` and `Option`, never nullable types
+- [ ] Arrow library deprecation warnings addressed (checked current documentation)
+- [ ] Code follows RULE-001 through RULE-006 from rules/kotlin.md
+
+### Functional Requirements
 - [ ] All required fields (candidate, version, platform, url) are validated for presence and non-emptiness
 - [ ] Candidate field validates against static list of allowed candidates
 - [ ] URL field validates as well-formed HTTPS URL via regex
@@ -344,13 +434,17 @@ Response: `400 Bad Request`
 - [ ] SHA256 hash validates as 64 hexadecimal characters (case-insensitive)
 - [ ] SHA512 hash validates as 128 hexadecimal characters (case-insensitive)
 - [ ] Optional hash fields can be completely omitted from request (results in None)
-- [ ] Optional hash fields cannot be null or empty strings if present
-- [ ] Version strings with suffixes like `-tem` or `-RC1` are accepted
+- [ ] Optional hash fields when present as Some(value) validate the value properly
+- [ ] Version strings with suffixes like `-beta-1` or `-RC1` are accepted
 - [ ] Multiple validation errors are accumulated and returned together
 - [ ] Validation error response follows the specified JSON structure
+
+### Integration & Quality
 - [ ] POST /versions endpoint integrates with new validation logic
 - [ ] Existing VersionValidator distribution suffix validation is removed
 - [ ] All tests pass using Kotest framework
 - [ ] Tests cover all happy paths, unhappy paths, and edge cases
 - [ ] Error messages are clear and indicate what values are valid
 - [ ] Code follows existing Kotlin and Arrow patterns in the codebase
+- [ ] No deprecation warnings from Arrow library
+
