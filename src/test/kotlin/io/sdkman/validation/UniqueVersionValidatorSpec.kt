@@ -10,9 +10,9 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 
-class VersionValidatorSpec : ShouldSpec({
+class UniqueVersionValidatorSpec : ShouldSpec({
 
-    context("validateUniqueVersion") {
+    context("validate") {
 
         should("accept unique version with valid fields") {
             val uniqueVersion = UniqueVersion(
@@ -22,7 +22,7 @@ class VersionValidatorSpec : ShouldSpec({
                 platform = Platform.LINUX_X64
             )
 
-            VersionValidator.validateUniqueVersion(uniqueVersion) shouldBe uniqueVersion.right()
+            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
         }
 
         should("accept unique version with no distribution") {
@@ -33,7 +33,7 @@ class VersionValidatorSpec : ShouldSpec({
                 platform = Platform.UNIVERSAL
             )
 
-            VersionValidator.validateUniqueVersion(uniqueVersion) shouldBe uniqueVersion.right()
+            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
         }
 
         should("accept version with suffix like -RC1") {
@@ -44,7 +44,7 @@ class VersionValidatorSpec : ShouldSpec({
                 platform = Platform.UNIVERSAL
             )
 
-            VersionValidator.validateUniqueVersion(uniqueVersion) shouldBe uniqueVersion.right()
+            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
         }
 
         should("reject when candidate is blank") {
@@ -56,7 +56,7 @@ class VersionValidatorSpec : ShouldSpec({
             )
 
             val expected = EmptyFieldError("candidate").left()
-            VersionValidator.validateUniqueVersion(uniqueVersion) shouldBe expected
+            UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
         }
 
         should("reject when version is blank") {
@@ -68,7 +68,7 @@ class VersionValidatorSpec : ShouldSpec({
             )
 
             val expected = EmptyFieldError("version").left()
-            VersionValidator.validateUniqueVersion(uniqueVersion) shouldBe expected
+            UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
         }
     }
 })

@@ -3,9 +3,9 @@ package io.sdkman.validation
 import arrow.core.*
 import io.sdkman.domain.UniqueVersion
 
-object VersionValidator {
+object UniqueVersionValidator {
 
-    fun validateUniqueVersion(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> =
+    fun validate(uniqueVersion: UniqueVersion): Either<ValidationError, UniqueVersion> =
         when {
             uniqueVersion.candidate.isBlank() -> EmptyFieldError("candidate").left()
             uniqueVersion.version.isBlank() -> EmptyFieldError("version").left()

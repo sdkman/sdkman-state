@@ -17,7 +17,7 @@ import io.sdkman.repos.VersionsRepository
 import io.sdkman.validation.ValidationErrorResponse
 import io.sdkman.validation.ValidationFailure
 import io.sdkman.validation.VersionRequestValidator
-import io.sdkman.validation.VersionValidator
+import io.sdkman.validation.UniqueVersionValidator
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -130,7 +130,7 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
             delete("/versions") {
                 Either.catch { call.receive<UniqueVersion>() }
                     .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
-                    .flatMap { VersionValidator.validateUniqueVersion(it) }
+                    .flatMap { UniqueVersionValidator.validate(it) }
                     .fold(
                         { error ->
                             val errorResponse = ErrorResponse("Validation failed", error.message)
