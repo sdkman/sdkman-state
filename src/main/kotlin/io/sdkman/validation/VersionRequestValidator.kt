@@ -76,7 +76,6 @@ object VersionRequestValidator {
         val sha256sumResult = validateHash("sha256sum", sha256sumOpt, 64, HEX_PATTERN_64)
         val sha512sumResult = validateHash("sha512sum", sha512sumOpt, 128, HEX_PATTERN_128)
 
-        // Collect all errors
         val errors =
             listOfNotNull(
                 candidateResult.swap().getOrNull(),
@@ -90,22 +89,24 @@ object VersionRequestValidator {
             )
                 .flatten()
 
-        //TODO: fix this to not use !! and work with Either/Option
-        return if (errors.isNotEmpty()) errors.toNonEmptyListOrNull()!!.left()
-        else {
-            Version(
-                candidate = candidateResult.getOrElse { error("Should not happen") },
-                version = versionResult.getOrElse { error("Should not happen") },
-                platform = platformResult.getOrElse { error("Should not happen") },
-                url = urlResult.getOrElse { error("Should not happen") },
-                visible = visibleOpt,
-                distribution =
-                    distributionResult.getOrElse { error("Should not happen") },
-                md5sum = md5sumResult.getOrElse { error("Should not happen") },
-                sha256sum = sha256sumResult.getOrElse { error("Should not happen") },
-                sha512sum = sha512sumResult.getOrElse { error("Should not happen") }
-            ).right()
-        }
+        return errors.toNonEmptyListOrNone().fold(
+            {
+                either {
+                    Version(
+                        candidate = candidateResult.bind(),
+                        version = versionResult.bind(),
+                        platform = platformResult.bind(),
+                        url = urlResult.bind(),
+                        visible = visibleOpt,
+                        distribution = distributionResult.bind(),
+                        md5sum = md5sumResult.bind(),
+                        sha256sum = sha256sumResult.bind(),
+                        sha512sum = sha512sumResult.bind()
+                    )
+                }
+            },
+            { errorList -> errorList.left() }
+        )
     }
 
     private fun validateCandidate(
