@@ -32,7 +32,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             url = "https://java-17.0.2-original",
             visible = true.some(),
             distribution = Distribution.TEMURIN.some(),
-            md5sum = "original-hash".some()
+            md5sum = "abc123def456abc123def456abc123de".some()
         )
         val requestBody = version.toJsonString()
 
@@ -72,7 +72,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             url = "https://java-17.0.3-original",
             visible = true.some(),
             distribution = Distribution.TEMURIN.some(),
-            md5sum = "original-hash".some()
+            md5sum = "abc123def456abc123def456abc123de".some()
         )
 
         val updatedVersion = Version(
@@ -82,7 +82,7 @@ class IdempotentPostVersionApiSpec : ShouldSpec({
             url = "https://java-17.0.3-updated",
             visible = false.some(),
             distribution = Distribution.TEMURIN.some(),
-            sha256sum = "updated-hash".some()
+            sha256sum = "abc123def456abc123def456abc123def456abc123def456abc123def456abc1".some()
         )
 
         withCleanDatabase {

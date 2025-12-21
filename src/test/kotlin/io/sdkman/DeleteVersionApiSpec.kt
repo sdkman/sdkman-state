@@ -165,23 +165,38 @@ class DeleteVersionApiSpec : ShouldSpec({
         }
     }
 
-    should("return BAD_REQUEST for UniqueVersion with distribution suffix in version") {
-        val invalidRequestBody = UniqueVersion(
-            candidate = "java",
-            version = "17.0.1-temurin",
-            distribution = Distribution.TEMURIN.some(),
-            platform = Platform.MAC_X64
+    should("accept UniqueVersion with version suffix like -RC1") {
+        val candidate = "kotlin"
+        val version = "1.9.0-RC1"
+        val platform = Platform.LINUX_X64
+
+        val requestBody = UniqueVersion(
+            candidate = candidate,
+            version = version,
+            distribution = None,
+            platform = platform
         ).toJsonString()
 
         withCleanDatabase {
+            insertVersions(
+                Version(
+                    candidate = candidate,
+                    version = version,
+                    platform = platform,
+                    url = "https://kotlin-1.9.0-linux-x64",
+                    visible = true.some(),
+                    distribution =None
+                )
+            )
             withTestApplication {
                 val response = client.delete("/versions") {
                     contentType(ContentType.Application.Json)
-                    setBody(invalidRequestBody)
+                    setBody(requestBody)
                     header(HttpHeaders.Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.BadRequest
+                response.status shouldBe HttpStatusCode.NoContent
             }
+            selectVersion(candidate, version, None, platform) shouldBe None
         }
     }
 

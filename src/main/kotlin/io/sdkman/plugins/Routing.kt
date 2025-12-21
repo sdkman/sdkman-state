@@ -9,12 +9,14 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.domain.Distribution
+import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
-import io.sdkman.domain.Version
-import io.sdkman.domain.HealthRepository
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.validation.ValidationErrorResponse
+import io.sdkman.validation.ValidationFailure
+import io.sdkman.validation.VersionRequestValidator
 import io.sdkman.validation.VersionValidator
 import kotlinx.serialization.Serializable
 
@@ -101,23 +103,29 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
         }
         authenticate("auth-basic") {
             post("/versions") {
-                Either.catch { call.receive<Version>() }
-                    .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
-                    .flatMap { VersionValidator.validateVersion(it) }
-                    .fold(
-                        { error ->
-                            val errorResponse = ErrorResponse("Validation failed", error.message)
-                            call.respond(HttpStatusCode.BadRequest, errorResponse)
-                        },
-                        { validVersion ->
-                            repo.create(validVersion)
-                                .map { call.respond(HttpStatusCode.NoContent) }
-                                .getOrElse { error ->
-                                    val errorResponse = ErrorResponse("Database error", error)
-                                    call.respond(HttpStatusCode.InternalServerError, errorResponse)
+                val requestBody = call.receiveText()
+                VersionRequestValidator.validateRequest(requestBody)
+                        .fold(
+                                { errors ->
+                                    val failures =
+                                            errors.map { ValidationFailure(it.field, it.message) }
+                                    val errorResponse =
+                                            ValidationErrorResponse("Validation failed", failures)
+                                    call.respond(HttpStatusCode.BadRequest, errorResponse)
+                                },
+                                { validVersion ->
+                                    repo.create(validVersion)
+                                            .map { call.respond(HttpStatusCode.NoContent) }
+                                            .getOrElse { error ->
+                                                val errorResponse =
+                                                        ErrorResponse("Database error", error)
+                                                call.respond(
+                                                        HttpStatusCode.InternalServerError,
+                                                        errorResponse
+                                                )
+                                            }
                                 }
-                        }
-                    )
+                        )
             }
             delete("/versions") {
                 Either.catch { call.receive<UniqueVersion>() }

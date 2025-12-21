@@ -81,14 +81,14 @@ class PostVersionApiSpec : ShouldSpec({
         }
     }
 
-    should("return 400 Bad Request when version contains distribution suffix") {
+    should("accept version with suffix like -RC1") {
         val version = Version(
-            candidate = "java",
-            version = "17.0.1-tem",
-            platform = Platform.LINUX_X64,
-            url = "https://example.com/java-17.0.1.tar.gz",
+            candidate = "kotlin",
+            version = "1.9.0-RC1",
+            platform = Platform.UNIVERSAL,
+            url = "https://github.com/JetBrains/kotlin/releases/download/1.9.0-RC1/kotlin.zip",
             visible = true.some(),
-            distribution = Distribution.TEMURIN.some()
+            distribution = None
         )
         val requestBody = version.toJsonString()
 
@@ -99,9 +99,14 @@ class PostVersionApiSpec : ShouldSpec({
                     setBody(requestBody)
                     header(Authorization, BasicAuthHeader)
                 }
-                response.status shouldBe HttpStatusCode.BadRequest
-                response.bodyAsText() shouldContain "Version '17.0.1-tem' should not contain distribution 'tem' suffix"
+                response.status shouldBe HttpStatusCode.NoContent
             }
+            selectVersion(
+                candidate = version.candidate,
+                version = version.version,
+                distribution = version.distribution,
+                platform = version.platform
+            ) shouldBe version.some()
         }
     }
 
@@ -125,7 +130,61 @@ class PostVersionApiSpec : ShouldSpec({
                     header(Authorization, BasicAuthHeader)
                 }
                 response.status shouldBe HttpStatusCode.BadRequest
-                response.bodyAsText() shouldContain "Invalid request"
+                response.bodyAsText() shouldContain "Validation failed"
+                response.bodyAsText() shouldContain "Distribution 'INVALID_DISTRO' is not valid"
+            }
+        }
+    }
+
+    should("return 400 Bad Request with accumulated errors when multiple fields are invalid") {
+        val requestBody = """
+            {
+                "candidate": "invalid-candidate",
+                "version": "",
+                "platform": "INVALID_PLATFORM",
+                "url": "http://not-https.com/file.zip"
+            }
+        """.trimIndent()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+                val responseBody = response.bodyAsText()
+                responseBody shouldContain "Validation failed"
+                responseBody shouldContain "Candidate 'invalid-candidate' is not valid"
+                responseBody shouldContain "version cannot be empty"
+                responseBody shouldContain "Platform 'INVALID_PLATFORM' is not valid"
+                responseBody shouldContain "must be a valid HTTPS URL"
+            }
+        }
+    }
+
+    should("return 400 Bad Request when required fields are missing") {
+        val requestBody = """
+            {
+                "visible": true
+            }
+        """.trimIndent()
+
+        withCleanDatabase {
+            withTestApplication {
+                val response = client.post("/versions") {
+                    contentType(ContentType.Application.Json)
+                    setBody(requestBody)
+                    header(Authorization, BasicAuthHeader)
+                }
+                response.status shouldBe HttpStatusCode.BadRequest
+                val responseBody = response.bodyAsText()
+                responseBody shouldContain "Validation failed"
+                responseBody shouldContain "candidate cannot be empty"
+                responseBody shouldContain "version cannot be empty"
+                responseBody shouldContain "platform cannot be empty"
+                responseBody shouldContain "url cannot be empty"
             }
         }
     }
