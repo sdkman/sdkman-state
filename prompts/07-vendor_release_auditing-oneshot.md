@@ -60,13 +60,16 @@ interface AuditRepository {
 ### Error Handling Philosophy
 - **Audit failures must never block business operations**
 - If audit logging fails, log a warning with full error details but allow the POST/DELETE to succeed
-- Consider Either's `tapLeft` to handle audit failures gracefully
+- Use Either's `onLeft` to handle audit failures gracefully (side-effect for logging)
+- **Follow RULE-107**: Prefer `.map` and `.getOrElse` over `.fold` when working with Either/Option
 - **Under no conditions use try-catch for error handling**. Keep it functional!
 - Audit repository methods should return `Either<DatabaseFailure, Unit>` for proper error handling
 
 ### Data Storage Strategy
 - Store version data as JSON text/jsonb column for flexibility and easy querying
 - Use PostgreSQL's `jsonb` type for efficient JSON querying and indexing
+- **Use Exposed's built-in `json()` function** for JSONB column support - do NOT create custom column types
+- Reference: https://www.jetbrains.com/help/exposed/json-and-jsonb-types.html#basic-usage
 - Serialize the complete `Version` object to JSON, preserving all fields including Option types
 - This allows recreating the exact state of what was created or deleted
 
@@ -99,6 +102,7 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 
 ### Test Support Utilities
 - Create test helper utilities to query the vendor_audit table directly and retrieve audit records
+- **Use Exposed's built-in `json<T>()` function in test support code** - same as production code
 - Provide helpers to deserialize the version_data JSONB column back into a Version object for verification
 - Use these helpers in integration tests to verify that the correct JSON was written and can be round-tripped
 - Follow existing test support patterns in `src/test/kotlin/io/sdkman/support/`
@@ -144,10 +148,13 @@ All tests should be written using Kotest's ShouldSpec style to match the existin
 
 ### Technology Preferences
 - Use Jetbrains Exposed ORM for audit repository implementation (consistent with existing `VersionsRepository`)
-- Use kotlinx.serialization to serialize Version to JSON string
+- **Use Exposed's built-in `json<T>()` function for JSONB columns** - do NOT create custom column types
+- Reference: https://www.jetbrains.com/help/exposed/json-and-jsonb-types.html#basic-usage
+- Use kotlinx.serialization with Exposed's automatic JSON serialization
 - Use PostgreSQL jsonb column type for version_data field
-- Use Instant type from kotlinx-datetime for timestamp
+- Use Instant type from java.time for timestamp
 - Follow Arrow `Either` patterns for error handling (consistent with codebase)
+- **Follow RULE-107**: Prefer `.map` and `.getOrElse` over `.fold` when working with Either/Option
 - Use suspend functions for async database operations (consistent with existing repository pattern)
 
 ### Database Migration
@@ -183,49 +190,69 @@ CREATE INDEX idx_vendor_audit_version_data ON vendor_audit USING GIN(version_dat
 
 ```kotlin
 // In Routing.kt - POST endpoint (pseudocode)
+// Follows RULE-107: Prefer map/getOrElse over fold
 post("/versions") {
     val principal = call.principal<UserIdPrincipal>()
     val username = principal?.name ?: "unknown"
 
     // ... validation logic ...
 
-    versionsRepository.save(version).fold(
-        { error -> /* handle error */ },
-        {
+    versionsRepository.save(version)
+        .onLeft { error ->
+            // Handle save error
+            call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error))
+        }
+        .map {
             // Version saved successfully, now audit it
             auditRepository.recordAudit(username, AuditOperation.POST, version)
-                .tapLeft { auditError ->
+                .onLeft { auditError ->
                     // Log warning but don't fail the request
                     logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
                 }
-
             call.respond(HttpStatusCode.NoContent)
         }
-    )
 }
 ```
 
-### Serialization Pattern
+### Exposed JSONB Column Pattern
 
 ```kotlin
-// Serialize Version to JSON string
-fun Version.toJson(): String =
-    Json.encodeToString(Version.serializer(), this)
+// Use Exposed's built-in json() function for JSONB columns
+// Reference: https://www.jetbrains.com/help/exposed/json-and-jsonb-types.html#basic-usage
+
+import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.json.json
+
+private object VendorAuditTable : Table(name = "vendor_audit") {
+    val id = long("id").autoIncrement()
+    val username = text("username")
+    val timestamp = timestamp("timestamp")
+    val operation = text("operation")
+    val versionData = json<Version>("version_data", Json.Default)  // Built-in JSONB support
+
+    override val primaryKey = PrimaryKey(id)
+}
 
 // In audit repository implementation
 suspend fun recordAudit(
     username: String,
     operation: AuditOperation,
     version: Version
-): Either<DatabaseFailure, Unit> = either {
-    transaction {
+): Either<DatabaseFailure, Unit> = Either.catch {
+    dbQuery {
         VendorAuditTable.insert {
             it[this.username] = username
-            it[this.timestamp] = Clock.System.now()
+            it[this.timestamp] = Instant.now()
             it[this.operation] = operation.name
-            it[this.versionData] = version.toJson()
+            it[this.versionData] = version  // Exposed handles serialization automatically
         }
     }
+    Unit
+}.mapLeft { error ->
+    DatabaseFailure(
+        message = "Failed to record audit: ${error.message}",
+        cause = error
+    )
 }
 ```
 
@@ -408,8 +435,11 @@ ORDER BY timestamp DESC;
 
 ### Code Quality
 - [ ] **No nullable types used** - follows Option pattern from kotlin.md rules
+- [ ] **RULE-107 compliance**: Uses `.map` and `.getOrElse` instead of `.fold` for Either/Option
+- [ ] Uses `onLeft` for side-effect error logging (not fold)
+- [ ] **Uses Exposed's built-in `json<T>()` function** - NO custom column types created
 - [ ] Exposed table definition follows existing VersionsTable pattern
-- [ ] Serialization uses kotlinx.serialization consistently
+- [ ] Serialization uses kotlinx.serialization consistently (automatic via Exposed json())
 - [ ] Error handling uses Either pattern consistently
 - [ ] Logging uses appropriate log level (WARN for audit failures)
 - [ ] Code is well-organized in appropriate packages
