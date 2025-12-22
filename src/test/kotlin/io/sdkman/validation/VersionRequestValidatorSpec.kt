@@ -4,6 +4,7 @@ import arrow.core.None
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
@@ -399,8 +400,8 @@ class VersionRequestValidatorSpec :
                 result.isLeft() shouldBe true
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidCandidateError>()
-                    errors.head.message shouldBe
-                        "Candidate 'invalid-candidate' is not valid. Allowed values: java, maven, gradle, kotlin, scala, groovy, sbt"
+                    errors.head.message shouldContain "Candidate 'invalid-candidate' is not valid"
+                    errors.head.message shouldContain "Allowed values:"
                 }
             }
 

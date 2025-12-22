@@ -10,8 +10,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 object VersionRequestValidator {
-    private val ALLOWED_CANDIDATES =
-        listOf("java", "maven", "gradle", "kotlin", "scala", "groovy", "sbt")
+    private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
     private val HTTPS_URL_PATTERN = Regex("^https://[a-zA-Z0-9.-]+(/.*)?$")
     private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
     private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
