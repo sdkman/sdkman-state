@@ -56,20 +56,18 @@ fun Application.configureRouting(
     routing {
         get("/meta/health") {
             healthRepo.checkDatabaseConnection()
-                .fold(
-                    { failure ->
-                        call.respond(
-                            HttpStatusCode.ServiceUnavailable,
-                            HealthCheckResponse(HealthStatus.FAILURE, failure.message)
-                        )
-                    },
-                    {
-                        call.respond(
-                            HttpStatusCode.OK,
-                            HealthCheckResponse(HealthStatus.SUCCESS, null)
-                        )
-                    }
-                )
+                .map {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        HealthCheckResponse(HealthStatus.SUCCESS, null)
+                    )
+                }
+                .getOrElse { failure ->
+                    call.respond(
+                        HttpStatusCode.ServiceUnavailable,
+                        HealthCheckResponse(HealthStatus.FAILURE, failure.message)
+                    )
+                }
         }
         get("/versions/{candidate}") {
             option {
@@ -103,10 +101,9 @@ fun Application.configureRouting(
                     platform = platform,
                     distribution = distribution
                 )
-                maybeVersion.fold(
-                    { call.respond(HttpStatusCode.NotFound) },
-                    { call.respond(HttpStatusCode.OK, it) }
-                )
+                maybeVersion
+                    .map { call.respond(HttpStatusCode.OK, it) }
+                    .getOrElse { call.respond(HttpStatusCode.NotFound) }
             }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
         }
         authenticate("auth-basic") {
@@ -115,33 +112,25 @@ fun Application.configureRouting(
                 val username = principal?.name ?: "unknown"
                 val requestBody = call.receiveText()
                 VersionRequestValidator.validateRequest(requestBody)
-                        .fold(
-                                { errors ->
-                                    val failures =
-                                            errors.map { ValidationFailure(it.field, it.message) }
-                                    val errorResponse =
-                                            ValidationErrorResponse("Validation failed", failures)
-                                    call.respond(HttpStatusCode.BadRequest, errorResponse)
-                                },
-                                { validVersion ->
-                                    repo.create(validVersion)
-                                            .map {
-                                                auditRepo.recordAudit(username, AuditOperation.POST, validVersion)
-                                                    .onLeft { auditError ->
-                                                        logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
-                                                    }
-                                                call.respond(HttpStatusCode.NoContent)
-                                            }
-                                            .getOrElse { error ->
-                                                val errorResponse =
-                                                        ErrorResponse("Database error", error)
-                                                call.respond(
-                                                        HttpStatusCode.InternalServerError,
-                                                        errorResponse
-                                                )
-                                            }
+                        .map { validVersion ->
+                            repo.create(validVersion)
+                                .also {
+                                    auditRepo.recordAudit(username, AuditOperation.POST, validVersion)
+                                        .onLeft { auditError ->
+                                            logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
+                                        }
                                 }
-                        )
+                                .map { call.respond(HttpStatusCode.NoContent) }
+                                .getOrElse { error ->
+                                    val errorResponse = ErrorResponse("Database error", error)
+                                    call.respond(HttpStatusCode.InternalServerError, errorResponse)
+                                }
+                        }
+                        .getOrElse { errors ->
+                            val failures = errors.map { ValidationFailure(it.field, it.message) }
+                            val errorResponse = ValidationErrorResponse("Validation failed", failures)
+                            call.respond(HttpStatusCode.BadRequest, errorResponse)
+                        }
             }
             delete("/versions") {
                 val principal = call.principal<UserIdPrincipal>()
@@ -149,35 +138,34 @@ fun Application.configureRouting(
                 Either.catch { call.receive<UniqueVersion>() }
                     .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
                     .flatMap { UniqueVersionValidator.validate(it) }
-                    .fold(
-                        { error ->
-                            val errorResponse = ErrorResponse("Validation failed", error.message)
-                            call.respond(HttpStatusCode.BadRequest, errorResponse)
-                        },
-                        { validUniqueVersion ->
-                            val maybeVersion = repo.read(
-                                candidate = validUniqueVersion.candidate,
-                                version = validUniqueVersion.version,
-                                platform = validUniqueVersion.platform,
-                                distribution = validUniqueVersion.distribution
-                            )
-                            maybeVersion.fold(
-                                { call.respond(HttpStatusCode.NotFound) },
-                                { versionToDelete ->
-                                    when (repo.delete(validUniqueVersion)) {
-                                        1 -> {
-                                            auditRepo.recordAudit(username, AuditOperation.DELETE, versionToDelete)
-                                                .onLeft { auditError ->
-                                                    logger.warn("Audit logging failed for DELETE /versions: ${auditError.message}", auditError)
-                                                }
-                                            call.respond(HttpStatusCode.NoContent)
+                    .map { validUniqueVersion ->
+                        val maybeVersion = repo.read(
+                            candidate = validUniqueVersion.candidate,
+                            version = validUniqueVersion.version,
+                            platform = validUniqueVersion.platform,
+                            distribution = validUniqueVersion.distribution
+                        )
+                        maybeVersion
+                            .also { versionOption ->
+                                versionOption.map { versionToDelete ->
+                                    auditRepo.recordAudit(username, AuditOperation.DELETE, versionToDelete)
+                                        .onLeft { auditError ->
+                                            logger.warn("Audit logging failed for DELETE /versions: ${auditError.message}", auditError)
                                         }
-                                        0 -> call.respond(HttpStatusCode.NotFound)
-                                    }
                                 }
-                            )
-                        }
-                    )
+                            }
+                            .map {
+                                when (repo.delete(validUniqueVersion)) {
+                                    1 -> call.respond(HttpStatusCode.NoContent)
+                                    0 -> call.respond(HttpStatusCode.NotFound)
+                                }
+                            }
+                            .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                    }
+                    .getOrElse { error ->
+                        val errorResponse = ErrorResponse("Validation failed", error.message)
+                        call.respond(HttpStatusCode.BadRequest, errorResponse)
+                    }
             }
         }
     }
