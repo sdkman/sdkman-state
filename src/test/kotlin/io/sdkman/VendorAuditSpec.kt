@@ -48,7 +48,7 @@ class VendorAuditSpec : ShouldSpec({
             auditRecords shouldHaveSize 1
             val auditRecord = auditRecords.first()
             auditRecord.username shouldBe "testuser"
-            auditRecord.operation shouldBe AuditOperation.POST
+            auditRecord.operation shouldBe AuditOperation.CREATE
 
             val deserializedVersion = deserializeVersionData(auditRecord.versionData)
             deserializedVersion shouldBe version

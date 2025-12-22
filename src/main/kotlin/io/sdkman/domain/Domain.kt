@@ -95,7 +95,7 @@ data class AuditRecord(
 
 @Serializable
 enum class AuditOperation {
-    POST,
+    CREATE,
     DELETE
 }
 

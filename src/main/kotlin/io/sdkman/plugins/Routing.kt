@@ -115,7 +115,7 @@ fun Application.configureRouting(
                         .map { validVersion ->
                             repo.create(validVersion)
                                 .also {
-                                    auditRepo.recordAudit(username, AuditOperation.POST, validVersion)
+                                    auditRepo.recordAudit(username, AuditOperation.CREATE, validVersion)
                                         .onLeft { auditError ->
                                             logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
                                         }
