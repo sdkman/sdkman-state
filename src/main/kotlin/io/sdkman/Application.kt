@@ -5,6 +5,7 @@ import io.sdkman.config.configureAppConfig
 import io.sdkman.plugins.*
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.repos.AuditRepositoryImpl
 
 fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
 
@@ -18,5 +19,5 @@ fun Application.module() {
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
 
-    configureRouting(VersionsRepository(), HealthRepositoryImpl())
+    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl())
 }

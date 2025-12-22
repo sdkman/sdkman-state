@@ -10,6 +10,7 @@ import arrow.core.getOrElse
 import arrow.core.serialization.OptionSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import kotlinx.datetime.Instant
 
 @Serializable
 data class Version(
@@ -81,5 +82,28 @@ enum class HealthStatus {
 
 interface HealthRepository {
     suspend fun checkDatabaseConnection(): Either<DatabaseFailure, Unit>
+}
+
+@Serializable
+data class AuditRecord(
+    val id: Long = 0,
+    val username: String,
+    val timestamp: Instant,
+    val operation: AuditOperation,
+    val versionData: String
+)
+
+@Serializable
+enum class AuditOperation {
+    POST,
+    DELETE
+}
+
+interface AuditRepository {
+    suspend fun recordAudit(
+        username: String,
+        operation: AuditOperation,
+        version: Version
+    ): Either<DatabaseFailure, Unit>
 }
 

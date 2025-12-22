@@ -58,7 +58,7 @@ class VersionsRepository {
         distribution: Option<Distribution>,
         visible: Option<Boolean>
     ): List<Version> = dbQuery {
-        Versions.select {
+        Versions.selectAll().where {
             (Versions.candidate eq candidate) and
                     platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
                     distribution.fold({ Op.TRUE }, { Versions.distribution eq it.name }) and
@@ -73,7 +73,7 @@ class VersionsRepository {
         platform: Platform,
         distribution: Option<Distribution>
     ): Option<Version> = dbQuery {
-        Versions.select {
+        Versions.selectAll().where {
             (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     (Versions.platform eq platform.name) and
@@ -85,7 +85,7 @@ class VersionsRepository {
     fun create(cv: Version): Either<String, Unit> = transaction {
         val visible = cv.visible.getOrElse { true }
 
-        Versions.select {
+        Versions.selectAll().where {
             (Versions.candidate eq cv.candidate) and
                     (Versions.version eq cv.version) and
                     (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and

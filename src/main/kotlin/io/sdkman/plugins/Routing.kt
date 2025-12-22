@@ -8,6 +8,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.sdkman.domain.AuditOperation
+import io.sdkman.domain.AuditRepository
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
@@ -19,6 +21,7 @@ import io.sdkman.validation.ValidationFailure
 import io.sdkman.validation.VersionRequestValidator
 import io.sdkman.validation.UniqueVersionValidator
 import kotlinx.serialization.Serializable
+import org.slf4j.LoggerFactory
 
 @Serializable
 data class ErrorResponse(
@@ -32,7 +35,12 @@ data class HealthCheckResponse(
     val message: String? = null
 )
 
-fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRepository) {
+fun Application.configureRouting(
+    repo: VersionsRepository,
+    healthRepo: HealthRepository,
+    auditRepo: AuditRepository
+) {
+    val logger = LoggerFactory.getLogger("io.sdkman.routes.VersionRoutes")
 
     fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
         when (this.queryParameters["visible"].toOption()) {
@@ -103,6 +111,8 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
         }
         authenticate("auth-basic") {
             post("/versions") {
+                val principal = call.principal<UserIdPrincipal>()
+                val username = principal?.name ?: "unknown"
                 val requestBody = call.receiveText()
                 VersionRequestValidator.validateRequest(requestBody)
                         .fold(
@@ -115,7 +125,13 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                                 },
                                 { validVersion ->
                                     repo.create(validVersion)
-                                            .map { call.respond(HttpStatusCode.NoContent) }
+                                            .map {
+                                                auditRepo.recordAudit(username, AuditOperation.POST, validVersion)
+                                                    .onLeft { auditError ->
+                                                        logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
+                                                    }
+                                                call.respond(HttpStatusCode.NoContent)
+                                            }
                                             .getOrElse { error ->
                                                 val errorResponse =
                                                         ErrorResponse("Database error", error)
@@ -128,6 +144,8 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                         )
             }
             delete("/versions") {
+                val principal = call.principal<UserIdPrincipal>()
+                val username = principal?.name ?: "unknown"
                 Either.catch { call.receive<UniqueVersion>() }
                     .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
                     .flatMap { UniqueVersionValidator.validate(it) }
@@ -137,10 +155,27 @@ fun Application.configureRouting(repo: VersionsRepository, healthRepo: HealthRep
                             call.respond(HttpStatusCode.BadRequest, errorResponse)
                         },
                         { validUniqueVersion ->
-                            when (repo.delete(validUniqueVersion)) {
-                                1 -> call.respond(HttpStatusCode.NoContent)
-                                0 -> call.respond(HttpStatusCode.NotFound)
-                            }
+                            val maybeVersion = repo.read(
+                                candidate = validUniqueVersion.candidate,
+                                version = validUniqueVersion.version,
+                                platform = validUniqueVersion.platform,
+                                distribution = validUniqueVersion.distribution
+                            )
+                            maybeVersion.fold(
+                                { call.respond(HttpStatusCode.NotFound) },
+                                { versionToDelete ->
+                                    when (repo.delete(validUniqueVersion)) {
+                                        1 -> {
+                                            auditRepo.recordAudit(username, AuditOperation.DELETE, versionToDelete)
+                                                .onLeft { auditError ->
+                                                    logger.warn("Audit logging failed for DELETE /versions: ${auditError.message}", auditError)
+                                                }
+                                            call.respond(HttpStatusCode.NoContent)
+                                        }
+                                        0 -> call.respond(HttpStatusCode.NotFound)
+                                    }
+                                }
+                            )
                         }
                     )
             }
