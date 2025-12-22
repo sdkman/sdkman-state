@@ -12,7 +12,7 @@ plugins {
     kotlin("jvm") version "2.3.0"
     id("io.ktor.plugin") version "3.3.3"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
+    id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
 }
 
 group = "io.sdkman"
