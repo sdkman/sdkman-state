@@ -10,65 +10,71 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 
-class UniqueVersionValidatorSpec : ShouldSpec({
+class UniqueVersionValidatorSpec :
+    ShouldSpec({
 
-    context("validate") {
+        context("validate") {
 
-        should("accept unique version with valid fields") {
-            val uniqueVersion = UniqueVersion(
-                candidate = "java",
-                version = "17.0.1",
-                distribution = Distribution.TEMURIN.some(),
-                platform = Platform.LINUX_X64
-            )
+            should("accept unique version with valid fields") {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "17.0.1",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
 
-            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
+                UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
+            }
+
+            should("accept unique version with no distribution") {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "maven",
+                        version = "3.9.0",
+                        distribution = None,
+                        platform = Platform.UNIVERSAL,
+                    )
+
+                UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
+            }
+
+            should("accept version with suffix like -RC1") {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "kotlin",
+                        version = "1.9.0-RC1",
+                        distribution = None,
+                        platform = Platform.UNIVERSAL,
+                    )
+
+                UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
+            }
+
+            should("reject when candidate is blank") {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "",
+                        version = "17.0.1",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+
+                val expected = EmptyFieldError("candidate").left()
+                UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
+            }
+
+            should("reject when version is blank") {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+
+                val expected = EmptyFieldError("version").left()
+                UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
+            }
         }
-
-        should("accept unique version with no distribution") {
-            val uniqueVersion = UniqueVersion(
-                candidate = "maven",
-                version = "3.9.0",
-                distribution = None,
-                platform = Platform.UNIVERSAL
-            )
-
-            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
-        }
-
-        should("accept version with suffix like -RC1") {
-            val uniqueVersion = UniqueVersion(
-                candidate = "kotlin",
-                version = "1.9.0-RC1",
-                distribution = None,
-                platform = Platform.UNIVERSAL
-            )
-
-            UniqueVersionValidator.validate(uniqueVersion) shouldBe uniqueVersion.right()
-        }
-
-        should("reject when candidate is blank") {
-            val uniqueVersion = UniqueVersion(
-                candidate = "",
-                version = "17.0.1",
-                distribution = Distribution.TEMURIN.some(),
-                platform = Platform.LINUX_X64
-            )
-
-            val expected = EmptyFieldError("candidate").left()
-            UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
-        }
-
-        should("reject when version is blank") {
-            val uniqueVersion = UniqueVersion(
-                candidate = "java",
-                version = "",
-                distribution = Distribution.TEMURIN.some(),
-                platform = Platform.LINUX_X64
-            )
-
-            val expected = EmptyFieldError("version").left()
-            UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
-        }
-    }
-})
+    })

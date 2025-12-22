@@ -9,6 +9,6 @@ import kotlinx.serialization.json.Json
 @OptIn(ExperimentalSerializationApi::class)
 fun Application.configureSerialization() {
     install(ContentNegotiation) {
-        json( Json { explicitNulls = false })
+        json(Json { explicitNulls = false })
     }
 }

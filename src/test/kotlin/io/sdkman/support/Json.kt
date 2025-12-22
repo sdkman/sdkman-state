@@ -1,7 +1,7 @@
 package io.sdkman.support
 
-import io.sdkman.domain.Version
 import io.sdkman.domain.UniqueVersion
+import io.sdkman.domain.Version
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 

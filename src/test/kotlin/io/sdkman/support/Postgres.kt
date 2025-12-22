@@ -11,9 +11,9 @@ import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.dao.id.IntIdTable
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.json.json
@@ -21,10 +21,10 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 
-const val dbHost = "localhost"
-const val dbPort = 5432
-const val dbUsername = "postgres"
-const val dbPassword = "postgres"
+const val DB_HOST = "localhost"
+const val DB_PORT = 5432
+const val DB_USERNAME = "postgres"
+const val DB_PASSWORD = "postgres"
 
 private object Versions : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
@@ -49,74 +49,93 @@ private object VendorAuditTable : Table(name = "vendor_audit") {
     override val primaryKey = PrimaryKey(id)
 }
 
-fun insertVersions(vararg cvs: Version) = transaction {
-    cvs.forEach { cv ->
-        Versions.insert {
-            it[candidate] = cv.candidate
-            it[version] = cv.version
-            it[platform] = cv.platform.name
-            it[distribution] = cv.distribution.map { it.name }.getOrNull()
-            it[url] = cv.url
-            it[visible] = cv.visible.getOrElse { true }
-            it[md5sum] = cv.md5sum.getOrNull()
-            it[sha256sum] = cv.sha256sum.getOrNull()
-            it[sha512sum] = cv.sha512sum.getOrNull()
+fun insertVersions(vararg cvs: Version) =
+    transaction {
+        cvs.forEach { cv ->
+            Versions.insert {
+                it[candidate] = cv.candidate
+                it[version] = cv.version
+                it[platform] = cv.platform.name
+                it[distribution] = cv.distribution.map { it.name }.getOrNull()
+                it[url] = cv.url
+                it[visible] = cv.visible.getOrElse { true }
+                it[md5sum] = cv.md5sum.getOrNull()
+                it[sha256sum] = cv.sha256sum.getOrNull()
+                it[sha512sum] = cv.sha512sum.getOrNull()
+            }
         }
     }
-}
 
 private fun <T> dbQuery(block: suspend () -> T): T =
     runBlocking(Dispatchers.IO) {
         newSuspendedTransaction(Dispatchers.IO) { block() }
     }
 
-fun selectVersion(candidate: String, version: String, distribution: Option<Distribution>, platform: Platform): Option<Version> =
+fun selectVersion(
+    candidate: String,
+    version: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+): Option<Version> =
     dbQuery {
-        Versions.selectAll().where {
-            (Versions.candidate eq candidate) and
+        Versions
+            .selectAll()
+            .where {
+                (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
                     (Versions.platform eq platform.name)
-        }.map {
-            Version(
-                candidate = it[Versions.candidate],
-                version = it[Versions.version],
-                distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
-                platform = Platform.valueOf(it[Versions.platform]),
-                url = it[Versions.url],
-                visible = it[Versions.visible].toOption(),
-                md5sum = it[Versions.md5sum].toOption(),
-                sha256sum = it[Versions.sha256sum].toOption(),
-                sha512sum = it[Versions.sha512sum].toOption()
-            )
-        }.firstOrNone()
+            }.map {
+                Version(
+                    candidate = it[Versions.candidate],
+                    version = it[Versions.version],
+                    distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
+                    platform = Platform.valueOf(it[Versions.platform]),
+                    url = it[Versions.url],
+                    visible = it[Versions.visible].toOption(),
+                    md5sum = it[Versions.md5sum].toOption(),
+                    sha256sum = it[Versions.sha256sum].toOption(),
+                    sha512sum = it[Versions.sha512sum].toOption(),
+                )
+            }.firstOrNone()
     }
 
-fun selectLastUpdatedAt(candidate: String, version: String, distribution: Option<Distribution>, platform: Platform): Option<Instant> =
+fun selectLastUpdatedAt(
+    candidate: String,
+    version: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+): Option<Instant> =
     dbQuery {
-        Versions.selectAll().where {
-            (Versions.candidate eq candidate) and
+        Versions
+            .selectAll()
+            .where {
+                (Versions.candidate eq candidate) and
                     (Versions.version eq version) and
                     distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
                     (Versions.platform eq platform.name)
-        }.map {
-            it[Versions.lastUpdatedAt]
-        }.firstOrNone()
+            }.map {
+                it[Versions.lastUpdatedAt]
+            }.firstOrNone()
     }
 
 private fun initialisePostgres() =
-    Database.connect(
-        url = "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2",
-        user = dbUsername,
-        password = dbPassword,
-        driver = "org.postgresql.Driver"
-    ).also {
-        Flyway.configure().dataSource(
-            "jdbc:postgresql://$dbHost:$dbPort/sdkman?sslMode=prefer&loglevel=2",
-            dbUsername,
-            dbPassword
-        ).load().migrate()
-    }
+    Database
+        .connect(
+            url = "jdbc:postgresql://$DB_HOST:$DB_PORT/sdkman?sslMode=prefer&loglevel=2",
+            user = DB_USERNAME,
+            password = DB_PASSWORD,
+            driver = "org.postgresql.Driver",
+        ).also {
+            Flyway
+                .configure()
+                .dataSource(
+                    "jdbc:postgresql://$DB_HOST:$DB_PORT/sdkman?sslMode=prefer&loglevel=2",
+                    DB_USERNAME,
+                    DB_PASSWORD,
+                ).load()
+                .migrate()
+        }
 
 fun selectAuditRecords(): List<AuditRecord> =
     dbQuery {
@@ -124,12 +143,13 @@ fun selectAuditRecords(): List<AuditRecord> =
             AuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
-                timestamp = kotlinx.datetime.Instant.fromEpochSeconds(
-                    row[VendorAuditTable.timestamp].epochSecond,
-                    row[VendorAuditTable.timestamp].nano
-                ),
+                timestamp =
+                    kotlinx.datetime.Instant.fromEpochSeconds(
+                        row[VendorAuditTable.timestamp].epochSecond,
+                        row[VendorAuditTable.timestamp].nano,
+                    ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData])
+                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
             )
         }
     }
@@ -140,12 +160,13 @@ fun selectAuditRecordsByUsername(username: String): List<AuditRecord> =
             AuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
-                timestamp = kotlinx.datetime.Instant.fromEpochSeconds(
-                    row[VendorAuditTable.timestamp].epochSecond,
-                    row[VendorAuditTable.timestamp].nano
-                ),
+                timestamp =
+                    kotlinx.datetime.Instant.fromEpochSeconds(
+                        row[VendorAuditTable.timestamp].epochSecond,
+                        row[VendorAuditTable.timestamp].nano,
+                    ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData])
+                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
             )
         }
     }
@@ -156,18 +177,18 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<AuditRecord> 
             AuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
-                timestamp = kotlinx.datetime.Instant.fromEpochSeconds(
-                    row[VendorAuditTable.timestamp].epochSecond,
-                    row[VendorAuditTable.timestamp].nano
-                ),
+                timestamp =
+                    kotlinx.datetime.Instant.fromEpochSeconds(
+                        row[VendorAuditTable.timestamp].epochSecond,
+                        row[VendorAuditTable.timestamp].nano,
+                    ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData])
+                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
             )
         }
     }
 
-fun deserializeVersionData(versionData: String): Version =
-    Json.decodeFromString(Version.serializer(), versionData)
+fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(Version.serializer(), versionData)
 
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()

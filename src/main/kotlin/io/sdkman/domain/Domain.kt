@@ -8,9 +8,9 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.serialization.OptionSerializer
+import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
-import kotlinx.datetime.Instant
 
 @Serializable
 data class Version(
@@ -50,10 +50,12 @@ enum class Distribution {
     SAP_MACHINE,
     SEMERU,
     TEMURIN,
-    ZULU
+    ZULU,
 }
 
-enum class Platform(val platformId: String) {
+enum class Platform(
+    val platformId: String,
+) {
     LINUX_X32("linuxx32"),
     LINUX_X64("linuxx64"),
     LINUX_ARM32HF("linuxarm32hf"),
@@ -62,7 +64,8 @@ enum class Platform(val platformId: String) {
     MAC_X64("darwinx64"),
     MAC_ARM64("darwinarm64"),
     WINDOWS_X64("windowsx64"),
-    UNIVERSAL("universal");
+    UNIVERSAL("universal"),
+    ;
 
     companion object {
         fun findByPlatformId(platformId: String): Platform =
@@ -71,13 +74,13 @@ enum class Platform(val platformId: String) {
 }
 
 data class DatabaseFailure(
-    override val message: String, 
-    override val cause: Throwable
-): Throwable()
+    override val message: String,
+    override val cause: Throwable,
+) : Throwable()
 
 enum class HealthStatus {
     SUCCESS,
-    FAILURE
+    FAILURE,
 }
 
 interface HealthRepository {
@@ -90,20 +93,19 @@ data class AuditRecord(
     val username: String,
     val timestamp: Instant,
     val operation: AuditOperation,
-    val versionData: String
+    val versionData: String,
 )
 
 @Serializable
 enum class AuditOperation {
     CREATE,
-    DELETE
+    DELETE,
 }
 
 interface AuditRepository {
     suspend fun recordAudit(
         username: String,
         operation: AuditOperation,
-        version: Version
+        version: Version,
     ): Either<DatabaseFailure, Unit>
 }
-

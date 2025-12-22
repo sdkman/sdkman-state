@@ -5,16 +5,17 @@ import io.kotest.matchers.shouldBe
 import io.sdkman.support.withCleanDatabase
 import kotlinx.coroutines.runBlocking
 
-class HealthRepositorySpec : ShouldSpec({
+class HealthRepositorySpec :
+    ShouldSpec({
 
-    should("successfully check database connection when database is available") {
-        withCleanDatabase {
-            val healthRepo = HealthRepositoryImpl()
-            
-            runBlocking {
-                val result = healthRepo.checkDatabaseConnection()
-                result.isRight() shouldBe true
+        should("successfully check database connection when database is available") {
+            withCleanDatabase {
+                val healthRepo = HealthRepositoryImpl()
+
+                runBlocking {
+                    val result = healthRepo.checkDatabaseConnection()
+                    result.isRight() shouldBe true
+                }
             }
         }
-    }
-})
+    })

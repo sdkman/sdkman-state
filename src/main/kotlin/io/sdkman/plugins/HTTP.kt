@@ -18,17 +18,18 @@ fun Application.configureHTTP(apiCacheConfig: ApiCacheConfig) {
         gzip {
             priority = 1.0
             matchContentType(
-                ContentType.Application.Json
+                ContentType.Application.Json,
             )
         }
     }
     install(CachingHeaders) {
         options { _, content ->
             when (content.contentType?.withoutParameters()) {
-                ContentType.Application.Json -> CachingOptions(
-                    cacheControl = CacheControl.MaxAge(maxAgeSeconds = apiCacheConfig.maxAgeSeconds),
-                    expires = GMTDate(Instant.now().plusSeconds(apiCacheConfig.maxAgeSeconds.toLong()).toEpochMilli())
-                )
+                ContentType.Application.Json ->
+                    CachingOptions(
+                        cacheControl = CacheControl.MaxAge(maxAgeSeconds = apiCacheConfig.maxAgeSeconds),
+                        expires = GMTDate(Instant.now().plusSeconds(apiCacheConfig.maxAgeSeconds.toLong()).toEpochMilli()),
+                    )
                 else -> null
             }
         }

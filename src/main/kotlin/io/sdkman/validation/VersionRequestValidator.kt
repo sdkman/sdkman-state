@@ -10,7 +10,6 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
 object VersionRequestValidator {
-
     private val ALLOWED_CANDIDATES =
         listOf("java", "maven", "gradle", "kotlin", "scala", "groovy", "sbt")
     private val HTTPS_URL_PATTERN = Regex("^https://[a-zA-Z0-9.-]+(/.*)?$")
@@ -21,12 +20,12 @@ object VersionRequestValidator {
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
             val jsonObject =
-                Either.catch { Json.parseToJsonElement(jsonString) as JsonObject }
+                Either
+                    .catch { Json.parseToJsonElement(jsonString) as JsonObject }
                     .mapLeft {
                         DeserializationError("request", "Invalid JSON: ${it.message}")
                             .nel()
-                    }
-                    .bind()
+                    }.bind()
 
             validateVersionFromJson(jsonObject).bind()
         }
@@ -47,8 +46,11 @@ object VersionRequestValidator {
             this.getOrNone(key).flatMap { element ->
                 when (element) {
                     is JsonPrimitive -> {
-                        if (element.content == "null") None
-                        else element.content.toBooleanStrictOrNull().toOption()
+                        if (element.content == "null") {
+                            None
+                        } else {
+                            element.content.toBooleanStrictOrNull().toOption()
+                        }
                     }
 
                     else -> None
@@ -85,9 +87,8 @@ object VersionRequestValidator {
                 distributionResult.swap().getOrNull(),
                 md5sumResult.swap().getOrNull(),
                 sha256sumResult.swap().getOrNull(),
-                sha512sumResult.swap().getOrNull()
-            )
-                .flatten()
+                sha512sumResult.swap().getOrNull(),
+            ).flatten()
 
         return errors.toNonEmptyListOrNone().fold(
             {
@@ -101,17 +102,15 @@ object VersionRequestValidator {
                         distribution = distributionResult.bind(),
                         md5sum = md5sumResult.bind(),
                         sha256sum = sha256sumResult.bind(),
-                        sha512sum = sha512sumResult.bind()
+                        sha512sum = sha512sumResult.bind(),
                     )
                 }
             },
-            { errorList -> errorList.left() }
+            { errorList -> errorList.left() },
         )
     }
 
-    private fun validateCandidate(
-        candidate: Option<String>
-    ): Either<NonEmptyList<ValidationError>, String> =
+    private fun validateCandidate(candidate: Option<String>): Either<NonEmptyList<ValidationError>, String> =
         candidate.fold(
             { EmptyFieldError("candidate").nel().left() },
             { value ->
@@ -120,19 +119,16 @@ object VersionRequestValidator {
                     value !in ALLOWED_CANDIDATES ->
                         InvalidCandidateError(
                             candidate = value,
-                            allowedCandidates = ALLOWED_CANDIDATES
-                        )
-                            .nel()
+                            allowedCandidates = ALLOWED_CANDIDATES,
+                        ).nel()
                             .left()
 
                     else -> value.right()
                 }
-            }
+            },
         )
 
-    private fun validateVersion(
-        version: Option<String>
-    ): Either<NonEmptyList<ValidationError>, String> =
+    private fun validateVersion(version: Option<String>): Either<NonEmptyList<ValidationError>, String> =
         version.fold(
             { EmptyFieldError("version").nel().left() },
             { value ->
@@ -140,12 +136,10 @@ object VersionRequestValidator {
                     value.isBlank() -> EmptyFieldError("version").nel().left()
                     else -> value.right()
                 }
-            }
+            },
         )
 
-    private fun validatePlatform(
-        platform: Option<String>
-    ): Either<NonEmptyList<ValidationError>, Platform> =
+    private fun validatePlatform(platform: Option<String>): Either<NonEmptyList<ValidationError>, Platform> =
         platform.fold(
             { EmptyFieldError("platform").nel().left() },
             { value ->
@@ -156,7 +150,7 @@ object VersionRequestValidator {
                             InvalidPlatformError(platform = value).nel()
                         }
                 }
-            }
+            },
         )
 
     private fun validateUrl(url: Option<String>): Either<NonEmptyList<ValidationError>, String> =
@@ -170,12 +164,10 @@ object VersionRequestValidator {
 
                     else -> value.right()
                 }
-            }
+            },
         )
 
-    private fun validateDistribution(
-        distribution: Option<String>
-    ): Either<NonEmptyList<ValidationError>, Option<Distribution>> =
+    private fun validateDistribution(distribution: Option<String>): Either<NonEmptyList<ValidationError>, Option<Distribution>> =
         distribution.fold(
             { None.right() }, // Missing distribution is valid
             { value ->
@@ -183,26 +175,25 @@ object VersionRequestValidator {
                     value.isBlank() ->
                         InvalidOptionalFieldError(
                             "distribution",
-                            "field cannot be empty"
-                        )
-                            .nel()
+                            "field cannot be empty",
+                        ).nel()
                             .left()
 
                     else ->
-                        Either.catch { Distribution.valueOf(value) }
+                        Either
+                            .catch { Distribution.valueOf(value) }
                             .mapLeft {
                                 InvalidDistributionError(distribution = value).nel()
-                            }
-                            .map { it.some() }
+                            }.map { it.some() }
                 }
-            }
+            },
         )
 
     private fun validateHash(
         field: String,
         hashOpt: Option<String>,
         expectedLength: Int,
-        pattern: Regex
+        pattern: Regex,
     ): Either<NonEmptyList<ValidationError>, Option<String>> =
         hashOpt.fold(
             { None.right() }, // Missing hash is valid
@@ -221,6 +212,6 @@ object VersionRequestValidator {
 
                     else -> hash.some().right()
                 }
-            }
+            },
         )
 }

@@ -5,9 +5,9 @@ import io.ktor.server.testing.*
 import io.sdkman.config.configureAppConfig
 import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
-import io.sdkman.repos.VersionsRepository
-import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.repos.AuditRepositoryImpl
+import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.repos.VersionsRepository
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
     testApplication {

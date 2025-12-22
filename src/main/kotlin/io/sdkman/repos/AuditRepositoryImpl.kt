@@ -15,7 +15,6 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import java.time.Instant
 
 class AuditRepositoryImpl : AuditRepository {
-
     private object VendorAuditTable : Table(name = "vendor_audit") {
         val id = long("id").autoIncrement()
         val username = text("username")
@@ -26,27 +25,28 @@ class AuditRepositoryImpl : AuditRepository {
         override val primaryKey = PrimaryKey(id)
     }
 
-    private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
 
     override suspend fun recordAudit(
         username: String,
         operation: AuditOperation,
-        version: Version
-    ): Either<DatabaseFailure, Unit> = Either.catch {
-        dbQuery {
-            VendorAuditTable.insert {
-                it[this.username] = username
-                it[this.timestamp] = Instant.now()
-                it[this.operation] = operation.name
-                it[this.versionData] = version
+        version: Version,
+    ): Either<DatabaseFailure, Unit> =
+        Either
+            .catch {
+                dbQuery {
+                    VendorAuditTable.insert {
+                        it[this.username] = username
+                        it[this.timestamp] = Instant.now()
+                        it[this.operation] = operation.name
+                        it[this.versionData] = version
+                    }
+                }
+                Unit
+            }.mapLeft { error ->
+                DatabaseFailure(
+                    message = "Failed to record audit: ${error.message}",
+                    cause = error,
+                )
             }
-        }
-        Unit
-    }.mapLeft { error ->
-        DatabaseFailure(
-            message = "Failed to record audit: ${error.message}",
-            cause = error
-        )
-    }
 }

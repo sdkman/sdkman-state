@@ -12,6 +12,7 @@ plugins {
     kotlin("jvm") version "2.3.0"
     id("io.ktor.plugin") version "3.3.3"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
 }
 
 group = "io.sdkman"
@@ -73,4 +74,12 @@ ktor {
 
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+ktlint {
+    version.set("1.5.0")
+}
+
+tasks.named("check") {
+    dependsOn("ktlintCheck")
 }
