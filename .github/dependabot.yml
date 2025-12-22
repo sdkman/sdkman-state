@@ -1,0 +1,34 @@
+version: 2
+updates:
+  # Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 10
+    groups:
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+      ktor:
+        patterns:
+          - "io.ktor*"
+      arrow:
+        patterns:
+          - "io.arrow-kt*"
+      testing:
+        patterns:
+          - "io.kotest*"
+          - "io.mockk*"
+      exposed:
+        patterns:
+          - "org.jetbrains.exposed*"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    open-pull-requests-limit: 5
