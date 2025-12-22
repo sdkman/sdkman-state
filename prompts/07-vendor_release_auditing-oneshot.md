@@ -97,6 +97,12 @@ interface AuditRepository {
 
 All tests should be written using Kotest's ShouldSpec style to match the existing test structure.
 
+### Test Support Utilities
+- Create test helper utilities to query the vendor_audit table directly and retrieve audit records
+- Provide helpers to deserialize the version_data JSONB column back into a Version object for verification
+- Use these helpers in integration tests to verify that the correct JSON was written and can be round-tripped
+- Follow existing test support patterns in `src/test/kotlin/io/sdkman/support/`
+
 ### Integration Tests - Happy Path
 - POST /versions creates version AND creates corresponding audit record with operation=POST
 - DELETE /versions deletes version AND creates corresponding audit record with operation=DELETE
