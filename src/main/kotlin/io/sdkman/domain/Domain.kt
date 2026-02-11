@@ -61,6 +61,7 @@ enum class Platform(
     LINUX_ARM32HF("linuxarm32hf"),
     LINUX_ARM32SF("linuxarm32sf"),
     LINUX_ARM64("linuxarm64"),
+    LINUX_RISCV64("linuxriscv64"),
     MAC_X64("darwinx64"),
     MAC_ARM64("darwinarm64"),
     WINDOWS_X64("windowsx64"),
