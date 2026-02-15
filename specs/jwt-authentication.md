@@ -548,10 +548,12 @@ sequenceDiagram
 | Endpoint | Anonymous | Regular User | Admin |
 |----------|-----------|--------------|-------|
 | GET /versions/* | ✅ | ✅ | ✅ |
+| GET /versions/{candidate}/tags/{tag} | ✅ | ✅ | ✅ |
 | GET /meta/health | ✅ | ✅ | ✅ |
 | POST /auth/login | ✅ | ✅ | ✅ |
 | POST /versions | ❌ | ✅ (scoped) | ✅ |
 | DELETE /versions | ❌ | ✅ (scoped) | ✅ |
+| DELETE /versions/tags | ❌ | ✅ (scoped) | ✅ |
 | POST /admin/users | ❌ | ❌ | ✅ |
 | DELETE /admin/users/{id} | ❌ | ❌ | ✅ |
 | POST /admin/users/{id}/reset-password | ❌ | ❌ | ✅ |

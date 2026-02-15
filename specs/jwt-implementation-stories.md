@@ -65,8 +65,9 @@
 - [ ] **Story 9: Update Protected Endpoints**
   - Replace Basic Auth with JWT auth on POST /versions
   - Replace Basic Auth with JWT auth on DELETE /versions
-  - Implement candidate scope authorization
-  - ~50 lines of changes + tests
+  - Replace Basic Auth with JWT auth on DELETE /versions/tags
+  - Implement candidate scope authorization for all protected endpoints
+  - ~60 lines of changes + tests
 
 - [ ] **Story 10: Vendor Audit Integration**
   - Create VendorAuditRepository
