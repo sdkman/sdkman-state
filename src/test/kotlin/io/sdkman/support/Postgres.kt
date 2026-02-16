@@ -39,6 +39,18 @@ private object Versions : IntIdTable(name = "versions") {
     val lastUpdatedAt = timestamp("last_updated_at")
 }
 
+private const val NA_SENTINEL = "NA"
+
+private object VersionTags : IntIdTable(name = "version_tags") {
+    val candidate = text("candidate")
+    val tag = text("tag")
+    val distribution = text("distribution")
+    val platform = text("platform")
+    val versionId = integer("version_id")
+    val createdAt = timestamp("created_at")
+    val lastUpdatedAt = timestamp("last_updated_at")
+}
+
 private object VendorAuditTable : Table(name = "vendor_audit") {
     val id = long("id").autoIncrement()
     val username = text("username")
@@ -64,6 +76,56 @@ fun insertVersions(vararg cvs: Version) =
                 it[sha512sum] = cv.sha512sum.getOrNull()
             }
         }
+    }
+
+fun insertVersionWithId(cv: Version): Int =
+    transaction {
+        Versions
+            .insert {
+                it[candidate] = cv.candidate
+                it[version] = cv.version
+                it[platform] = cv.platform.name
+                it[distribution] = cv.distribution.map { it.name }.getOrNull()
+                it[url] = cv.url
+                it[visible] = cv.visible.getOrElse { true }
+                it[md5sum] = cv.md5sum.getOrNull()
+                it[sha256sum] = cv.sha256sum.getOrNull()
+                it[sha512sum] = cv.sha512sum.getOrNull()
+            }[Versions.id]
+            .value
+    }
+
+fun insertTag(
+    candidate: String,
+    tag: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+    versionId: Int,
+) = transaction {
+    VersionTags.insert {
+        it[this.candidate] = candidate
+        it[this.tag] = tag
+        it[this.distribution] = distribution.map { it.name }.getOrElse { NA_SENTINEL }
+        it[this.platform] = platform.name
+        it[this.versionId] = versionId
+        it[this.createdAt] = Instant.now()
+        it[this.lastUpdatedAt] = Instant.now()
+    }
+}
+
+fun selectTagNames(versionId: Int): List<String> =
+    dbQuery {
+        VersionTags
+            .selectAll()
+            .where { VersionTags.versionId eq versionId }
+            .map { it[VersionTags.tag] }
+    }
+
+fun selectAllTags(): List<Pair<Int, String>> =
+    dbQuery {
+        VersionTags
+            .selectAll()
+            .map { it[VersionTags.versionId] to it[VersionTags.tag] }
     }
 
 private fun <T> dbQuery(block: suspend () -> T): T =
@@ -193,6 +255,7 @@ fun deserializeVersionData(versionData: String): Version = Json.decodeFromString
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()
     transaction {
+        VersionTags.deleteAll()
         VendorAuditTable.deleteAll()
         Versions.deleteAll()
     }

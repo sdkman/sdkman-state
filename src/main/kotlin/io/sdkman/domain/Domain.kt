@@ -109,3 +109,47 @@ interface AuditRepository {
         version: Version,
     ): Either<DatabaseFailure, Unit>
 }
+
+data class VersionTag(
+    val id: Int = 0,
+    val candidate: String,
+    val tag: String,
+    val distribution: Option<Distribution>,
+    val platform: Platform,
+    val versionId: Int,
+    val createdAt: java.time.Instant = java.time.Instant.now(),
+    val lastUpdatedAt: java.time.Instant = java.time.Instant.now(),
+)
+
+@Serializable
+data class UniqueTag(
+    val candidate: String,
+    val tag: String,
+    val distribution: Option<Distribution> = None,
+    val platform: Platform,
+)
+
+interface TagsRepository {
+    suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>>
+
+    suspend fun findVersionIdByTag(
+        candidate: String,
+        tag: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, Option<Int>>
+
+    suspend fun replaceTags(
+        versionId: Int,
+        candidate: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+        tags: List<String>,
+    ): Either<DatabaseFailure, Unit>
+
+    suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int>
+
+    suspend fun hasTagsForVersion(versionId: Int): Either<DatabaseFailure, Boolean>
+
+    suspend fun findTagNamesByVersionId(versionId: Int): Either<DatabaseFailure, List<String>>
+}
