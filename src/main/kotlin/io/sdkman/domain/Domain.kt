@@ -8,9 +8,9 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.serialization.OptionSerializer
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import kotlin.time.Instant
 
 @Serializable
 data class Version(

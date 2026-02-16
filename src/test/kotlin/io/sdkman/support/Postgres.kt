@@ -206,9 +206,9 @@ fun selectAuditRecords(): List<AuditRecord> =
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =
-                    kotlinx.datetime.Instant.fromEpochSeconds(
+                    kotlin.time.Instant.fromEpochSeconds(
                         row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano,
+                        row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
                 versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
@@ -223,9 +223,9 @@ fun selectAuditRecordsByUsername(username: String): List<AuditRecord> =
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =
-                    kotlinx.datetime.Instant.fromEpochSeconds(
+                    kotlin.time.Instant.fromEpochSeconds(
                         row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano,
+                        row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
                 versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
@@ -240,9 +240,9 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<AuditRecord> 
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =
-                    kotlinx.datetime.Instant.fromEpochSeconds(
+                    kotlin.time.Instant.fromEpochSeconds(
                         row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano,
+                        row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
                 versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),

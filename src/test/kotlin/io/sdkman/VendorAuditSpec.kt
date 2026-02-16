@@ -149,7 +149,7 @@ class VendorAuditSpec :
 
             withCleanDatabase {
                 val beforeTime =
-                    kotlinx.datetime.Clock.System
+                    kotlin.time.Clock.System
                         .now()
 
                 withTestApplication {
@@ -161,7 +161,7 @@ class VendorAuditSpec :
                 }
 
                 val afterTime =
-                    kotlinx.datetime.Clock.System
+                    kotlin.time.Clock.System
                         .now()
 
                 // then: timestamp is within reasonable range (5 seconds)
