@@ -297,6 +297,11 @@ components:
           type: "string"
         sha512sum:
           type: "string"
+        tags:
+          type: "array"
+          items:
+            type: "string"
+          description: "Version tags (e.g. latest, 27, 27.1). Always present in GET responses as an array (empty if no tags)."
       required:
         - "candidate"
         - "version"

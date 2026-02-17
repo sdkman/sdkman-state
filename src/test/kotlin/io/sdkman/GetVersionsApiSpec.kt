@@ -28,6 +28,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxArm64 =
                 Version(
@@ -37,6 +38,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java17linuxX64 =
                 Version(
@@ -46,6 +48,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_X64,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxX64 =
                 Version(
@@ -55,6 +58,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_X64,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {
@@ -85,6 +89,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-17.0.1-tem",
                     visible = false.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxArm64 =
                 Version(
@@ -94,6 +99,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             listOf(
@@ -127,6 +133,7 @@ class GetVersionsApiSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21universal =
                 Version(
@@ -136,6 +143,7 @@ class GetVersionsApiSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {
@@ -167,6 +175,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxArm64 =
                 Version(
@@ -176,6 +185,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_ARM64,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java17linuxX64 =
                 Version(
@@ -185,6 +195,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_X64,
                     url = "https://java-17.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxX64 =
                 Version(
@@ -194,6 +205,7 @@ class GetVersionsApiSpec :
                     platform = Platform.LINUX_X64,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {
@@ -238,6 +250,7 @@ class GetVersionsApiSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://java-17.0.1-tem",
                     visible = false.some(),
+                    tags = emptyList<String>().some(),
                 )
             val java21linuxX64 =
                 Version(
@@ -247,6 +260,7 @@ class GetVersionsApiSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://java-21.0.1-tem",
                     visible = true.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             listOf(

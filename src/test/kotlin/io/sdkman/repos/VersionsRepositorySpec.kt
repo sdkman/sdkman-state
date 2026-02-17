@@ -44,7 +44,7 @@ class VersionsRepositorySpec :
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe version.some()
+                    retrieved shouldBe version.copy(tags = emptyList<String>().some()).some()
                 }
             }
 
@@ -71,7 +71,7 @@ class VersionsRepositorySpec :
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe version.some()
+                    retrieved shouldBe version.copy(tags = emptyList<String>().some()).some()
                 }
             }
 
@@ -107,7 +107,7 @@ class VersionsRepositorySpec :
                             platform = updatedVersion.platform,
                             distribution = updatedVersion.distribution,
                         )
-                    retrieved shouldBe updatedVersion.some()
+                    retrieved shouldBe updatedVersion.copy(tags = emptyList<String>().some()).some()
                 }
             }
 
@@ -168,6 +168,7 @@ class VersionsRepositorySpec :
                         url = "https://java-17.0.1",
                         visible = true.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
                 val version2 =
                     Version(
@@ -177,6 +178,7 @@ class VersionsRepositorySpec :
                         url = "https://java-21.0.1",
                         visible = true.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
 
                 withCleanDatabase {
@@ -207,6 +209,7 @@ class VersionsRepositorySpec :
                         url = "https://java-17.0.1-linux",
                         visible = true.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
                 val macVersion =
                     Version(
@@ -245,6 +248,7 @@ class VersionsRepositorySpec :
                         url = "https://java-17.0.1-temurin",
                         visible = true.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
                 val zulu =
                     Version(
@@ -283,6 +287,7 @@ class VersionsRepositorySpec :
                         url = "https://java-17.0.1",
                         visible = true.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
                 val hiddenVersion =
                     Version(
@@ -292,6 +297,7 @@ class VersionsRepositorySpec :
                         url = "https://java-18.0.1",
                         visible = false.some(),
                         distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
                     )
 
                 withCleanDatabase {
@@ -350,6 +356,7 @@ class VersionsRepositorySpec :
                         url = "https://kotlin-1.9.0",
                         visible = true.some(),
                         distribution = Distribution.JETBRAINS.some(),
+                        tags = emptyList<String>().some(),
                     )
 
                 withCleanDatabase {
@@ -377,6 +384,7 @@ class VersionsRepositorySpec :
                         url = "https://scala-3.3.1",
                         visible = true.some(),
                         distribution = None,
+                        tags = emptyList<String>().some(),
                     )
 
                 withCleanDatabase {

@@ -103,7 +103,7 @@ class VendorAuditSpec :
                 auditRecord.operation shouldBe AuditOperation.DELETE
 
                 val deserializedVersion = deserializeVersionData(auditRecord.versionData)
-                deserializedVersion shouldBe version
+                deserializedVersion shouldBe version.copy(tags = emptyList<String>().some())
             }
         }
 

@@ -29,6 +29,7 @@ class GetVersionApiSpec :
                     url = "https://kotlin-2.1.0-tem",
                     visible = true.some(),
                     distribution = None,
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {
@@ -51,6 +52,7 @@ class GetVersionApiSpec :
                     url = "https://java-21.0.1-mac-x64",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {
@@ -73,6 +75,7 @@ class GetVersionApiSpec :
                     url = "https://scala-3.1.2",
                     visible = true.some(),
                     distribution = None,
+                    tags = emptyList<String>().some(),
                 )
 
             withCleanDatabase {

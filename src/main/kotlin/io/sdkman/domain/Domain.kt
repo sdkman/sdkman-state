@@ -23,6 +23,7 @@ data class Version(
     val md5sum: Option<String> = None,
     val sha256sum: Option<String> = None,
     val sha512sum: Option<String> = None,
+    val tags: Option<List<String>> = None,
 )
 
 @Serializable

@@ -5,6 +5,7 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.right
+import arrow.core.some
 import arrow.core.toOption
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
@@ -33,22 +34,50 @@ class VersionsRepository {
         val lastUpdatedAt = timestamp("last_updated_at")
     }
 
-    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
+    private object VersionTags : Table("version_tags") {
+        val versionId = integer("version_id")
+        val tag = text("tag")
+    }
 
-    private fun Query.asVersions(): List<Version> =
-        this.map {
-            Version(
-                candidate = it[Versions.candidate],
-                version = it[Versions.version],
-                platform = Platform.valueOf(it[Versions.platform]),
-                url = it[Versions.url],
-                visible = it[Versions.visible].toOption(),
-                distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
-                md5sum = it[Versions.md5sum].toOption(),
-                sha256sum = it[Versions.sha256sum].toOption(),
-                sha512sum = it[Versions.sha512sum].toOption(),
-            )
-        }
+    private suspend fun <T> dbQuery(block: suspend () -> T): T =
+        newSuspendedTransaction(Dispatchers.IO) { block() }
+
+    private fun ResultRow.toVersion(): Version =
+        Version(
+            candidate = this[Versions.candidate],
+            version = this[Versions.version],
+            platform = Platform.valueOf(this[Versions.platform]),
+            url = this[Versions.url],
+            visible = this[Versions.visible].toOption(),
+            distribution = this[Versions.distribution].toOption().map { Distribution.valueOf(it) },
+            md5sum = this[Versions.md5sum].toOption(),
+            sha256sum = this[Versions.sha256sum].toOption(),
+            sha512sum = this[Versions.sha512sum].toOption(),
+        )
+
+    private fun Version.withTags(tags: List<String>): Version =
+        copy(tags = tags.some())
+
+    private fun fetchTagNames(versionId: Int): List<String> =
+        VersionTags
+            .select(VersionTags.tag)
+            .where { VersionTags.versionId eq versionId }
+            .map { it[VersionTags.tag] }
+
+    private fun batchFetchTags(versionIds: List<Int>): Map<Int, List<String>> =
+        if (versionIds.isEmpty()) emptyMap()
+        else
+            VersionTags
+                .select(VersionTags.versionId, VersionTags.tag)
+                .where { VersionTags.versionId inList versionIds }
+                .groupBy { it[VersionTags.versionId] }
+                .mapValues { (_, rows) -> rows.map { it[VersionTags.tag] } }
+
+    private fun matchesVersion(cv: Version): Op<Boolean> =
+        (Versions.candidate eq cv.candidate) and
+            (Versions.version eq cv.version) and
+            (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
+            (Versions.platform eq cv.platform.name)
 
     suspend fun read(
         candidate: String,
@@ -57,14 +86,20 @@ class VersionsRepository {
         visible: Option<Boolean>,
     ): List<Version> =
         dbQuery {
-            Versions
-                .selectAll()
-                .where {
-                    (Versions.candidate eq candidate) and
-                        platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
-                        distribution.fold({ Op.TRUE }, { Versions.distribution eq it.name }) and
-                        visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
-                }.asVersions()
+            val rows =
+                Versions
+                    .selectAll()
+                    .where {
+                        (Versions.candidate eq candidate) and
+                            platform.map { Versions.platform eq it.name }.getOrElse { Op.TRUE } and
+                            distribution.fold({ Op.TRUE }, { Versions.distribution eq it.name }) and
+                            visible.map { Versions.visible eq it }.getOrElse { Op.TRUE }
+                    }.map { it[Versions.id].value to it.toVersion() }
+
+            val tagsByVersionId = batchFetchTags(rows.map { it.first })
+
+            rows
+                .map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
                 .sortedWith(compareBy({ it.candidate }, { it.version }, { it.distribution.getOrNull() }, { it.platform }))
         }
 
@@ -82,52 +117,49 @@ class VersionsRepository {
                         (Versions.version eq version) and
                         (Versions.platform eq platform.name) and
                         distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })
-                }.asVersions()
+                }.map { it[Versions.id].value to it.toVersion() }
                 .firstOrNone()
+                .map { (id, v) -> v.withTags(fetchTagNames(id)) }
         }
 
     fun create(cv: Version): Either<String, Unit> =
         transaction {
-            val visible = cv.visible.getOrElse { true }
+            val exists =
+                Versions
+                    .selectAll()
+                    .where { matchesVersion(cv) }
+                    .empty()
+                    .not()
 
-            Versions
-                .selectAll()
-                .where {
-                    (Versions.candidate eq cv.candidate) and
-                        (Versions.version eq cv.version) and
-                        (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
-                        (Versions.platform eq cv.platform.name)
-                }.firstOrNone()
-                .map {
-                    Versions
-                        .update({
-                            (Versions.candidate eq cv.candidate) and
-                                (Versions.version eq cv.version) and
-                                (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
-                                (Versions.platform eq cv.platform.name)
-                        }) {
-                            it[url] = cv.url
-                            it[this.visible] = visible
-                            it[md5sum] = cv.md5sum.getOrNull()
-                            it[sha256sum] = cv.sha256sum.getOrNull()
-                            it[sha512sum] = cv.sha512sum.getOrNull()
-                            it[lastUpdatedAt] = Instant.now()
-                        }.let { Unit.right() }
-                }.getOrElse {
-                    Versions
-                        .insert {
-                            it[candidate] = cv.candidate
-                            it[version] = cv.version
-                            it[distribution] = cv.distribution.map { it.name }.getOrNull()
-                            it[platform] = cv.platform.name
-                            it[url] = cv.url
-                            it[this.visible] = visible
-                            it[md5sum] = cv.md5sum.getOrNull()
-                            it[sha256sum] = cv.sha256sum.getOrNull()
-                            it[sha512sum] = cv.sha512sum.getOrNull()
-                        }.let { Unit.right() }
-                }
+            if (exists) updateVersion(cv) else insertVersion(cv)
         }
+
+    private fun updateVersion(cv: Version): Either<String, Unit> {
+        Versions.update({ matchesVersion(cv) }) {
+            it[url] = cv.url
+            it[visible] = cv.visible.getOrElse { true }
+            it[md5sum] = cv.md5sum.getOrNull()
+            it[sha256sum] = cv.sha256sum.getOrNull()
+            it[sha512sum] = cv.sha512sum.getOrNull()
+            it[lastUpdatedAt] = Instant.now()
+        }
+        return Unit.right()
+    }
+
+    private fun insertVersion(cv: Version): Either<String, Unit> {
+        Versions.insert {
+            it[candidate] = cv.candidate
+            it[version] = cv.version
+            it[distribution] = cv.distribution.map { d -> d.name }.getOrNull()
+            it[platform] = cv.platform.name
+            it[url] = cv.url
+            it[visible] = cv.visible.getOrElse { true }
+            it[md5sum] = cv.md5sum.getOrNull()
+            it[sha256sum] = cv.sha256sum.getOrNull()
+            it[sha512sum] = cv.sha512sum.getOrNull()
+        }
+        return Unit.right()
+    }
 
     fun delete(version: UniqueVersion): Int =
         transaction {
