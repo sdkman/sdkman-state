@@ -14,6 +14,7 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
+import io.sdkman.domain.TagsRepository
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.validation.UniqueVersionValidator
@@ -36,9 +37,10 @@ data class HealthCheckResponse(
 )
 
 fun Application.configureRouting(
-    repo: VersionsRepository,
+    versionsRepo: VersionsRepository,
     healthRepo: HealthRepository,
     auditRepo: AuditRepository,
+    tagsRepo: TagsRepository,
 ) {
     val logger = LoggerFactory.getLogger("io.sdkman.routes.VersionRoutes")
 
@@ -84,7 +86,7 @@ fun Application.configureRouting(
                     call.request.queryParameters["distribution"]
                         .toOption()
                         .flatMap { it.toDistribution() }
-                val versions = repo.read(candidateId, platform, distribution, visible)
+                val versions = versionsRepo.read(candidateId, platform, distribution, visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 call.respond(HttpStatusCode.BadRequest)
@@ -112,7 +114,7 @@ fun Application.configureRouting(
                         .toOption()
                         .flatMap { it.toDistribution() }
                 val maybeVersion =
-                    repo.read(
+                    versionsRepo.read(
                         candidate = candidateId,
                         version = versionId,
                         platform = platform,
@@ -131,7 +133,7 @@ fun Application.configureRouting(
                 VersionRequestValidator
                     .validateRequest(requestBody)
                     .map { validVersion ->
-                        repo
+                        versionsRepo
                             .create(validVersion)
                             .also {
                                 auditRepo
@@ -139,8 +141,21 @@ fun Application.configureRouting(
                                     .onLeft { auditError ->
                                         logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
                                     }
-                            }.map { _ -> call.respond(HttpStatusCode.NoContent) }
-                            .getOrElse { error ->
+                            }.map { versionId ->
+                                validVersion.tags.onSome { tagList ->
+                                    tagsRepo
+                                        .replaceTags(
+                                            versionId = versionId,
+                                            candidate = validVersion.candidate,
+                                            distribution = validVersion.distribution,
+                                            platform = validVersion.platform,
+                                            tags = tagList,
+                                        ).onLeft { tagError ->
+                                            logger.warn("Tag processing failed for POST /versions: ${tagError.message}", tagError)
+                                        }
+                                }
+                                call.respond(HttpStatusCode.NoContent)
+                            }.getOrElse { error ->
                                 val errorResponse = ErrorResponse("Database error", error)
                                 call.respond(HttpStatusCode.InternalServerError, errorResponse)
                             }
@@ -159,7 +174,7 @@ fun Application.configureRouting(
                     .flatMap { UniqueVersionValidator.validate(it) }
                     .map { validUniqueVersion ->
                         val maybeVersion =
-                            repo.read(
+                            versionsRepo.read(
                                 candidate = validUniqueVersion.candidate,
                                 version = validUniqueVersion.version,
                                 platform = validUniqueVersion.platform,
@@ -175,7 +190,7 @@ fun Application.configureRouting(
                                         }
                                 }
                             }.map {
-                                when (repo.delete(validUniqueVersion)) {
+                                when (versionsRepo.delete(validUniqueVersion)) {
                                     1 -> call.respond(HttpStatusCode.NoContent)
                                     0 -> call.respond(HttpStatusCode.NotFound)
                                 }

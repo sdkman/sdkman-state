@@ -5,6 +5,7 @@ import io.sdkman.config.configureAppConfig
 import io.sdkman.plugins.*
 import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
 
 fun main(args: Array<String>) =
@@ -21,5 +22,5 @@ fun Application.module() {
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
 
-    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl())
+    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
 }

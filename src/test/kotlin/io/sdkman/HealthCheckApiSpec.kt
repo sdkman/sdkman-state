@@ -18,6 +18,7 @@ import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
 import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.support.withCleanDatabase
 import kotlinx.serialization.json.Json
@@ -35,7 +36,7 @@ class HealthCheckApiSpec :
                     application {
                         val dbConfig = configureAppConfig(environment).databaseConfig
                         configureDatabase(dbConfig)
-                        configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl())
+                        configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
                     }
 
                     client.get("/meta/health").apply {
@@ -60,7 +61,7 @@ class HealthCheckApiSpec :
                     val dbConfig = configureAppConfig(environment).databaseConfig
                     val badDbConfig = dbConfig.copy(port = 9999)
                     configureDatabase(badDbConfig)
-                    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl())
+                    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
                 }
 
                 client.get("/meta/health").apply {

@@ -7,6 +7,7 @@ import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
 import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
+import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
@@ -17,7 +18,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
         application {
             val dbConfig = configureAppConfig(environment).databaseConfig
             configureDatabase(dbConfig)
-            configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl())
+            configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
         }
         fn(this)
     }
