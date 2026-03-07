@@ -101,4 +101,57 @@ class PostVersionTagsApiSpec :
                 }
             }
         }
+
+        should("POST with empty tags clears all tags") {
+            val initialPost =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest", "27"]
+                }
+                """.trimIndent()
+
+            val clearTagsPost =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": []
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(initialPost)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(clearTagsPost)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    val getResponse =
+                        client.get("/versions/java/27.0.2") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getResponse.status shouldBe HttpStatusCode.OK
+
+                    getResponse.bodyAsText().extractTags() shouldBe emptyList()
+                }
+            }
+        }
     })
