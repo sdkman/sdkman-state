@@ -13,6 +13,7 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.support.*
+import io.sdkman.support.extractTags
 import kotlin.time.Duration.Companion.seconds
 
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
@@ -252,6 +253,35 @@ class VendorAuditSpec :
                 deserializedVersion.md5sum shouldBe None
                 deserializedVersion.sha256sum shouldBe None
                 deserializedVersion.sha512sum shouldBe None
+            }
+        }
+
+        should("include tags in audit version_data when POST has tags") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest", "27"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                val auditRecords = selectAuditRecords()
+                auditRecords shouldHaveSize 1
+                auditRecords.first().versionData.extractTags() shouldBe listOf("latest", "27")
             }
         }
 
