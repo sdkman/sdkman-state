@@ -303,6 +303,11 @@ components:
             type: "string"
             pattern: "^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$"
             maxLength: 50
+          example:
+            - "latest"
+            - "27"
+            - "27.0"
+            - "lts"
           description: "Version tags (e.g. latest, 27, 27.1). Tags must start and end with alphanumeric characters and may contain dots, hyphens, and underscores. On POST: absent preserves existing tags, empty array clears all tags, non-empty array replaces all tags. Tags are mutually exclusive within (candidate, distribution, platform) scope. Always present in GET responses as an array (empty if no tags)."
       required:
         - "candidate"
