@@ -49,4 +49,56 @@ class PostVersionTagsApiSpec :
                 }
             }
         }
+
+        should("POST without tags field preserves existing tags") {
+            val initialPost =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest", "27"]
+                }
+                """.trimIndent()
+
+            val updatePost =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-updated-url.tar.gz"
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(initialPost)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(updatePost)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    val getResponse =
+                        client.get("/versions/java/27.0.2") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getResponse.status shouldBe HttpStatusCode.OK
+
+                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27")
+                }
+            }
+        }
     })
