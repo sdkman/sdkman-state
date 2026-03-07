@@ -2,6 +2,7 @@ package io.sdkman
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -390,6 +391,194 @@ class PostVersionTagsApiSpec :
                     getResponse.status shouldBe HttpStatusCode.OK
 
                     getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "8")
+                }
+            }
+        }
+        should("return 400 when tag contains invalid characters") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["inv@lid!"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[0]"
+                    responseBody shouldContain "must contain only alphanumeric characters"
+                }
+            }
+        }
+
+        should("return 400 when tag is blank") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["   "]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[0]"
+                    responseBody shouldContain "must not be blank"
+                }
+            }
+        }
+
+        should("return 400 when tag exceeds 50 characters") {
+            val longTag = "a".repeat(51)
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["$longTag"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[0]"
+                    responseBody shouldContain "must not exceed 50 characters"
+                }
+            }
+        }
+
+        should("return 400 when tag starts with a dot") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": [".hidden"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[0]"
+                    responseBody shouldContain "must start and end with an alphanumeric character"
+                }
+            }
+        }
+
+        should("return 400 with accumulated errors for multiple invalid tags") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["   ", ".hidden"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[0]"
+                    responseBody shouldContain "must not be blank"
+                    responseBody shouldContain "tags[1]"
+                    responseBody shouldContain "must start and end with an alphanumeric character"
+                }
+            }
+        }
+
+        should("return 400 and create no version when mix of valid and invalid tags") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest", "inv@lid!"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "tags[1]"
+
+                    val getResponse =
+                        client.get("/versions/java/27.0.2") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getResponse.status shouldBe HttpStatusCode.NotFound
                 }
             }
         }
