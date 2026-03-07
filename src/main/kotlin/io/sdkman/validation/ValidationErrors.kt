@@ -59,6 +59,11 @@ data class InvalidOptionalFieldError(
     override val message: String = "$field is invalid: $reason"
 }
 
+data class InvalidTagError(
+    override val field: String,
+    override val message: String,
+) : ValidationError()
+
 data class DeserializationError(
     override val field: String,
     override val message: String,

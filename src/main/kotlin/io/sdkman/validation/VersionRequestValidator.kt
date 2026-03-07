@@ -6,6 +6,7 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -15,6 +16,7 @@ object VersionRequestValidator {
     private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
     private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
     private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
+    private val TAG_NAME_PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")
 
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
@@ -56,6 +58,19 @@ object VersionRequestValidator {
                 }
             }
 
+        // Helper to extract tags list: None = absent, Some(emptyList) = clear, Some(list) = replace
+        fun JsonObject.getTagsOrNone(key: String): Option<List<String>> =
+            this.getOrNone(key).map { element ->
+                when (element) {
+                    is JsonArray ->
+                        element.mapNotNull { item ->
+                            (item as? JsonPrimitive)?.takeIf { it.isString }?.content
+                        }
+
+                    else -> emptyList()
+                }
+            }
+
         // Extract all fields to Option immediately at JSON boundary (RULE-001)
         val candidateOpt: Option<String> = jsonObject.getStringOrNone("candidate")
         val versionOpt: Option<String> = jsonObject.getStringOrNone("version")
@@ -66,6 +81,7 @@ object VersionRequestValidator {
         val md5sumOpt: Option<String> = jsonObject.getStringOrNone("md5sum")
         val sha256sumOpt: Option<String> = jsonObject.getStringOrNone("sha256sum")
         val sha512sumOpt: Option<String> = jsonObject.getStringOrNone("sha512sum")
+        val tagsOpt: Option<List<String>> = jsonObject.getTagsOrNone("tags")
 
         // Validate all fields
         val candidateResult = validateCandidate(candidateOpt)
@@ -76,6 +92,7 @@ object VersionRequestValidator {
         val md5sumResult = validateHash("md5sum", md5sumOpt, 32, HEX_PATTERN_32)
         val sha256sumResult = validateHash("sha256sum", sha256sumOpt, 64, HEX_PATTERN_64)
         val sha512sumResult = validateHash("sha512sum", sha512sumOpt, 128, HEX_PATTERN_128)
+        val tagsResult = validateTags(tagsOpt)
 
         val errors =
             listOfNotNull(
@@ -87,6 +104,7 @@ object VersionRequestValidator {
                 md5sumResult.swap().getOrNull(),
                 sha256sumResult.swap().getOrNull(),
                 sha512sumResult.swap().getOrNull(),
+                tagsResult.swap().getOrNull(),
             ).flatten()
 
         return errors.toNonEmptyListOrNone().fold(
@@ -102,6 +120,7 @@ object VersionRequestValidator {
                         md5sum = md5sumResult.bind(),
                         sha256sum = sha256sumResult.bind(),
                         sha512sum = sha512sumResult.bind(),
+                        tags = tagsResult.bind(),
                     )
                 }
             },
@@ -213,4 +232,42 @@ object VersionRequestValidator {
                 }
             },
         )
+
+    private fun validateTags(tagsOpt: Option<List<String>>): Either<NonEmptyList<ValidationError>, Option<List<String>>> =
+        tagsOpt.fold(
+            { None.right() },
+            { tags ->
+                val tagErrors =
+                    tags.flatMapIndexed { index, tag ->
+                        validateTag(index, tag)
+                    }
+                tagErrors.toNonEmptyListOrNone().fold(
+                    { tags.some().right() },
+                    { errors -> errors.left() },
+                )
+            },
+        )
+
+    private fun validateTag(
+        index: Int,
+        tag: String,
+    ): List<ValidationError> =
+        when {
+            tag.isBlank() ->
+                listOf(InvalidTagError("tags[$index]", "Tag must not be blank"))
+
+            tag.length > 50 ->
+                listOf(InvalidTagError("tags[$index]", "Tag must not exceed 50 characters"))
+
+            !TAG_NAME_PATTERN.matches(tag) ->
+                listOf(
+                    InvalidTagError(
+                        "tags[$index]",
+                        "Tag must contain only alphanumeric characters, dots, hyphens, and underscores, " +
+                            "and must start and end with an alphanumeric character",
+                    ),
+                )
+
+            else -> emptyList()
+        }
 }
