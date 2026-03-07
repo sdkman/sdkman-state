@@ -139,7 +139,7 @@ fun Application.configureRouting(
                                     .onLeft { auditError ->
                                         logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
                                     }
-                            }.map { call.respond(HttpStatusCode.NoContent) }
+                            }.map { _ -> call.respond(HttpStatusCode.NoContent) }
                             .getOrElse { error ->
                                 val errorResponse = ErrorResponse("Database error", error)
                                 call.respond(HttpStatusCode.InternalServerError, errorResponse)

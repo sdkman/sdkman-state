@@ -39,8 +39,7 @@ class VersionsRepository {
         val tag = text("tag")
     }
 
-    private suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
 
     private fun ResultRow.toVersion(): Version =
         Version(
@@ -55,8 +54,7 @@ class VersionsRepository {
             sha512sum = this[Versions.sha512sum].toOption(),
         )
 
-    private fun Version.withTags(tags: List<String>): Version =
-        copy(tags = tags.some())
+    private fun Version.withTags(tags: List<String>): Version = copy(tags = tags.some())
 
     private fun fetchTagNames(versionId: Int): List<String> =
         VersionTags
@@ -65,13 +63,15 @@ class VersionsRepository {
             .map { it[VersionTags.tag] }
 
     private fun batchFetchTags(versionIds: List<Int>): Map<Int, List<String>> =
-        if (versionIds.isEmpty()) emptyMap()
-        else
+        if (versionIds.isEmpty()) {
+            emptyMap()
+        } else {
             VersionTags
                 .select(VersionTags.versionId, VersionTags.tag)
                 .where { VersionTags.versionId inList versionIds }
                 .groupBy { it[VersionTags.versionId] }
                 .mapValues { (_, rows) -> rows.map { it[VersionTags.tag] } }
+        }
 
     private fun matchesVersion(cv: Version): Op<Boolean> =
         (Versions.candidate eq cv.candidate) and
@@ -122,7 +122,7 @@ class VersionsRepository {
                 .map { (id, v) -> v.withTags(fetchTagNames(id)) }
         }
 
-    fun create(cv: Version): Either<String, Unit> =
+    fun create(cv: Version): Either<String, Int> =
         transaction {
             val exists =
                 Versions
@@ -134,7 +134,7 @@ class VersionsRepository {
             if (exists) updateVersion(cv) else insertVersion(cv)
         }
 
-    private fun updateVersion(cv: Version): Either<String, Unit> {
+    private fun updateVersion(cv: Version): Either<String, Int> {
         Versions.update({ matchesVersion(cv) }) {
             it[url] = cv.url
             it[visible] = cv.visible.getOrElse { true }
@@ -143,22 +143,29 @@ class VersionsRepository {
             it[sha512sum] = cv.sha512sum.getOrNull()
             it[lastUpdatedAt] = Instant.now()
         }
-        return Unit.right()
+        val versionId =
+            Versions
+                .select(Versions.id)
+                .where { matchesVersion(cv) }
+                .single()[Versions.id]
+                .value
+        return versionId.right()
     }
 
-    private fun insertVersion(cv: Version): Either<String, Unit> {
-        Versions.insert {
-            it[candidate] = cv.candidate
-            it[version] = cv.version
-            it[distribution] = cv.distribution.map { d -> d.name }.getOrNull()
-            it[platform] = cv.platform.name
-            it[url] = cv.url
-            it[visible] = cv.visible.getOrElse { true }
-            it[md5sum] = cv.md5sum.getOrNull()
-            it[sha256sum] = cv.sha256sum.getOrNull()
-            it[sha512sum] = cv.sha512sum.getOrNull()
-        }
-        return Unit.right()
+    private fun insertVersion(cv: Version): Either<String, Int> {
+        val id =
+            Versions.insertAndGetId {
+                it[candidate] = cv.candidate
+                it[version] = cv.version
+                it[distribution] = cv.distribution.map { d -> d.name }.getOrNull()
+                it[platform] = cv.platform.name
+                it[url] = cv.url
+                it[visible] = cv.visible.getOrElse { true }
+                it[md5sum] = cv.md5sum.getOrNull()
+                it[sha256sum] = cv.sha256sum.getOrNull()
+                it[sha512sum] = cv.sha512sum.getOrNull()
+            }
+        return id.value.right()
     }
 
     fun delete(version: UniqueVersion): Int =
