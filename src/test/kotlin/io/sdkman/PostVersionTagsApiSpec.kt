@@ -207,4 +207,64 @@ class PostVersionTagsApiSpec :
                 }
             }
         }
+
+        should("mutual exclusivity moves tag from version A to version B") {
+            val versionA =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.1",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.1-temurin-linux-x64.tar.gz",
+                    "tags": ["latest"]
+                }
+                """.trimIndent()
+
+            val versionB =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(versionA)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(versionB)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    val getA =
+                        client.get("/versions/java/27.0.1") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getA.status shouldBe HttpStatusCode.OK
+                    getA.bodyAsText().extractTags() shouldBe emptyList()
+
+                    val getB =
+                        client.get("/versions/java/27.0.2") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getB.status shouldBe HttpStatusCode.OK
+                    getB.bodyAsText().extractTags() shouldBe listOf("latest")
+                }
+            }
+        }
     })
