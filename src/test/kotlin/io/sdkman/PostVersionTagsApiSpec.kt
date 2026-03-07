@@ -327,4 +327,70 @@ class PostVersionTagsApiSpec :
                 }
             }
         }
+
+        should("POST version with multiple tags stores all of them") {
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "LINUX_X64",
+                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "tags": ["latest", "27", "27.0", "lts"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    val getResponse =
+                        client.get("/versions/java/27.0.2") {
+                            parameter("platform", "linuxx64")
+                            parameter("distribution", "TEMURIN")
+                        }
+                    getResponse.status shouldBe HttpStatusCode.OK
+
+                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27", "27.0", "lts")
+                }
+            }
+        }
+
+        should("POST version without distribution stores tags with NA sentinel") {
+            val requestBody =
+                """
+                {
+                    "candidate": "gradle",
+                    "version": "8.12",
+                    "platform": "UNIVERSAL",
+                    "url": "https://cdn.example.com/gradle-8.12.zip",
+                    "tags": ["latest", "8"]
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                withTestApplication {
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            header(Authorization, BASIC_AUTH_HEADER)
+                        }.status shouldBe HttpStatusCode.NoContent
+
+                    val getResponse =
+                        client.get("/versions/gradle/8.12") {
+                            parameter("platform", "universal")
+                        }
+                    getResponse.status shouldBe HttpStatusCode.OK
+
+                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "8")
+                }
+            }
+        }
     })
