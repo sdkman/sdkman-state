@@ -12,6 +12,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlin.time.Instant
 
+sealed interface Auditable
+
 @Serializable
 data class Version(
     val candidate: String,
@@ -24,7 +26,7 @@ data class Version(
     val sha256sum: Option<String> = None,
     val sha512sum: Option<String> = None,
     val tags: Option<List<String>> = None,
-)
+) : Auditable
 
 @Serializable
 data class UniqueVersion(
@@ -107,7 +109,7 @@ interface AuditRepository {
     suspend fun recordAudit(
         username: String,
         operation: AuditOperation,
-        version: Version,
+        data: Auditable,
     ): Either<DatabaseFailure, Unit>
 }
 
@@ -128,7 +130,7 @@ data class UniqueTag(
     val tag: String,
     val distribution: Option<Distribution> = None,
     val platform: Platform,
-)
+) : Auditable
 
 interface TagsRepository {
     suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>>
