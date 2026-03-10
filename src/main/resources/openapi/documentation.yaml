@@ -116,6 +116,64 @@ paths:
                   value:
                     error: "Database error"
                     message: "null"
+  /versions/tags:
+    delete:
+      description: "Remove a tag by its unique scope (candidate, tag, distribution, platform)"
+      security:
+        - basicAuth: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/UniqueTag"
+            examples:
+              with_distribution:
+                summary: "Delete a tag with distribution"
+                value:
+                  candidate: "java"
+                  tag: "latest"
+                  distribution: "TEMURIN"
+                  platform: "LINUX_X64"
+              without_distribution:
+                summary: "Delete a tag without distribution"
+                value:
+                  candidate: "gradle"
+                  tag: "latest"
+                  platform: "UNIVERSAL"
+        required: true
+      responses:
+        "204":
+          description: "No Content - Tag successfully removed"
+        "400":
+          description: "Bad Request - Validation errors or malformed JSON"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: "Accumulated validation failures"
+                  value:
+                    error: "Validation Error"
+                    failures:
+                      - field: "candidate"
+                        message: "Candidate must not be blank"
+                      - field: "tag"
+                        message: "Tag must not be blank"
+        "401":
+          description: "Unauthorized - Missing or invalid authentication"
+        "404":
+          description: "Not Found - Tag does not exist for the given scope"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                not_found:
+                  summary: "Tag not found"
+                  value:
+                    error: "Not Found"
+                    message: "Tag 'nonexistent' not found"
   /versions/{candidate}:
     get:
       description: ""
@@ -255,6 +313,70 @@ components:
         - "version"
         - "distribution"
         - "platform"
+    UniqueTag:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        tag:
+          type: "string"
+        distribution:
+          type: "string"
+          enum:
+            - "BISHENG"
+            - "CORRETTO"
+            - "GRAALCE"
+            - "GRAALVM"
+            - "JETBRAINS"
+            - "KONA"
+            - "LIBERICA"
+            - "LIBERICA_NIK"
+            - "MANDREL"
+            - "MICROSOFT"
+            - "OPENJDK"
+            - "ORACLE"
+            - "SAP_MACHINE"
+            - "SEMERU"
+            - "TEMURIN"
+            - "ZULU"
+        platform:
+          type: "string"
+          enum:
+            - "LINUX_X32"
+            - "LINUX_X64"
+            - "LINUX_ARM32HF"
+            - "LINUX_ARM32SF"
+            - "LINUX_ARM64"
+            - "MAC_X64"
+            - "MAC_ARM64"
+            - "WINDOWS_X64"
+            - "UNIVERSAL"
+      required:
+        - "candidate"
+        - "tag"
+        - "platform"
+    ValidationErrorResponse:
+      type: "object"
+      properties:
+        error:
+          type: "string"
+        failures:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ValidationFailure"
+      required:
+        - "error"
+        - "failures"
+    ValidationFailure:
+      type: "object"
+      properties:
+        field:
+          type: "string"
+        message:
+          type: "string"
+      required:
+        - "field"
+        - "message"
     ErrorResponse:
       type: "object"
       properties:

@@ -12,6 +12,7 @@ import io.sdkman.domain.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
@@ -56,7 +57,7 @@ private object VendorAuditTable : Table(name = "vendor_audit") {
     val username = text("username")
     val timestamp = timestamp("timestamp")
     val operation = text("operation")
-    val versionData = json<Version>("version_data", Json.Default)
+    val versionData = json<JsonElement>("version_data", Json.Default)
 
     override val primaryKey = PrimaryKey(id)
 }
@@ -211,7 +212,7 @@ fun selectAuditRecords(): List<AuditRecord> =
                         row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
+                versionData = row[VendorAuditTable.versionData].toString(),
             )
         }
     }
@@ -228,7 +229,7 @@ fun selectAuditRecordsByUsername(username: String): List<AuditRecord> =
                         row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
+                versionData = row[VendorAuditTable.versionData].toString(),
             )
         }
     }
@@ -245,7 +246,7 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<AuditRecord> 
                         row[VendorAuditTable.timestamp].nano.toLong(),
                     ),
                 operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = Json.encodeToString(Version.serializer(), row[VendorAuditTable.versionData]),
+                versionData = row[VendorAuditTable.versionData].toString(),
             )
         }
     }

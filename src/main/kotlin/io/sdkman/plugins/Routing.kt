@@ -16,9 +16,11 @@ import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.TagsRepository
+import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.validation.UniqueTagValidator
 import io.sdkman.validation.UniqueVersionValidator
 import io.sdkman.validation.ValidationErrorResponse
 import io.sdkman.validation.ValidationFailure
@@ -60,6 +62,40 @@ private sealed interface DeleteError {
     data class Database(
         val message: String,
     ) : DeleteError
+}
+
+private sealed interface DeleteTagError {
+    data class Deserialization(
+        val message: String,
+    ) : DeleteTagError
+
+    data class Validation(
+        val failures: List<ValidationFailure>,
+    ) : DeleteTagError
+
+    data class NotFound(
+        val tagName: String,
+    ) : DeleteTagError
+
+    data class Database(
+        val message: String,
+    ) : DeleteTagError
+}
+
+private suspend fun ApplicationCall.respondDeleteTagError(error: DeleteTagError) {
+    when (error) {
+        is DeleteTagError.Deserialization ->
+            respond(HttpStatusCode.BadRequest, ErrorResponse("Bad Request", error.message))
+
+        is DeleteTagError.Validation ->
+            respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation Error", error.failures))
+
+        is DeleteTagError.NotFound ->
+            respond(HttpStatusCode.NotFound, ErrorResponse("Not Found", "Tag '${error.tagName}' not found"))
+
+        is DeleteTagError.Database ->
+            respond(HttpStatusCode.InternalServerError, ErrorResponse("Database Error", error.message))
+    }
 }
 
 private fun ApplicationCall.authenticatedUsername(): String =
@@ -275,6 +311,39 @@ fun Application.configureRouting(
                     ifLeft = { error -> call.respondDeleteError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
+            }
+            delete("/versions/tags") {
+                val username = call.authenticatedUsername()
+                either {
+                    val uniqueTag =
+                        Either
+                            .catch { call.receive<UniqueTag>() }
+                            .mapLeft {
+                                DeleteTagError.Deserialization(
+                                    "Invalid request: ${it.message ?: "Unknown error"}",
+                                )
+                            }.bind()
+                    UniqueTagValidator
+                        .validate(uniqueTag)
+                        .mapLeft { DeleteTagError.Validation(it) }
+                        .bind()
+                    val deletedCount =
+                        tagsRepo
+                            .deleteTag(uniqueTag)
+                            .mapLeft { DeleteTagError.Database(it.message) }
+                            .bind()
+                    if (deletedCount == 0) raise(DeleteTagError.NotFound(uniqueTag.tag))
+                    auditRepo
+                        .recordAudit(username, AuditOperation.DELETE, uniqueTag)
+                        .onLeft { error ->
+                            logger.warn(
+                                "Audit logging failed for DELETE /versions/tags: ${error.message}",
+                            )
+                        }
+                    call.respond(HttpStatusCode.NoContent)
+                }.onLeft { error ->
+                    call.respondDeleteTagError(error)
+                }
             }
         }
     }

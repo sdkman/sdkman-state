@@ -2,6 +2,7 @@ package io.sdkman.support
 
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
 import kotlinx.serialization.json.Json
@@ -15,6 +16,8 @@ fun Version.toJson() = Json.encodeToJsonElement<Version>(this)
 fun Version.toJsonString() = this.toJson().toString()
 
 fun UniqueVersion.toJsonString() = Json.encodeToJsonElement(this).toString()
+
+fun UniqueTag.toJsonString() = Json.encodeToJsonElement(this).toString()
 
 fun String.parseJsonObject(): JsonObject = Json.decodeFromString<JsonObject>(this)
 
