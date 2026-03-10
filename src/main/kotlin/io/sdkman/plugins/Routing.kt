@@ -31,6 +31,13 @@ data class ErrorResponse(
 )
 
 @Serializable
+data class TagConflictResponse(
+    val error: String,
+    val message: String,
+    val tags: List<String>,
+)
+
+@Serializable
 data class HealthCheckResponse(
     val status: HealthStatus,
     val message: String? = null,
@@ -181,19 +188,49 @@ fun Application.configureRouting(
                                 distribution = validUniqueVersion.distribution,
                             )
                         maybeVersion
-                            .also { versionOption ->
-                                versionOption.map { versionToDelete ->
-                                    auditRepo
-                                        .recordAudit(username, AuditOperation.DELETE, versionToDelete)
-                                        .onLeft { auditError ->
-                                            logger.warn("Audit logging failed for DELETE /versions: ${auditError.message}", auditError)
-                                        }
-                                }
-                            }.map {
-                                when (versionsRepo.delete(validUniqueVersion)) {
-                                    1 -> call.respond(HttpStatusCode.NoContent)
-                                    0 -> call.respond(HttpStatusCode.NotFound)
-                                }
+                            .map { versionToDelete ->
+                                versionsRepo
+                                    .findVersionId(validUniqueVersion)
+                                    .map { versionId ->
+                                        tagsRepo
+                                            .findTagNamesByVersionId(versionId)
+                                            .map { tagNames ->
+                                                when {
+                                                    tagNames.isNotEmpty() ->
+                                                        call.respond(
+                                                            HttpStatusCode.Conflict,
+                                                            TagConflictResponse(
+                                                                error = "Conflict",
+                                                                message =
+                                                                    "Cannot delete version with active tags. Remove or reassign the following tags first.",
+                                                                tags = tagNames,
+                                                            ),
+                                                        )
+                                                    else -> {
+                                                        auditRepo
+                                                            .recordAudit(username, AuditOperation.DELETE, versionToDelete)
+                                                            .onLeft { auditError ->
+                                                                logger.warn(
+                                                                    "Audit logging failed for DELETE /versions: ${auditError.message}",
+                                                                    auditError,
+                                                                )
+                                                            }
+                                                        when (versionsRepo.delete(validUniqueVersion)) {
+                                                            1 -> call.respond(HttpStatusCode.NoContent)
+                                                            0 -> call.respond(HttpStatusCode.NotFound)
+                                                        }
+                                                    }
+                                                }
+                                            }.getOrElse { error ->
+                                                logger.warn("Tag check failed for DELETE /versions: ${error.message}", error)
+                                                call.respond(
+                                                    HttpStatusCode.InternalServerError,
+                                                    ErrorResponse("Database error", error.message),
+                                                )
+                                            }
+                                    }.getOrElse {
+                                        call.respond(HttpStatusCode.NotFound)
+                                    }
                             }.getOrElse { call.respond(HttpStatusCode.NotFound) }
                     }.getOrElse { error ->
                         val errorResponse = ErrorResponse("Validation failed", error.message)

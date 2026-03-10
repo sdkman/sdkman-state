@@ -59,6 +59,22 @@ paths:
             '*/*':
               schema:
                 type: "object"
+        "409":
+          description: "Conflict - Version has active tags that must be removed or reassigned before deletion"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/TagConflictResponse"
+              examples:
+                Example#1:
+                  description: "Version has active tags"
+                  value:
+                    error: "Conflict"
+                    message: "Cannot delete version with active tags. Remove or reassign the following tags first."
+                    tags:
+                      - "latest"
+                      - "27"
+                      - "27.0"
     post:
       description: ""
       security:
@@ -249,6 +265,21 @@ components:
       required:
         - "error"
         - "message"
+    TagConflictResponse:
+      type: "object"
+      properties:
+        error:
+          type: "string"
+        message:
+          type: "string"
+        tags:
+          type: "array"
+          items:
+            type: "string"
+      required:
+        - "error"
+        - "message"
+        - "tags"
     Version:
       type: "object"
       properties:

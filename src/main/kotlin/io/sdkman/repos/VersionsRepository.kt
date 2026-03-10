@@ -168,6 +168,23 @@ class VersionsRepository {
         return id.value.right()
     }
 
+    suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int> =
+        dbQuery {
+            Versions
+                .select(Versions.id)
+                .where {
+                    val baseCondition =
+                        (Versions.candidate eq uniqueVersion.candidate) and
+                            (Versions.version eq uniqueVersion.version) and
+                            (Versions.platform eq uniqueVersion.platform.name)
+                    uniqueVersion.distribution.fold(
+                        { baseCondition and (Versions.distribution eq null) },
+                        { distributionValue -> baseCondition and (Versions.distribution eq distributionValue.name) },
+                    )
+                }.map { it[Versions.id].value }
+                .firstOrNone()
+        }
+
     fun delete(version: UniqueVersion): Int =
         transaction {
             Versions.deleteWhere {
