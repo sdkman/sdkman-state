@@ -1,6 +1,7 @@
 package io.sdkman.plugins
 
 import arrow.core.*
+import arrow.core.raise.either
 import arrow.core.raise.option
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -16,12 +17,14 @@ import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.TagsRepository
 import io.sdkman.domain.UniqueVersion
+import io.sdkman.domain.Version
 import io.sdkman.repos.VersionsRepository
 import io.sdkman.validation.UniqueVersionValidator
 import io.sdkman.validation.ValidationErrorResponse
 import io.sdkman.validation.ValidationFailure
 import io.sdkman.validation.VersionRequestValidator
 import kotlinx.serialization.Serializable
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @Serializable
@@ -42,6 +45,83 @@ data class HealthCheckResponse(
     val status: HealthStatus,
     val message: String? = null,
 )
+
+private sealed interface DeleteError {
+    data class Validation(
+        val message: String,
+    ) : DeleteError
+
+    data object NotFound : DeleteError
+
+    data class TagConflict(
+        val tags: List<String>,
+    ) : DeleteError
+
+    data class Database(
+        val message: String,
+    ) : DeleteError
+}
+
+private fun ApplicationCall.authenticatedUsername(): String =
+    principal<UserIdPrincipal>()
+        .toOption()
+        .map { it.name }
+        .getOrElse { "unknown" }
+
+private suspend fun logAudit(
+    logger: Logger,
+    auditRepo: AuditRepository,
+    username: String,
+    operation: AuditOperation,
+    version: Version,
+) {
+    auditRepo.recordAudit(username, operation, version).onLeft { error ->
+        logger.warn("Audit logging failed: ${error.message}", error)
+    }
+}
+
+private suspend fun processTags(
+    logger: Logger,
+    tagsRepo: TagsRepository,
+    versionId: Int,
+    version: Version,
+) {
+    version.tags.onSome { tagList ->
+        tagsRepo
+            .replaceTags(
+                versionId = versionId,
+                candidate = version.candidate,
+                distribution = version.distribution,
+                platform = version.platform,
+                tags = tagList,
+            ).onLeft { error ->
+                logger.warn("Tag processing failed: ${error.message}", error)
+            }
+    }
+}
+
+private suspend fun ApplicationCall.respondDeleteError(error: DeleteError) {
+    when (error) {
+        is DeleteError.Validation ->
+            respond(HttpStatusCode.BadRequest, ErrorResponse("Validation failed", error.message))
+
+        is DeleteError.NotFound ->
+            respond(HttpStatusCode.NotFound)
+
+        is DeleteError.TagConflict ->
+            respond(
+                HttpStatusCode.Conflict,
+                TagConflictResponse(
+                    error = "Conflict",
+                    message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
+                    tags = error.tags,
+                ),
+            )
+
+        is DeleteError.Database ->
+            respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.message))
+    }
+}
 
 fun Application.configureRouting(
     versionsRepo: VersionsRepository,
@@ -134,108 +214,67 @@ fun Application.configureRouting(
         }
         authenticate("auth-basic") {
             post("/versions") {
-                val principal = call.principal<UserIdPrincipal>()
-                val username = principal?.name ?: "unknown"
+                val username = call.authenticatedUsername()
                 val requestBody = call.receiveText()
-                VersionRequestValidator
-                    .validateRequest(requestBody)
-                    .map { validVersion ->
-                        versionsRepo
-                            .create(validVersion)
-                            .also {
-                                auditRepo
-                                    .recordAudit(username, AuditOperation.CREATE, validVersion)
-                                    .onLeft { auditError ->
-                                        logger.warn("Audit logging failed for POST /versions: ${auditError.message}", auditError)
-                                    }
-                            }.map { versionId ->
-                                validVersion.tags.onSome { tagList ->
-                                    tagsRepo
-                                        .replaceTags(
-                                            versionId = versionId,
-                                            candidate = validVersion.candidate,
-                                            distribution = validVersion.distribution,
-                                            platform = validVersion.platform,
-                                            tags = tagList,
-                                        ).onLeft { tagError ->
-                                            logger.warn("Tag processing failed for POST /versions: ${tagError.message}", tagError)
-                                        }
-                                }
-                                call.respond(HttpStatusCode.NoContent)
-                            }.getOrElse { error ->
-                                val errorResponse = ErrorResponse("Database error", error)
-                                call.respond(HttpStatusCode.InternalServerError, errorResponse)
-                            }
-                    }.getOrElse { errors ->
+                VersionRequestValidator.validateRequest(requestBody).fold(
+                    ifLeft = { errors ->
                         val failures = errors.map { ValidationFailure(it.field, it.message) }
-                        val errorResponse = ValidationErrorResponse("Validation failed", failures)
-                        call.respond(HttpStatusCode.BadRequest, errorResponse)
-                    }
+                        call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
+                    },
+                    ifRight = { validVersion ->
+                        versionsRepo.create(validVersion).fold(
+                            ifLeft = { error ->
+                                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error))
+                            },
+                            ifRight = { versionId ->
+                                logAudit(logger, auditRepo, username, AuditOperation.CREATE, validVersion)
+                                processTags(logger, tagsRepo, versionId, validVersion)
+                                call.respond(HttpStatusCode.NoContent)
+                            },
+                        )
+                    },
+                )
             }
             delete("/versions") {
-                val principal = call.principal<UserIdPrincipal>()
-                val username = principal?.name ?: "unknown"
-                Either
-                    .catch { call.receive<UniqueVersion>() }
-                    .mapLeft { io.sdkman.validation.InvalidRequestError(it.message ?: "Unknown error") }
-                    .flatMap { UniqueVersionValidator.validate(it) }
-                    .map { validUniqueVersion ->
-                        val maybeVersion =
-                            versionsRepo.read(
+                val username = call.authenticatedUsername()
+                either<DeleteError, Unit> {
+                    val uniqueVersion =
+                        Either
+                            .catch { call.receive<UniqueVersion>() }
+                            .mapLeft { DeleteError.Validation("Invalid request: ${it.message ?: "Unknown error"}") }
+                            .bind()
+                    val validUniqueVersion =
+                        UniqueVersionValidator
+                            .validate(uniqueVersion)
+                            .mapLeft { DeleteError.Validation(it.message) }
+                            .bind()
+                    val versionToDelete =
+                        versionsRepo
+                            .read(
                                 candidate = validUniqueVersion.candidate,
                                 version = validUniqueVersion.version,
                                 platform = validUniqueVersion.platform,
                                 distribution = validUniqueVersion.distribution,
-                            )
-                        maybeVersion
-                            .map { versionToDelete ->
-                                versionsRepo
-                                    .findVersionId(validUniqueVersion)
-                                    .map { versionId ->
-                                        tagsRepo
-                                            .findTagNamesByVersionId(versionId)
-                                            .map { tagNames ->
-                                                when {
-                                                    tagNames.isNotEmpty() ->
-                                                        call.respond(
-                                                            HttpStatusCode.Conflict,
-                                                            TagConflictResponse(
-                                                                error = "Conflict",
-                                                                message =
-                                                                    "Cannot delete version with active tags. Remove or reassign the following tags first.",
-                                                                tags = tagNames,
-                                                            ),
-                                                        )
-                                                    else -> {
-                                                        auditRepo
-                                                            .recordAudit(username, AuditOperation.DELETE, versionToDelete)
-                                                            .onLeft { auditError ->
-                                                                logger.warn(
-                                                                    "Audit logging failed for DELETE /versions: ${auditError.message}",
-                                                                    auditError,
-                                                                )
-                                                            }
-                                                        when (versionsRepo.delete(validUniqueVersion)) {
-                                                            1 -> call.respond(HttpStatusCode.NoContent)
-                                                            0 -> call.respond(HttpStatusCode.NotFound)
-                                                        }
-                                                    }
-                                                }
-                                            }.getOrElse { error ->
-                                                logger.warn("Tag check failed for DELETE /versions: ${error.message}", error)
-                                                call.respond(
-                                                    HttpStatusCode.InternalServerError,
-                                                    ErrorResponse("Database error", error.message),
-                                                )
-                                            }
-                                    }.getOrElse {
-                                        call.respond(HttpStatusCode.NotFound)
-                                    }
-                            }.getOrElse { call.respond(HttpStatusCode.NotFound) }
-                    }.getOrElse { error ->
-                        val errorResponse = ErrorResponse("Validation failed", error.message)
-                        call.respond(HttpStatusCode.BadRequest, errorResponse)
-                    }
+                            ).toEither { DeleteError.NotFound }
+                            .bind()
+                    val versionId =
+                        versionsRepo
+                            .findVersionId(validUniqueVersion)
+                            .toEither { DeleteError.NotFound }
+                            .bind()
+                    val tagNames =
+                        tagsRepo
+                            .findTagNamesByVersionId(versionId)
+                            .mapLeft { DeleteError.Database(it.message) }
+                            .bind()
+                    if (tagNames.isNotEmpty()) raise(DeleteError.TagConflict(tagNames))
+                    logAudit(logger, auditRepo, username, AuditOperation.DELETE, versionToDelete)
+                    val deleted = versionsRepo.delete(validUniqueVersion)
+                    if (deleted == 0) raise(DeleteError.NotFound)
+                }.fold(
+                    ifLeft = { error -> call.respondDeleteError(error) },
+                    ifRight = { call.respond(HttpStatusCode.NoContent) },
+                )
             }
         }
     }
