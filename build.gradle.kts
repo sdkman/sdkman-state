@@ -13,6 +13,7 @@ plugins {
     id("io.ktor.plugin") version "3.4.0"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.10"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 group = "io.sdkman"
@@ -78,6 +79,11 @@ tasks.withType<Test>().configureEach {
 
 ktlint {
     version.set("1.5.0")
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom(files("$projectDir/detekt.yml"))
 }
 
 tasks.named("check") {
