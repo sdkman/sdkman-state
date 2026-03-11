@@ -159,6 +159,7 @@ private suspend fun ApplicationCall.respondDeleteError(error: DeleteError) {
     }
 }
 
+@Suppress("LongMethod")
 fun Application.configureRouting(
     versionsRepo: VersionsRepository,
     healthRepo: HealthRepository,
