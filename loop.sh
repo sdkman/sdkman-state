@@ -1,33 +1,37 @@
 #!/usr/bin/env bash
 # Usage: ./loop.sh [plan|build] [max_iterations]
 # Examples:
-#   ./loop.sh              # Build mode, unlimited tasks
-#   ./loop.sh 20           # Build mode, max 20 tasks
-#   ./loop.sh build 20     # Build mode, max 20 tasks
-#   ./loop.sh plan         # Plan mode, unlimited tasks
-#   ./loop.sh plan 5       # Plan mode, max 5 tasks
+#   ./loop.sh              # Build mode, max 50 iterations (default cap)
+#   ./loop.sh 20           # Build mode, max 20 iterations
+#   ./loop.sh build 20     # Build mode, max 20 iterations
+#   ./loop.sh plan         # Plan mode, max 3 iterations (default cap)
+#   ./loop.sh plan 2       # Plan mode, max 2 iterations
+
+# Default caps prevent runaway loops
+PLAN_DEFAULT_CAP=3
+BUILD_DEFAULT_CAP=50
 
 # Parse arguments
 if [ "$1" = "plan" ]; then
-    # Plan mode
+    # Plan mode with sensible default cap
     MODE="plan"
     PROMPT_FILE="PROMPT_plan.md"
-    MAX_ITERATIONS=${2:-0}
+    MAX_ITERATIONS=${2:-$PLAN_DEFAULT_CAP}
 elif [ "$1" = "build" ]; then
-    # Explicit build mode (with optional max iterations)
+    # Explicit build mode with default cap
     MODE="build"
     PROMPT_FILE="PROMPT_build.md"
-    MAX_ITERATIONS=${2:-0}
+    MAX_ITERATIONS=${2:-$BUILD_DEFAULT_CAP}
 elif [[ "$1" =~ ^[0-9]+$ ]]; then
-    # Build mode with max tasks (bare number)
+    # Build mode with explicit max
     MODE="build"
     PROMPT_FILE="PROMPT_build.md"
     MAX_ITERATIONS=$1
 else
-    # Build mode, unlimited (no arguments or invalid input)
+    # Build mode with default cap (no arguments or invalid input)
     MODE="build"
     PROMPT_FILE="PROMPT_build.md"
-    MAX_ITERATIONS=0
+    MAX_ITERATIONS=$BUILD_DEFAULT_CAP
 fi
 
 ITERATION=0
