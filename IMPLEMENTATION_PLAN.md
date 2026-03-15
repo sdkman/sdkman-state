@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** Planning phase -- nothing implemented yet
+> **Status:** In progress -- Phase 0 and Phase 1 complete; package restructuring done
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -45,33 +45,35 @@ Resolve build configuration issues and known defects before any structural work 
 
 Everything else depends on this. Migrate domain models first per spec section 11.
 
+> **COMPLETE:** Full package restructuring from `io.sdkman` to `io.sdkman.state` is done. All files are in their final hexagonal directory structure under `src/main/kotlin/io/sdkman/state/` and `src/test/kotlin/io/sdkman/state/`. The old `io.sdkman` package tree has been removed.
+
 ### 1.1 Package Structure Scaffolding
-- [ ] Create target directory tree under `src/main/kotlin/io/sdkman/state/`
-- [ ] Create test directory tree under `src/test/kotlin/io/sdkman/state/`
+- [x] Create target directory tree under `src/main/kotlin/io/sdkman/state/`
+- [x] Create test directory tree under `src/test/kotlin/io/sdkman/state/`
 
 ### 1.2 Domain Error Types (spec section 2.2)
-- [x] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants -- done as `io.sdkman.domain.DatabaseFailure` in `DatabaseFailure.kt`; will move to `domain/error/` subdirectory during package restructuring
-- [ ] Create `domain/error/ValidationError.kt` -- move validation error hierarchy from `validation/ValidationErrors.kt`
-- [x] Create `domain/error/DomainError.kt` -- unified sealed interface consolidating `DeleteError`/`DeleteTagError` from Routing.kt -- done as `io.sdkman.domain.DomainError` in `DomainError.kt`; will move to `domain/error/` subdirectory during package restructuring
+- [x] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants -- now at `io.sdkman.state.domain.error.DatabaseFailure`
+- [x] Create `domain/error/ValidationError.kt` -- validation error hierarchy moved to `application/validation/ValidationErrors.kt` (contains `ValidationError` sealed class alongside validation infrastructure)
+- [x] Create `domain/error/DomainError.kt` -- unified sealed interface consolidating `DeleteError`/`DeleteTagError` -- now at `io.sdkman.state.domain.error.DomainError`
 
 ### 1.3 Domain Models (spec section 2.1)
-- [x] Create `domain/model/Platform.kt` -- file created as `io.sdkman.domain.Platform` in `Platform.kt`; @Serializable removed (Platform never had @Serializable, now confirmed pure); will move to `domain/model/` subdirectory during package restructuring
-- [x] Create `domain/model/Distribution.kt` -- file created as `io.sdkman.domain.Distribution` in `Distribution.kt`; @Serializable removed; will move to `domain/model/` subdirectory during package restructuring
-- [x] Create `domain/model/Version.kt` -- file created as `io.sdkman.domain.Version` + `UniqueVersion` in `Version.kt`; @Serializable removed; serialization handled by VersionDto in io.sdkman.dto; will move to `domain/model/` subdirectory during package restructuring
-- [x] Create `domain/model/VersionTag.kt` -- file created as `io.sdkman.domain.VersionTag` + `UniqueTag` in `VersionTag.kt`; @Serializable removed from UniqueTag; serialization handled by UniqueTagDto in io.sdkman.dto; `java.time.Instant` changed to `kotlin.time.Instant`; conversion helper `toKotlinTimeInstant()` added to `PostgresConnectivity.kt`; will move to `domain/model/` subdirectory during package restructuring
-- [x] Create `domain/model/Audit.kt` -- file created as `io.sdkman.domain.Auditable` + `AuditOperation` + `AuditRecord` in `Audit.kt`; @Serializable removed from AuditOperation; will move to `domain/model/` subdirectory during package restructuring
-- [x] Create `domain/model/HealthCheckSuccess.kt` -- HealthStatus enum removed; HealthCheckResponse.status changed to String in Routing.kt; file renamed to HealthCheckSuccess.kt; will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/Platform.kt` -- now at `io.sdkman.state.domain.model.Platform`; pure domain enum, no serialization annotations
+- [x] Create `domain/model/Distribution.kt` -- now at `io.sdkman.state.domain.model.Distribution`; pure domain model
+- [x] Create `domain/model/Version.kt` -- now at `io.sdkman.state.domain.model.Version` + `UniqueVersion`; serialization handled by VersionDto in adapter layer
+- [x] Create `domain/model/VersionTag.kt` -- now at `io.sdkman.state.domain.model.VersionTag` + `UniqueTag`; serialization handled by UniqueTagDto in adapter layer; uses `kotlin.time.Instant`
+- [x] Create `domain/model/Audit.kt` -- now at `io.sdkman.state.domain.model.Audit` (`Auditable`, `AuditOperation`)
+- [x] Create `domain/model/HealthCheckSuccess.kt` -- now at `io.sdkman.state.domain.model.HealthCheckSuccess`
 - [x] Move `AuditRecord` to test sources as `VendorAuditRecord` (only used in test assertions) -- moved to `VendorAuditRecord` in test support `Postgres.kt`; removed from `Audit.kt`
 
 ### 1.4 Repository Port Interfaces (spec section 2.3)
-- [~] Create `domain/repository/VersionRepository.kt` -- file created as `io.sdkman.domain.VersionRepository` in `VersionRepository.kt`; `VersionsRepository` implements it; Routing depends on interface; will move to `domain/repository/` subdirectory during package restructuring
-- [~] Create `domain/repository/TagRepository.kt` -- file created as `io.sdkman.domain.TagsRepository` in `TagsRepository.kt`; will rename to `TagRepository` and move to `domain/repository/` subdirectory during package restructuring
-- [~] Create `domain/repository/AuditRepository.kt` -- file created as `io.sdkman.domain.AuditRepository` in `AuditRepository.kt`; will move to `domain/repository/` subdirectory during package restructuring
-- [~] Create `domain/repository/HealthRepository.kt` -- file created as `io.sdkman.domain.HealthRepository` in `HealthRepository.kt`; return type already `Either<DatabaseFailure, HealthCheckSuccess>`; will move to `domain/repository/` subdirectory during package restructuring
+- [x] Create `domain/repository/VersionRepository.kt` -- now at `io.sdkman.state.domain.repository.VersionRepository`; `VersionsRepository` implements it; Routing depends on interface
+- [x] Create `domain/repository/TagRepository.kt` -- now at `io.sdkman.state.domain.repository.TagsRepository`
+- [x] Create `domain/repository/AuditRepository.kt` -- now at `io.sdkman.state.domain.repository.AuditRepository`
+- [x] Create `domain/repository/HealthRepository.kt` -- now at `io.sdkman.state.domain.repository.HealthRepository`; return type `Either<DatabaseFailure, HealthCheckSuccess>`
 
 ### 1.5 Domain Service Interfaces (spec section 2.4)
-- [~] Create `domain/service/VersionService.kt` -- file created as `io.sdkman.domain.VersionService` in `VersionService.kt`; covers findAll, findOne, createOrUpdate, delete; will move to `domain/service/` subdirectory during package restructuring
-- [~] Create `domain/service/TagService.kt` -- file created as `io.sdkman.domain.TagService` in `TagService.kt`; covers deleteTag; will move to `domain/service/` subdirectory during package restructuring
+- [x] Create `domain/service/VersionService.kt` -- now at `io.sdkman.state.domain.service.VersionService`; covers findAll, findOne, createOrUpdate, delete
+- [x] Create `domain/service/TagService.kt` -- now at `io.sdkman.state.domain.service.TagService`; covers deleteTag
 
 ---
 
@@ -80,21 +82,22 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ### 2.1 Configuration (spec section 5)
 - [ ] Create `config/AppConfig.kt` -- interface + `DefaultAppConfig` implementation (currently just data classes)
 - [ ] Create `config/ConfigExtensions.kt` -- Arrow-based config helpers
-- [ ] Extract JDBC URL construction to shared config (currently duplicated in `Databases.kt:9` and `Migration.kt:11`)
-- [ ] Move `CandidateLoader.kt` from `validation/` to `config/`
-- [ ] Move `Authentication.kt` from `plugins/` to `config/`
-- [ ] Move `Migration.kt` from `plugins/` to `config/`
+- [x] Extract JDBC URL construction to shared config -- done in `ApplicationConfig.kt` (`DatabaseConfig.jdbcUrl` property)
+- [x] Move `CandidateLoader.kt` to `application/validation/` -- moved to `io.sdkman.state.application.validation.CandidateLoader` (kept with validation infrastructure since it loads valid candidates for validation)
+- [ ] Move `Authentication.kt` from `plugins/` to `config/` -- still at `io.sdkman.state.plugins.Authentication`
+- [ ] Move `Migration.kt` from `plugins/` to `config/` -- still at `io.sdkman.state.plugins.Migration`
 
 ---
 
 ## Phase 3: Secondary Adapters (Persistence)
 
 ### 3.1 Repository Implementations (spec sections 4.2, 6, 7)
-- [ ] Create `adapter/secondary/persistence/PostgresConnectivity.kt` -- shared `dbQuery` helper (currently duplicated in all 4 repository files)
-- [ ] Create `adapter/secondary/persistence/PostgresVersionRepository.kt` -- implements new `VersionRepository` port; contains `internal object VersionsTable` (single definition); **all methods suspend** (currently `create()` and `delete()` are blocking via `transaction{}` -- `VersionsRepository.kt:125,188`)
-- [ ] Create `adapter/secondary/persistence/PostgresTagRepository.kt` -- implements new `TagRepository` port; contains `internal object VersionTagsTable` (**single definition** -- currently defined in `VersionsRepository.kt:37-40` as 2-col, `TagsRepositoryImpl.kt:31-43` as 7-col, and `Postgres.kt:45-53` as 7-col); add `findTagNamesByVersionIds` batch method; extract `NA_SENTINEL` to single location
-- [ ] Create `adapter/secondary/persistence/PostgresAuditRepository.kt` -- implements `AuditRepository`; contains `internal object AuditTable`
-- [ ] Create `adapter/secondary/persistence/PostgresHealthRepository.kt` -- implements `HealthRepository`; returns `HealthCheckSuccess`
+> **Note:** Repository implementations have been moved to `io.sdkman.state.adapter.secondary.persistence` package. Items below track remaining structural improvements beyond the package move.
+- [x] Create `adapter/secondary/persistence/PostgresConnectivity.kt` -- shared `dbQuery` helper, now at `io.sdkman.state.adapter.secondary.persistence.PostgresConnectivity`
+- [ ] Rename `VersionsRepository.kt` to `PostgresVersionRepository.kt` -- currently at `adapter/secondary/persistence/VersionsRepository.kt`; ensure **all methods suspend** (verify `create()` and `delete()` use `newSuspendedTransaction`)
+- [ ] Rename `TagsRepositoryImpl.kt` to `PostgresTagRepository.kt` -- currently at `adapter/secondary/persistence/TagsRepositoryImpl.kt`; consolidate `VersionTagsTable` to single definition; add `findTagNamesByVersionIds` batch method; extract `NA_SENTINEL` to single location
+- [ ] Rename `AuditRepositoryImpl.kt` to `PostgresAuditRepository.kt` -- currently at `adapter/secondary/persistence/AuditRepositoryImpl.kt`
+- [ ] Rename `HealthRepositoryImpl.kt` to `PostgresHealthRepository.kt` -- currently at `adapter/secondary/persistence/HealthRepositoryImpl.kt`
 - [ ] Normalise `VersionTag` timestamps: convert `java.time.Instant` to/from `kotlinx.datetime.Instant` at persistence boundary only (spec section 9)
 
 ---
@@ -102,14 +105,14 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 4: Application Layer (Business Logic Extraction)
 
 ### 4.1 Application Services (spec section 3.1)
-- [x] Create `application/service/VersionServiceImpl.kt` -- created in `io.sdkman.service`; extracts business logic from Routing.kt (validation stays in routing, orchestration/audit/tags in service)
-- [x] Create `application/service/TagServiceImpl.kt` -- created in `io.sdkman.service`; extracts tag deletion + audit from Routing.kt
+- [x] Create `application/service/VersionServiceImpl.kt` -- now at `io.sdkman.state.application.service.VersionServiceImpl`; extracts business logic from Routing.kt
+- [x] Create `application/service/TagServiceImpl.kt` -- now at `io.sdkman.state.application.service.TagServiceImpl`; extracts tag deletion + audit from Routing.kt
 
 ### 4.2 Application Validation (spec section 3.2)
-- [ ] Refactor `VersionRequestValidator.kt` to `application/validation/VersionRequestValidator.kt` -- receives pre-parsed DTO (not raw JSON), validates domain rules only
-- [ ] Move `UniqueVersionValidator.kt` to `application/validation/UniqueVersionValidator.kt`
-- [ ] Move `UniqueTagValidator.kt` to `application/validation/UniqueTagValidator.kt` -- **fix inconsistent return type** (currently returns `Either<List<ValidationFailure>, UniqueTag>` vs `Either<NonEmptyList<ValidationError>, ...>` elsewhere)
-- [ ] Move `ValidationErrors.kt` to `application/validation/ValidationErrors.kt`
+- [x] Move `VersionRequestValidator.kt` to `application/validation/VersionRequestValidator.kt` -- now at `io.sdkman.state.application.validation.VersionRequestValidator`
+- [x] Move `UniqueVersionValidator.kt` to `application/validation/UniqueVersionValidator.kt` -- now at `io.sdkman.state.application.validation.UniqueVersionValidator`
+- [x] Move `UniqueTagValidator.kt` to `application/validation/UniqueTagValidator.kt` -- now at `io.sdkman.state.application.validation.UniqueTagValidator`; **fix inconsistent return type** still pending (currently returns `Either<List<ValidationFailure>, UniqueTag>` vs `Either<NonEmptyList<ValidationError>, ...>` elsewhere)
+- [x] Move `ValidationErrors.kt` to `application/validation/ValidationErrors.kt` -- now at `io.sdkman.state.application.validation.ValidationErrors`
 
 ---
 

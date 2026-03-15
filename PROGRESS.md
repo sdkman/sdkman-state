@@ -270,3 +270,29 @@ Each entry must follow this structure exactly:
 - _Context:_ Remaining Phase 5.2 items (move Compression.kt from HTTP.kt, move Serialization.kt) are purely file relocations and can be done during Phase 8 cleanup
 
 ---
+
+### [2026-03-15 23:00] — Phase 1.1 + 1.2 + 1.4 + 1.5 + 4.2 + 5.1 + 5.2: Package Restructure to io.sdkman.state
+
+**Summary:** Restructured the entire codebase from flat `io.sdkman` package to `io.sdkman.state` with proper hexagonal architecture subdirectories. Moved all 44 main source files and 20 test source files to their target locations.
+
+**Files changed:**
+- All 44 main source files moved from `io.sdkman.*` to `io.sdkman.state.*` with updated package declarations and imports
+- All 20 test source files moved from `io.sdkman.*` to `io.sdkman.state.*`
+- `src/main/resources/application.conf` — updated module reference from `io.sdkman.ApplicationKt.module` to `io.sdkman.state.ApplicationKt.module`
+- Key directory mappings:
+  - `io.sdkman.domain` → split into `domain/model/`, `domain/error/`, `domain/repository/`, `domain/service/`
+  - `io.sdkman.dto` → `adapter/primary/rest/dto/`
+  - `io.sdkman.service` → `application/service/`
+  - `io.sdkman.repos` → `adapter/secondary/persistence/`
+  - `io.sdkman.plugins` (routes) → `adapter/primary/rest/`
+  - `io.sdkman.plugins` (framework) → `plugins/`
+  - `io.sdkman.validation` → `application/validation/`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Moving all domain types from a single package (`io.sdkman.domain`) into subpackages (`domain/model`, `domain/error`, `domain/repository`, `domain/service`) requires explicit imports for every cross-subpackage reference — no more implicit same-package visibility
+- _Gotchas:_ `application.conf` module path must be updated when the Application.kt package changes, or Ktor won't find the entry point at runtime
+- _Context:_ Old directories are fully removed — no stale files remain. The restructure completes Phase 1.1 scaffolding and resolves all "will move during package restructuring" notes from Phases 1.2-1.5
+
+---
