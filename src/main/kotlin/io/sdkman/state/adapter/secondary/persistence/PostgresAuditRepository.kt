@@ -11,23 +11,10 @@ import io.sdkman.state.domain.repository.AuditRepository
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
-import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.javatime.timestamp
-import org.jetbrains.exposed.sql.json.json
 import java.time.Instant
 
 class PostgresAuditRepository : AuditRepository {
-    private object VendorAuditTable : Table(name = "vendor_audit") {
-        val id = long("id").autoIncrement()
-        val username = text("username")
-        val timestamp = timestamp("timestamp")
-        val operation = text("operation")
-        val versionData = json<JsonElement>("version_data", Json.Default)
-
-        override val primaryKey = PrimaryKey(id)
-    }
-
     private fun Auditable.toJsonElement(): JsonElement =
         when (this) {
             is Version -> Json.encodeToJsonElement(this.toDto())

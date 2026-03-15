@@ -191,7 +191,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Create `adapter/secondary/persistence/PostgresAuditRepositoryIntegrationSpec.kt` -- 5 tests: CREATE audit for Version, DELETE audit for UniqueTag, multiple usernames, filter by operation, version without distribution
 - [x] Migrate `HealthRepositorySpec` to `adapter/secondary/persistence/PostgresHealthRepositoryIntegrationSpec.kt` -- renamed with `@Tags("integration")` annotation
 - [x] Add `@Tags("integration")` to all integration specs -- applied via `io.kotest.core.annotation.Tags`
-- [ ] Remove duplicate table definitions from test support (import `internal object` tables from main source)
+- [x] Remove duplicate table definitions from test support (import `internal object` tables from main source) -- promoted `Versions` and `VendorAuditTable` from `private object` to `internal object` in `PostgresConnectivity.kt`; test `Postgres.kt` now imports them directly (following the established `VersionTags` pattern)
 
 ### 7.4 Unit Tests (Services with MockK)
 - [x] Create `application/service/VersionServiceUnitSpec.kt` -- test service orchestration with mocked repos (13 tests: findAll delegation/filtering, findOne found/not-found, createOrUpdate with/without tags + DB error + audit failure + tag failure, delete happy path + VersionNotFound + ID not found + TagConflict + DB error + race condition)
