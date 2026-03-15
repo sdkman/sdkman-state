@@ -25,18 +25,18 @@ Resolve build configuration issues and known defects before any structural work 
 ### 0.3 Existing Code Defects
 - [x] Fix `VendorAuditSpec` dead code: `insertVersions` call at line 73 outside `withCleanDatabase` block at line 85 (data inserted then immediately wiped by `withCleanDatabase`) -- `src/test/kotlin/io/sdkman/VendorAuditSpec.kt:73`
 - [x] Fix `IdempotentPostVersionApiSpec` misleading test name: test says "succeed with 201" (line 28) but asserts `HttpStatusCode.NoContent` (204) at line 50 -- `src/test/kotlin/io/sdkman/IdempotentPostVersionApiSpec.kt:28`
-- [ ] Fix `UniqueTagValidator` return type inconsistency: returns `Either<List<ValidationFailure>, UniqueTag>` while `UniqueVersionValidator` returns `Either<NonEmptyList<ValidationError>, UniqueVersion>` -- normalise to consistent error type
+- [x] Fix `UniqueTagValidator` return type inconsistency: returns `Either<List<ValidationFailure>, UniqueTag>` while `UniqueVersionValidator` returns `Either<NonEmptyList<ValidationError>, UniqueVersion>` -- normalise to consistent error type
 - [x] Fix `VersionsRepository.create()` and `delete()` using blocking `transaction{}` instead of suspend `newSuspendedTransaction` -- all other repository methods are properly suspend -- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt:125-135` (create) and `188-201` (delete)
-- [ ] Fix duplicated `dbQuery` helper: identical private function defined in all 4 repository files (`VersionsRepository.kt:42`, `TagsRepositoryImpl.kt:45`, `AuditRepositoryImpl.kt:32`, `HealthRepositoryImpl.kt:11`) -- extract to shared utility
-- [ ] Fix duplicated JDBC URL construction: `"jdbc:postgresql://${config.host}:${config.port}/sdkman?sslMode=prefer&loglevel=2"` appears in both `Databases.kt:9` and `Migration.kt:11` -- extract to shared config
-- [ ] Fix duplicated `NA_SENTINEL` constant: defined in both `TagsRepositoryImpl.kt:28` and test support `Postgres.kt:43` -- extract to single location
+- [x] Fix duplicated `dbQuery` helper: identical private function defined in all 4 repository files (`VersionsRepository.kt:42`, `TagsRepositoryImpl.kt:45`, `AuditRepositoryImpl.kt:32`, `HealthRepositoryImpl.kt:11`) -- extract to shared utility
+- [x] Fix duplicated JDBC URL construction: `"jdbc:postgresql://${config.host}:${config.port}/sdkman?sslMode=prefer&loglevel=2"` appears in both `Databases.kt:9` and `Migration.kt:11` -- extract to shared config
+- [x] Fix duplicated `NA_SENTINEL` constant: defined in both `TagsRepositoryImpl.kt:28` and test support `Postgres.kt:43` -- extract to single location
 - [ ] Fix duplicate `VersionTags` table definition: defined as 2-column minimal table in `VersionsRepository.kt:37-40`, as full 7-column `IntIdTable` in `TagsRepositoryImpl.kt:31-43`, and again in test support `Postgres.kt:45-53` -- consolidate to single definition
-- [ ] Fix `HealthCheckResponse.message` using nullable `String? = null` instead of `Option<String>` -- `src/main/kotlin/io/sdkman/plugins/Routing.kt:48`
-- [ ] Fix `HealthCheckApiSpec` SUCCESS test using nullable chain `contentType()?.withoutParameters()` at line 44 (inconsistent with FAILURE test which correctly uses `.toOption().map`) -- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt:44`
+- [x] Fix `HealthCheckResponse.message` using nullable `String? = null` instead of `Option<String>` -- `src/main/kotlin/io/sdkman/plugins/Routing.kt:48`
+- [x] Fix `HealthCheckApiSpec` SUCCESS test using nullable chain `contentType()?.withoutParameters()` at line 44 (inconsistent with FAILURE test which correctly uses `.toOption().map`) -- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt:44`
 - [ ] Fix private sealed error types `DeleteError` and `DeleteTagError` in `Routing.kt:51-83` -- not reusable outside routing, should be domain-level error types
 - [ ] Fix business logic embedded in `TagsRepositoryImpl.replaceTags`: exclusive tag ownership rule (delete-from-other-versions-then-insert) at lines 128-134 is domain logic in the persistence layer -- `src/main/kotlin/io/sdkman/repos/TagsRepositoryImpl.kt:106-152`
 - [ ] Fix business logic in `Routing.kt`: multi-step orchestration (validate, create, audit, process tags) inline in route handlers at lines 253-273 -- should be in application service layer
-- [ ] Fix `getOrNull()!!` pattern: ~14 instances in `TagsRepositorySpec` using unsafe unwrap instead of Arrow matchers
+- [x] Fix `getOrNull()!!` pattern: ~14 instances in `TagsRepositorySpec` using unsafe unwrap instead of Arrow matchers
 
 ---
 
