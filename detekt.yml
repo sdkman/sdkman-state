@@ -22,3 +22,7 @@ style:
     active: false
   UseCheckOrError:
     active: false
+
+SdkmanRuleSet:
+  NoNullableTypes:
+    active: true

@@ -28,6 +28,7 @@ application {
 
 repositories {
     mavenCentral()
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -59,6 +60,9 @@ dependencies {
     testImplementation("org.testcontainers:postgresql")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")
+
+    detektPlugins("com.github.marc0der:detekt-rules:1.0.0")
+    compileOnly("com.github.marc0der:detekt-rules:1.0.0")
 }
 
 fun String.runCommand(): String =

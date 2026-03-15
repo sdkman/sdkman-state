@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** Complete -- Phases 0-5, 7, 8, 9 complete; Phase 6 (detekt rules) blocked on external artifact
+> **Status:** Complete -- All phases (0-9) complete; Phase 6.3 detekt nullable enforcement unblocked and resolved
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -161,10 +161,10 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 ### 6.3 Detekt Nullable Enforcement
 - [x] Detekt now passing — `configureRouting` `LongMethod` violation suppressed with `@Suppress("LongMethod")` (see Phase 0.3); suppression naturally removed after Phase 5.2 route split; no other violations outstanding
-- [ ] Add JitPack repository to `build.gradle.kts`: `maven("https://jitpack.io")`
-- [ ] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")`
-- [ ] Run `./gradlew detekt` to verify no nullable violations remain
-- [ ] Add `@AllowNullableTypes` annotation only where external interop requires it (document each case)
+- [x] Add JitPack repository to `build.gradle.kts`: `maven("https://jitpack.io")` -- added alongside `mavenCentral()`
+- [x] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")` -- also added `compileOnly` for the `@AllowNullableTypes` annotation
+- [x] Run `./gradlew detekt` to verify no nullable violations remain -- zero violations in both main and test sources; `NoNullableTypes` rule verified active via probe test
+- [x] Add `@AllowNullableTypes` annotation only where external interop requires it (document each case) -- no annotations needed; all nullable types were already eradicated in Phase 6.1/6.2; the only nullable-adjacent patterns are `getOrNull()` calls at Exposed ORM boundary in test support (writing `Option` values to nullable DB columns), which the rule correctly ignores since `getOrNull()` returns a non-nullable type from Arrow's perspective
 
 ---
 
