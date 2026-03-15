@@ -11,7 +11,7 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
-import io.sdkman.state.config.configureAppConfig
+import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureBasicAuthentication
 import io.sdkman.state.config.configureDatabase
 
@@ -32,11 +32,11 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             config = testApplicationConfig()
         }
         application {
-            val appConfig = configureAppConfig(environment)
-            configureDatabase(appConfig.databaseConfig)
-            configureHTTP(appConfig.apiCacheConfig)
+            val appConfig = DefaultAppConfig(environment.config)
+            configureDatabase(appConfig)
+            configureHTTP(appConfig)
             configureSerialization()
-            configureBasicAuthentication(appConfig.apiAuthenticationConfig)
+            configureBasicAuthentication(appConfig)
 
             val versionsRepo = PostgresVersionRepository()
             val tagsRepo = PostgresTagRepository()

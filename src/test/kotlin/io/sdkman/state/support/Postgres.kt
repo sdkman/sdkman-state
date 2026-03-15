@@ -10,7 +10,8 @@ import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
 import io.sdkman.state.adapter.secondary.persistence.VendorAuditTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTags
 import io.sdkman.state.adapter.secondary.persistence.Versions
-import io.sdkman.state.config.DatabaseConfig
+import io.sdkman.state.config.DefaultAppConfig
+import io.sdkman.state.config.jdbcUrl
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
@@ -157,12 +158,12 @@ fun selectLastUpdatedAt(
             }.firstOrNone()
     }
 
-private val testDbConfig = DatabaseConfig(DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD)
+private val testAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }
 
 private fun initialisePostgres() =
     Database
         .connect(
-            url = testDbConfig.jdbcUrl,
+            url = testAppConfig.jdbcUrl,
             user = DB_USERNAME,
             password = DB_PASSWORD,
             driver = "org.postgresql.Driver",
@@ -170,7 +171,7 @@ private fun initialisePostgres() =
             Flyway
                 .configure()
                 .dataSource(
-                    testDbConfig.jdbcUrl,
+                    testAppConfig.jdbcUrl,
                     DB_USERNAME,
                     DB_PASSWORD,
                 ).load()

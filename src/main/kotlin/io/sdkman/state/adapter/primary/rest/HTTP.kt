@@ -10,10 +10,10 @@ import io.ktor.server.plugins.swagger.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.date.*
-import io.sdkman.state.config.ApiCacheConfig
+import io.sdkman.state.config.AppConfig
 import java.time.Instant
 
-fun Application.configureHTTP(apiCacheConfig: ApiCacheConfig) {
+fun Application.configureHTTP(config: AppConfig) {
     install(Compression) {
         gzip {
             priority = 1.0
@@ -29,8 +29,8 @@ fun Application.configureHTTP(apiCacheConfig: ApiCacheConfig) {
             when (content.contentType?.withoutParameters()) {
                 ContentType.Application.Json ->
                     CachingOptions(
-                        cacheControl = CacheControl.MaxAge(maxAgeSeconds = apiCacheConfig.maxAgeSeconds),
-                        expires = GMTDate(Instant.now().plusSeconds(apiCacheConfig.maxAgeSeconds.toLong()).toEpochMilli()),
+                        cacheControl = CacheControl.MaxAge(maxAgeSeconds = config.cacheMaxAge),
+                        expires = GMTDate(Instant.now().plusSeconds(config.cacheMaxAge.toLong()).toEpochMilli()),
                     )
                 else -> null
             }
