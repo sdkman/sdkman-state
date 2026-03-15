@@ -1,7 +1,6 @@
-package io.sdkman.state.plugins
+package io.sdkman.state.config
 
 import io.ktor.server.application.*
-import io.sdkman.state.config.DatabaseConfig
 import org.jetbrains.exposed.sql.Database
 
 fun Application.configureDatabase(config: DatabaseConfig) =

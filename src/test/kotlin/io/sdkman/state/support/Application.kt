@@ -10,7 +10,7 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.config.configureAppConfig
-import io.sdkman.state.plugins.configureDatabase
+import io.sdkman.state.config.configureDatabase
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
     testApplication {

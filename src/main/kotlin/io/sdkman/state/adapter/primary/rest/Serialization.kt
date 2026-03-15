@@ -1,4 +1,4 @@
-package io.sdkman.state.plugins
+package io.sdkman.state.adapter.primary.rest
 
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*

@@ -1,4 +1,4 @@
-package io.sdkman.state.plugins
+package io.sdkman.state.adapter.primary.rest
 
 import io.ktor.http.*
 import io.ktor.http.content.*
