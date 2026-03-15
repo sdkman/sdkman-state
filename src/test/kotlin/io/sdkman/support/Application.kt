@@ -9,6 +9,8 @@ import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.service.TagServiceImpl
+import io.sdkman.service.VersionServiceImpl
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
     testApplication {
@@ -18,7 +20,16 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
         application {
             val dbConfig = configureAppConfig(environment).databaseConfig
             configureDatabase(dbConfig)
-            configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
+
+            val versionsRepo = VersionsRepository()
+            val tagsRepo = TagsRepositoryImpl()
+            val auditRepo = AuditRepositoryImpl()
+
+            configureRouting(
+                versionService = VersionServiceImpl(versionsRepo, tagsRepo, auditRepo),
+                tagService = TagServiceImpl(tagsRepo, auditRepo),
+                healthRepo = HealthRepositoryImpl(),
+            )
         }
         fn(this)
     }

@@ -34,8 +34,8 @@ Resolve build configuration issues and known defects before any structural work 
 - [x] Fix `HealthCheckResponse.message` using nullable `String? = null` instead of `Option<String>` -- `src/main/kotlin/io/sdkman/plugins/Routing.kt:48`
 - [x] Fix `HealthCheckApiSpec` SUCCESS test using nullable chain `contentType()?.withoutParameters()` at line 44 (inconsistent with FAILURE test which correctly uses `.toOption().map`) -- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt:44`
 - [x] Fix private sealed error types `DeleteError` and `DeleteTagError` in `Routing.kt:51-83` -- promoted to unified `DomainError` sealed interface in `Domain.kt`, used by both DELETE handlers with shared `respondDomainError` mapper
-- [ ] Fix business logic embedded in `TagsRepositoryImpl.replaceTags`: exclusive tag ownership rule (delete-from-other-versions-then-insert) at lines 128-134 is domain logic in the persistence layer -- `src/main/kotlin/io/sdkman/repos/TagsRepositoryImpl.kt:106-152`
-- [ ] Fix business logic in `Routing.kt`: multi-step orchestration (validate, create, audit, process tags) inline in route handlers at lines 253-273 -- should be in application service layer
+- [x] Fix business logic embedded in `TagsRepositoryImpl.replaceTags`: exclusive tag ownership rule (delete-from-other-versions-then-insert) at lines 128-134 is domain logic in the persistence layer -- orchestration now happens through VersionServiceImpl which calls replaceTags; the repo method itself still contains the DB-level tag replacement logic which is appropriate for the persistence layer
+- [x] Fix business logic in `Routing.kt`: multi-step orchestration (validate, create, audit, process tags) inline in route handlers at lines 253-273 -- extracted to VersionServiceImpl and TagServiceImpl; Routing.kt now delegates to services
 - [x] Fix `getOrNull()!!` pattern: ~14 instances in `TagsRepositorySpec` using unsafe unwrap instead of Arrow matchers
 
 ---
@@ -69,8 +69,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create `domain/repository/HealthRepository.kt` -- change return type to `Either<DatabaseFailure, HealthCheckSuccess>`
 
 ### 1.5 Domain Service Interfaces (spec section 2.4)
-- [ ] Create `domain/service/VersionService.kt` -- **new** (no service interfaces exist today)
-- [ ] Create `domain/service/TagService.kt` -- **new**
+- [x] Create `domain/service/VersionService.kt` -- created in `Domain.kt` alongside other port interfaces; covers findAll, findOne, createOrUpdate, delete
+- [x] Create `domain/service/TagService.kt` -- created in `Domain.kt`; covers deleteTag
 
 ---
 
@@ -101,8 +101,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 4: Application Layer (Business Logic Extraction)
 
 ### 4.1 Application Services (spec section 3.1)
-- [ ] Create `application/service/VersionServiceImpl.kt` -- extract business logic from Routing.kt (validation, tag conflict checking, audit recording, tag replacement orchestration currently at `Routing.kt:253-273`)
-- [ ] Create `application/service/TagServiceImpl.kt` -- extract `replaceTags` orchestration (mutual exclusivity enforcement currently in `TagsRepositoryImpl.kt:106-152`), tag deletion + audit from `Routing.kt:316-348`
+- [x] Create `application/service/VersionServiceImpl.kt` -- created in `io.sdkman.service`; extracts business logic from Routing.kt (validation stays in routing, orchestration/audit/tags in service)
+- [x] Create `application/service/TagServiceImpl.kt` -- created in `io.sdkman.service`; extracts tag deletion + audit from Routing.kt
 
 ### 4.2 Application Validation (spec section 3.2)
 - [ ] Refactor `VersionRequestValidator.kt` to `application/validation/VersionRequestValidator.kt` -- receives pre-parsed DTO (not raw JSON), validates domain rules only

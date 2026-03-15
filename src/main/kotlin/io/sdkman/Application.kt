@@ -7,6 +7,8 @@ import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.service.TagServiceImpl
+import io.sdkman.service.VersionServiceImpl
 
 fun main(args: Array<String>) =
     io.ktor.server.netty.EngineMain
@@ -22,5 +24,13 @@ fun Application.module() {
     configureSerialization()
     configureBasicAuthentication(appConfig.apiAuthenticationConfig)
 
-    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
+    val versionsRepo = VersionsRepository()
+    val tagsRepo = TagsRepositoryImpl()
+    val auditRepo = AuditRepositoryImpl()
+
+    configureRouting(
+        versionService = VersionServiceImpl(versionsRepo, tagsRepo, auditRepo),
+        tagService = TagServiceImpl(tagsRepo, auditRepo),
+        healthRepo = HealthRepositoryImpl(),
+    )
 }

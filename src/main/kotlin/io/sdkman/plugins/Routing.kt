@@ -12,18 +12,15 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.sdkman.domain.AuditOperation
-import io.sdkman.domain.AuditRepository
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.DomainError
 import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
-import io.sdkman.domain.TagsRepository
+import io.sdkman.domain.TagService
 import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.UniqueVersion
-import io.sdkman.domain.Version
-import io.sdkman.domain.VersionRepository
+import io.sdkman.domain.VersionService
 import io.sdkman.validation.UniqueTagValidator
 import io.sdkman.validation.UniqueVersionValidator
 import io.sdkman.validation.ValidationErrorResponse
@@ -31,8 +28,6 @@ import io.sdkman.validation.ValidationFailure
 import io.sdkman.validation.VersionRequestValidator
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
 @Serializable
 data class ErrorResponse(
@@ -88,47 +83,11 @@ private fun ApplicationCall.authenticatedUsername(): String =
         .map { it.name }
         .getOrElse { "unknown" }
 
-private suspend fun logAudit(
-    logger: Logger,
-    auditRepo: AuditRepository,
-    username: String,
-    operation: AuditOperation,
-    version: Version,
-) {
-    auditRepo.recordAudit(username, operation, version).onLeft { error ->
-        logger.warn("Audit logging failed: ${error.message}", error)
-    }
-}
-
-private suspend fun processTags(
-    logger: Logger,
-    tagsRepo: TagsRepository,
-    versionId: Int,
-    version: Version,
-) {
-    version.tags.onSome { tagList ->
-        tagsRepo
-            .replaceTags(
-                versionId = versionId,
-                candidate = version.candidate,
-                distribution = version.distribution,
-                platform = version.platform,
-                tags = tagList,
-            ).onLeft { error ->
-                logger.warn("Tag processing failed: ${error.message}", error)
-            }
-    }
-}
-
-@Suppress("LongMethod")
 fun Application.configureRouting(
-    versionsRepo: VersionRepository,
+    versionService: VersionService,
+    tagService: TagService,
     healthRepo: HealthRepository,
-    auditRepo: AuditRepository,
-    tagsRepo: TagsRepository,
 ) {
-    val logger = LoggerFactory.getLogger("io.sdkman.routes.VersionRoutes")
-
     fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
         when (this.queryParameters["visible"].toOption()) {
             Some("all") -> None
@@ -171,7 +130,7 @@ fun Application.configureRouting(
                     call.request.queryParameters["distribution"]
                         .toOption()
                         .flatMap { it.toDistribution() }
-                val versions = versionsRepo.read(candidateId, platform, distribution, visible)
+                val versions = versionService.findAll(candidateId, platform, distribution, visible)
                 call.respond(HttpStatusCode.OK, versions)
             }.getOrElse {
                 call.respond(HttpStatusCode.BadRequest)
@@ -198,13 +157,7 @@ fun Application.configureRouting(
                     call.request.queryParameters["distribution"]
                         .toOption()
                         .flatMap { it.toDistribution() }
-                val maybeVersion =
-                    versionsRepo.read(
-                        candidate = candidateId,
-                        version = versionId,
-                        platform = platform,
-                        distribution = distribution,
-                    )
+                val maybeVersion = versionService.findOne(candidateId, versionId, platform, distribution)
                 maybeVersion
                     .map { call.respond(HttpStatusCode.OK, it) }
                     .getOrElse { call.respond(HttpStatusCode.NotFound) }
@@ -220,15 +173,9 @@ fun Application.configureRouting(
                         call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
                     },
                     ifRight = { validVersion ->
-                        versionsRepo.create(validVersion).fold(
-                            ifLeft = { error ->
-                                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.message))
-                            },
-                            ifRight = { versionId ->
-                                logAudit(logger, auditRepo, username, AuditOperation.CREATE, validVersion)
-                                processTags(logger, tagsRepo, versionId, validVersion)
-                                call.respond(HttpStatusCode.NoContent)
-                            },
+                        versionService.createOrUpdate(validVersion, username).fold(
+                            ifLeft = { error -> call.respondDomainError(error) },
+                            ifRight = { call.respond(HttpStatusCode.NoContent) },
                         )
                     },
                 )
@@ -249,35 +196,7 @@ fun Application.configureRouting(
                             .validate(uniqueVersion)
                             .mapLeft { DomainError.ValidationFailed(it.message) }
                             .bind()
-                    val versionToDelete =
-                        versionsRepo
-                            .read(
-                                candidate = validUniqueVersion.candidate,
-                                version = validUniqueVersion.version,
-                                platform = validUniqueVersion.platform,
-                                distribution = validUniqueVersion.distribution,
-                            ).toEither {
-                                DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version)
-                            }.bind()
-                    val versionId =
-                        versionsRepo
-                            .findVersionId(validUniqueVersion)
-                            .toEither {
-                                DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version)
-                            }.bind()
-                    val tagNames =
-                        tagsRepo
-                            .findTagNamesByVersionId(versionId)
-                            .mapLeft { DomainError.DatabaseError(it) }
-                            .bind()
-                    if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-                    logAudit(logger, auditRepo, username, AuditOperation.DELETE, versionToDelete)
-                    val deleted = versionsRepo.delete(validUniqueVersion)
-                    if (deleted == 0) {
-                        raise(
-                            DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version),
-                        )
-                    }
+                    versionService.delete(validUniqueVersion, username).bind()
                 }.fold(
                     ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
@@ -299,19 +218,7 @@ fun Application.configureRouting(
                         .mapLeft { errors ->
                             DomainError.ValidationFailures(errors.map { ValidationFailure(it.field, it.message) })
                         }.bind()
-                    val deletedCount =
-                        tagsRepo
-                            .deleteTag(uniqueTag)
-                            .mapLeft { DomainError.DatabaseError(it) }
-                            .bind()
-                    if (deletedCount == 0) raise(DomainError.TagNotFound(uniqueTag.tag))
-                    auditRepo
-                        .recordAudit(username, AuditOperation.DELETE, uniqueTag)
-                        .onLeft { error ->
-                            logger.warn(
-                                "Audit logging failed for DELETE /versions/tags: ${error.message}",
-                            )
-                        }
+                    tagService.deleteTag(uniqueTag, username).bind()
                 }.fold(
                     ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
