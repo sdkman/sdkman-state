@@ -63,9 +63,10 @@ object VersionRequestValidator {
             this.getOrNone(key).map { element ->
                 when (element) {
                     is JsonArray ->
-                        element.mapNotNull { item ->
-                            (item as? JsonPrimitive)?.takeIf { it.isString }?.content
-                        }
+                        element
+                            .filterIsInstance<JsonPrimitive>()
+                            .filter { it.isString }
+                            .map { it.content }
 
                     else -> emptyList()
                 }
@@ -95,17 +96,17 @@ object VersionRequestValidator {
         val tagsResult = validateTags(tagsOpt)
 
         val errors =
-            listOfNotNull(
-                candidateResult.swap().getOrNull(),
-                versionResult.swap().getOrNull(),
-                platformResult.swap().getOrNull(),
-                urlResult.swap().getOrNull(),
-                distributionResult.swap().getOrNull(),
-                md5sumResult.swap().getOrNull(),
-                sha256sumResult.swap().getOrNull(),
-                sha512sumResult.swap().getOrNull(),
-                tagsResult.swap().getOrNull(),
-            ).flatten()
+            listOf<Either<NonEmptyList<ValidationError>, *>>(
+                candidateResult,
+                versionResult,
+                platformResult,
+                urlResult,
+                distributionResult,
+                md5sumResult,
+                sha256sumResult,
+                sha512sumResult,
+                tagsResult,
+            ).flatMap { it.fold({ errs -> errs }, { emptyList() }) }
 
         return errors.toNonEmptyListOrNone().fold(
             {

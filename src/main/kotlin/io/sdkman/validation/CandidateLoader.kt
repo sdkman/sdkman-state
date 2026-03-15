@@ -1,5 +1,8 @@
 package io.sdkman.validation
 
+import arrow.core.Option
+import arrow.core.getOrElse
+
 object CandidateLoader {
     private const val CANDIDATES_RESOURCE = "/candidates.txt"
 
@@ -9,8 +12,9 @@ object CandidateLoader {
 
     private fun loadCandidates(): List<String> {
         val resource =
-            this::class.java.getResourceAsStream(CANDIDATES_RESOURCE)
-                ?: throw IllegalStateException("Cannot find $CANDIDATES_RESOURCE in classpath")
+            Option
+                .fromNullable(this::class.java.getResourceAsStream(CANDIDATES_RESOURCE))
+                .getOrElse { error("Cannot find $CANDIDATES_RESOURCE in classpath") }
 
         return resource.bufferedReader().use { reader ->
             reader
