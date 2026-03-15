@@ -30,7 +30,7 @@ Resolve build configuration issues and known defects before any structural work 
 - [x] Fix duplicated `dbQuery` helper: identical private function defined in all 4 repository files (`VersionsRepository.kt:42`, `TagsRepositoryImpl.kt:45`, `AuditRepositoryImpl.kt:32`, `HealthRepositoryImpl.kt:11`) -- extract to shared utility
 - [x] Fix duplicated JDBC URL construction: `"jdbc:postgresql://${config.host}:${config.port}/sdkman?sslMode=prefer&loglevel=2"` appears in both `Databases.kt:9` and `Migration.kt:11` -- extract to shared config
 - [x] Fix duplicated `NA_SENTINEL` constant: defined in both `TagsRepositoryImpl.kt:28` and test support `Postgres.kt:43` -- extract to single location
-- [ ] Fix duplicate `VersionTags` table definition: defined as 2-column minimal table in `VersionsRepository.kt:37-40`, as full 7-column `IntIdTable` in `TagsRepositoryImpl.kt:31-43`, and again in test support `Postgres.kt:45-53` -- consolidate to single definition
+- [x] Fix duplicate `VersionTags` table definition: consolidated to single `internal object VersionTags` in `PostgresConnectivity.kt`, shared by `VersionsRepository`, `TagsRepositoryImpl`, and test `Postgres.kt`
 - [x] Fix `HealthCheckResponse.message` using nullable `String? = null` instead of `Option<String>` -- `src/main/kotlin/io/sdkman/plugins/Routing.kt:48`
 - [x] Fix `HealthCheckApiSpec` SUCCESS test using nullable chain `contentType()?.withoutParameters()` at line 44 (inconsistent with FAILURE test which correctly uses `.toOption().map`) -- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt:44`
 - [ ] Fix private sealed error types `DeleteError` and `DeleteTagError` in `Routing.kt:51-83` -- not reusable outside routing, should be domain-level error types
