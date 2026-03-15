@@ -17,7 +17,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 
 class VersionsRepository {
@@ -122,8 +121,8 @@ class VersionsRepository {
                 .map { (id, v) -> v.withTags(fetchTagNames(id)) }
         }
 
-    fun create(cv: Version): Either<String, Int> =
-        transaction {
+    suspend fun create(cv: Version): Either<String, Int> =
+        dbQuery {
             val exists =
                 Versions
                     .selectAll()
@@ -185,8 +184,8 @@ class VersionsRepository {
                 .firstOrNone()
         }
 
-    fun delete(version: UniqueVersion): Int =
-        transaction {
+    suspend fun delete(version: UniqueVersion): Int =
+        dbQuery {
             Versions.deleteWhere {
                 val baseCondition =
                     (candidate eq version.candidate) and
