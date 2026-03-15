@@ -1,12 +1,7 @@
-@file:UseSerializers(OptionSerializer::class)
-
 package io.sdkman.domain
 
 import arrow.core.None
 import arrow.core.Option
-import arrow.core.serialization.OptionSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
 
 data class VersionTag(
     val id: Int = 0,
@@ -23,7 +18,6 @@ data class VersionTag(
             .now(),
 )
 
-@Serializable
 data class UniqueTag(
     val candidate: String,
     val tag: String,

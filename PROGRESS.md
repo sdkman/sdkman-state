@@ -220,3 +220,29 @@ Each entry must follow this structure exactly:
 - _Context:_ `configureRouting` in Routing.kt is 130 lines vs detekt max of 60 — pre-existing violation suppressed with annotation; will be naturally resolved in Phase 5.2 when routes split into VersionRoutes/TagRoutes/HealthRoutes
 
 ---
+
+### [2026-03-15 21:00] — Phase 1.3 + 5.1: Remove @Serializable from Domain Models
+
+**Summary:** Removed `@Serializable` from all domain models (`Version`, `UniqueVersion`, `UniqueTag`, `Distribution`, `AuditOperation`) to enforce hexagonal RULE-004 (domain entities must not reference infrastructure annotations). Created `@Serializable` DTOs (`VersionDto`, `UniqueVersionDto`, `UniqueTagDto`) in `io.sdkman.dto` package for serialization at adapter boundaries.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/dto/VersionDto.kt` — new file; @Serializable DTO mirroring Version with toDto()/toDomain() mappers
+- `src/main/kotlin/io/sdkman/dto/UniqueVersionDto.kt` — new file; @Serializable DTO mirroring UniqueVersion with toDomain() mapper
+- `src/main/kotlin/io/sdkman/dto/UniqueTagDto.kt` — new file; @Serializable DTO mirroring UniqueTag with toDto()/toDomain() mappers
+- `src/main/kotlin/io/sdkman/domain/Version.kt` — removed @Serializable, @file:UseSerializers, and serialization imports
+- `src/main/kotlin/io/sdkman/domain/VersionTag.kt` — removed @Serializable from UniqueTag, removed serialization imports
+- `src/main/kotlin/io/sdkman/domain/Distribution.kt` — removed @Serializable and serialization import
+- `src/main/kotlin/io/sdkman/domain/Audit.kt` — removed @Serializable from AuditOperation and serialization import
+- `src/main/kotlin/io/sdkman/plugins/Routing.kt` — GET responses now map Version→VersionDto; DELETE handlers receive UniqueVersionDto/UniqueTagDto and map to domain
+- `src/main/kotlin/io/sdkman/repos/AuditRepositoryImpl.kt` — toJsonElement() now converts domain→DTO before Json.encodeToJsonElement
+- `src/test/kotlin/io/sdkman/support/Json.kt` — toJson()/toJsonString() now go through DTOs
+- `src/test/kotlin/io/sdkman/support/Postgres.kt` — deserializeVersionData() decodes to VersionDto then maps toDomain()
+
+**Test outcome:** PASS — all 131 tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ kotlinx.serialization compiler plugin auto-generates serializers for enums used as fields in @Serializable classes, even when the enum itself lacks @Serializable — Platform (never annotated) and Distribution (annotation removed) both work as fields in @Serializable DTOs
+- _Gotchas:_ Test support `deserializeVersionData` used `Version.serializer()` directly — needed intermediate DTO deserialization + toDomain() conversion to maintain test assertion compatibility (tests compare deserialized audit data against domain `Version` objects)
+- _Context:_ DTOs currently live in `io.sdkman.dto` package — will move to `io.sdkman.state.adapter.primary.rest.dto` during Phase 1.1 package restructuring
+
+---

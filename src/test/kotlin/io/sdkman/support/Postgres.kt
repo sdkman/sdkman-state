@@ -9,6 +9,8 @@ import io.sdkman.domain.AuditOperation
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
+import io.sdkman.dto.VersionDto
+import io.sdkman.dto.toDomain
 import io.sdkman.repos.NA_SENTINEL
 import io.sdkman.repos.VersionTags
 import kotlinx.coroutines.Dispatchers
@@ -251,7 +253,7 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRe
         }
     }
 
-fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(Version.serializer(), versionData)
+fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(VersionDto.serializer(), versionData).toDomain()
 
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()

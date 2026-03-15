@@ -7,6 +7,7 @@ import io.sdkman.domain.Auditable
 import io.sdkman.domain.DatabaseFailure
 import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.Version
+import io.sdkman.dto.toDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -29,8 +30,8 @@ class AuditRepositoryImpl : AuditRepository {
 
     private fun Auditable.toJsonElement(): JsonElement =
         when (this) {
-            is Version -> Json.encodeToJsonElement(this)
-            is UniqueTag -> Json.encodeToJsonElement(this)
+            is Version -> Json.encodeToJsonElement(this.toDto())
+            is UniqueTag -> Json.encodeToJsonElement(this.toDto())
         }
 
     override suspend fun recordAudit(
