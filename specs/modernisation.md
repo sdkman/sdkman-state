@@ -7,7 +7,7 @@ This specification describes the target state for modernising sdkman-state to fo
 **In Scope:**
 - Structural refactoring to adopt hexagonal architecture
 - Migration from real PostgreSQL to Testcontainers (postgres:16) in tests
-- Normalising timestamp types to `kotlinx.datetime.Instant`
+- Normalising timestamp types to `kotlin.time.Instant` (Kotlin stdlib)
 - Adopting sealed class pattern for `DatabaseFailure`
 - Stripping `@Serializable` annotations from domain models
 - Separating JSON parsing (adapter) from validation logic (application)
@@ -23,6 +23,8 @@ This specification describes the target state for modernising sdkman-state to fo
 - Adding new features
 
 **All existing API behaviour must be preserved.**
+
+**Implementation Note:** The spec originally referenced `kotlinx.datetime.Instant`, but Kotlin 2.3.10 includes `kotlin.time.Instant` in the stdlib, making the external dependency unnecessary. The `kotlinx-datetime:0.7.1-0.6.x-compat` library's `toKotlinInstant()` conversion is `internal`, so direct construction via `Instant.fromEpochSeconds()` is used at the persistence boundary instead.
 
 ---
 
@@ -73,67 +75,72 @@ Hexagonal architecture with clear layer separation:
 
 ```
 src/main/kotlin/io/sdkman/state/
-├── App.kt                                        # Entry point with fun Application.module()
+├── Application.kt                                    # Entry point with fun Application.module()
 ├── config/
-│   ├── AppConfig.kt                              # Interface + DefaultAppConfig implementation
-│   ├── ConfigExtensions.kt                       # Arrow-based config helpers
-│   ├── CandidateLoader.kt                        # Loads allowed candidates from classpath
-│   ├── Authentication.kt                         # Ktor basic auth plugin
-│   └── Migration.kt                              # Flyway migration runner
+│   ├── AppConfig.kt                                  # Interface + DefaultAppConfig implementation
+│   ├── ConfigExtensions.kt                           # Arrow-based config helpers
+│   ├── CandidateLoader.kt                            # Loads allowed candidates from classpath
+│   ├── Authentication.kt                             # Ktor basic auth plugin
+│   ├── Databases.kt                                  # Database connection setup
+│   └── Migration.kt                                  # Flyway migration runner
 ├── domain/
 │   ├── model/
-│   │   ├── Audit.kt                              # Auditable sealed interface, AuditOperation enum
-│   │   ├── Distribution.kt                       # Distribution enum (no @Serializable)
-│   │   ├── Platform.kt                           # Platform enum (no @Serializable)
-│   │   ├── Version.kt                            # Version, UniqueVersion data classes (no @Serializable)
-│   │   ├── VersionTag.kt                         # VersionTag (pure domain, kotlinx.datetime.Instant), UniqueTag
-│   │   ├── HealthCheckSuccess.kt                 # data object HealthCheckSuccess
-│   │   └── DomainError.kt                        # Unified sealed class for all domain errors
+│   │   ├── Audit.kt                                  # Auditable sealed interface, AuditOperation enum
+│   │   ├── Distribution.kt                           # Distribution enum (no @Serializable)
+│   │   ├── Platform.kt                               # Platform enum (no @Serializable)
+│   │   ├── Version.kt                                # Version, UniqueVersion data classes (no @Serializable)
+│   │   ├── VersionTag.kt                             # VersionTag (kotlin.time.Instant), UniqueTag
+│   │   └── HealthCheckSuccess.kt                     # data object HealthCheckSuccess
 │   ├── error/
-│   │   ├── DatabaseError.kt                      # DatabaseFailure sealed class with variants
-│   │   └── ValidationError.kt                    # Validation error hierarchy
-│   ├── repository/                               # Port interfaces
+│   │   ├── DatabaseFailure.kt                        # DatabaseFailure sealed class with variants
+│   │   └── DomainError.kt                            # Unified sealed interface + FieldError type
+│   ├── repository/                                   # Port interfaces
 │   │   ├── AuditRepository.kt
 │   │   ├── HealthRepository.kt
 │   │   ├── TagRepository.kt
 │   │   └── VersionRepository.kt
-│   └── service/                                  # Domain service interfaces
+│   └── service/                                      # Domain service interfaces
 │       ├── TagService.kt
 │       └── VersionService.kt
 ├── application/
-│   ├── service/                                  # Business logic orchestration
+│   ├── service/                                      # Business logic orchestration
 │   │   ├── TagServiceImpl.kt
 │   │   └── VersionServiceImpl.kt
-│   └── validation/                               # Domain validation (no JSON parsing)
+│   └── validation/                                   # Domain validation (no JSON parsing)
 │       ├── UniqueTagValidator.kt
 │       ├── UniqueVersionValidator.kt
 │       ├── VersionRequestValidator.kt
-│       └── ValidationErrors.kt                   # Validation error types
+│       └── ValidationErrors.kt                       # Validation error types
 ├── adapter/
 │   ├── primary/
-│   │   └── rest/                                 # HTTP adapters only
+│   │   └── rest/                                     # HTTP adapters only
 │   │       ├── HealthRoutes.kt
 │   │       ├── TagRoutes.kt
 │   │       ├── VersionRoutes.kt
-│   │       ├── RequestExtensions.kt              # Shared HTTP helpers (authenticatedUsername, visibleQueryParam)
-│   │       ├── Compression.kt                    # Ktor compression plugin
-│   │       ├── Serialization.kt                  # Ktor content negotiation
-│   │       └── dto/                              # Request/Response DTOs (@Serializable)
-│   │           ├── VersionRequest.kt             # Unvalidated request DTO
-│   │           ├── UniqueVersionRequest.kt       # Unvalidated delete request DTO
-│   │           ├── UniqueTagRequest.kt           # Unvalidated tag delete request DTO
-│   │           ├── ErrorResponse.kt              # HTTP error response DTO
-│   │           ├── TagConflictResponse.kt        # Tag conflict response DTO
-│   │           ├── HealthCheckResponse.kt        # Health check response DTO
-│   │           └── ValidationErrorResponse.kt    # Validation error response DTO
+│   │       ├── Routing.kt                            # 22-line composition function wiring routes
+│   │       ├── RequestExtensions.kt                  # Shared HTTP helpers (authenticatedUsername, respondDomainError)
+│   │       ├── HTTP.kt                               # Ktor compression + caching headers + Swagger
+│   │       ├── Serialization.kt                      # Ktor content negotiation (explicitNulls = false)
+│   │       └── dto/                                  # Request/Response DTOs (@Serializable)
+│   │           ├── VersionRequest.kt                 # Unvalidated version create/update request
+│   │           ├── VersionDto.kt                     # Version response DTO with toDto()/toDomain()
+│   │           ├── UniqueVersionDto.kt               # Delete request/response DTO (serves both roles)
+│   │           ├── UniqueTagDto.kt                   # Tag delete request/response DTO (serves both roles)
+│   │           ├── ErrorResponse.kt                  # HTTP error response DTO
+│   │           ├── TagConflictResponse.kt            # Tag conflict response DTO
+│   │           ├── HealthCheckResponse.kt            # Health check response DTO
+│   │           └── ValidationErrorResponse.kt        # Validation error response DTO + ValidationFailure
 │   └── secondary/
-│       └── persistence/                          # Database adapters
-│           ├── PostgresConnectivity.kt           # Database connection management
-│           ├── PostgresAuditRepository.kt        # Contains internal AuditTable
+│       └── persistence/                              # Database adapters
+│           ├── PostgresConnectivity.kt               # dbQuery helper, NA_SENTINEL, toKotlinTimeInstant()
+│           ├── PostgresAuditRepository.kt            # Contains internal AuditTable
 │           ├── PostgresHealthRepository.kt
-│           ├── PostgresTagRepository.kt          # Contains internal VersionTagsTable
-│           └── PostgresVersionRepository.kt      # Contains internal VersionsTable
+│           ├── PostgresTagRepository.kt              # Contains internal VersionTagsTable
+│           └── PostgresVersionRepository.kt          # Contains internal VersionsTable
 ```
+
+**Design Decision — No Separate Request DTOs for Delete:**
+`UniqueVersionDto` and `UniqueTagDto` serve as both request and response DTOs. Creating separate `UniqueVersionRequest`/`UniqueTagRequest` types would be pure ceremony since the fields are identical.
 
 ---
 
@@ -148,24 +155,23 @@ src/main/kotlin/io/sdkman/state/
 | File | Contents |
 |------|----------|
 | `Version.kt` | `Version` data class, `UniqueVersion` data class (no @Serializable) |
-| `VersionTag.kt` | `VersionTag` data class (timestamps normalised to `kotlinx.datetime.Instant`, pure domain model), `UniqueTag` data class |
+| `VersionTag.kt` | `VersionTag` data class (timestamps use `kotlin.time.Instant`, pure domain model), `UniqueTag` data class |
 | `Platform.kt` | `Platform` enum with `platformId` property and `findByPlatformId` companion method |
 | `Distribution.kt` | `Distribution` enum (no @Serializable) |
 | `Audit.kt` | `Auditable` sealed interface (Version and UniqueTag implement it), `AuditOperation` enum |
 | `HealthCheckSuccess.kt` | `data object HealthCheckSuccess` following broker pattern |
-| `DomainError.kt` | Unified `sealed class DomainError` with variants for version delete, tag delete, validation, and not-found errors |
 
 **Removed from main source:**
 - `HealthStatus` enum - replaced by `Either<DatabaseFailure, HealthCheckSuccess>` pattern
 
 **Moved to test sources:**
-- `AuditRecord` → `VendorAuditRecord` in `src/test/kotlin/io/sdkman/state/support/VendorAuditRecord.kt`
+- `AuditRecord` → `VendorAuditRecord` in `src/test/kotlin/io/sdkman/state/support/Postgres.kt`
   - This type is only used for test assertions (reading back audit data from `vendor_audit` table)
   - Main source writes `Version`/`UniqueTag` directly as JSON via `AuditRepository`
   - Rename distinguishes it from broker's audit concept
 
 **Key Changes:**
-- `VersionTag.createdAt` and `VersionTag.lastUpdatedAt` change from `java.time.Instant` to `kotlinx.datetime.Instant`
+- `VersionTag.createdAt` and `VersionTag.lastUpdatedAt` change from `java.time.Instant` to `kotlin.time.Instant`
 - `VersionTag` remains a pure domain model with no @Serializable (internal use only)
 
 ### 2.2 Domain Error Types
@@ -176,32 +182,42 @@ src/main/kotlin/io/sdkman/state/
 - Validation errors in `validation/ValidationErrors.kt`
 - Four different error patterns across the codebase
 
-**Target:** Create unified error hierarchy in `domain/`:
+**Target:** Create error types in `domain/error/`:
 
 | File | Contents |
 |------|----------|
-| `error/DatabaseError.kt` | `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants (following broker pattern) |
-| `error/ValidationError.kt` | Validation error hierarchy (moved from `validation/`) |
-| `model/DomainError.kt` | Unified `sealed class DomainError` consolidating DeleteError and DeleteTagError variants |
+| `DatabaseFailure.kt` | `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants |
+| `DomainError.kt` | `FieldError` data class + unified `sealed interface DomainError` consolidating all domain error variants |
 
 **DomainError.kt structure:**
 ```kotlin
-sealed class DomainError {
+data class FieldError(
+    val field: String,
+    val message: String,
+)
+
+sealed interface DomainError {
     // Version delete errors
-    data class VersionNotFound(val candidate: String, val version: String) : DomainError()
-    data class TagConflict(val tags: List<String>) : DomainError()
+    data class VersionNotFound(val candidate: String, val version: String) : DomainError
+    data class TagConflict(val tags: List<String>) : DomainError
 
     // Tag delete errors
-    data class TagNotFound(val tagName: String) : DomainError()
+    data class TagNotFound(val tagName: String) : DomainError
 
-    // Validation errors (wrapping validation failures)
-    data class ValidationFailed(val message: String) : DomainError()
-    data class ValidationFailures(val failures: List<ValidationFailure>) : DomainError()
+    // Validation errors (wrapping domain-level field errors)
+    data class ValidationFailed(val message: String) : DomainError
+    data class ValidationFailures(val failures: List<FieldError>) : DomainError
 
     // Database errors (wrapping DatabaseFailure)
-    data class DatabaseError(val failure: DatabaseFailure) : DomainError()
+    data class DatabaseError(val failure: DatabaseFailure) : DomainError
 }
 ```
+
+**Design Decision — `FieldError` vs `ValidationFailure`:**
+`DomainError.ValidationFailures` uses `List<FieldError>` (domain type) rather than `List<ValidationFailure>` (DTO type) to avoid a layering violation where the domain would import from the adapter layer. Conversion from `FieldError` to `ValidationFailure` DTO happens at the adapter boundary in `respondDomainError`.
+
+**Design Decision — `sealed interface` vs `sealed class`:**
+`DomainError` is a `sealed interface` (not `sealed class`) because variants don't share common state — only a type hierarchy. This is idiomatic Kotlin for marker-style hierarchies.
 
 ### 2.3 Repository Port Interfaces
 
@@ -244,45 +260,33 @@ interface VersionRepository {
 Note:
 - `createOrUpdate` returns `Either<DatabaseFailure, Int>` (version ID) for consistency with current behavior
 - `findVersionId` exposed for service layer coordination
-- `findVersionIdByTag` moved here from TagRepository (it looks up a version, belongs with version operations)
+- `findVersionIdByTag` lives here (it looks up a version, belongs with version operations)
 
 **TagRepository.kt**
 ```kotlin
 interface TagRepository {
-    suspend fun findByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>>
+    suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>>
 
     suspend fun findTagNamesByVersionId(versionId: Int): Either<DatabaseFailure, List<String>>
 
     suspend fun findTagNamesByVersionIds(versionIds: List<Int>): Either<DatabaseFailure, Map<Int, List<String>>>
 
-    suspend fun create(
-        versionId: Int,
-        candidate: String,
-        tag: String,
-        distribution: Option<Distribution>,
-        platform: Platform
-    ): Either<DatabaseFailure, VersionTag>
-
-    suspend fun deleteByVersionIdAndScope(
+    suspend fun replaceTags(
         versionId: Int,
         candidate: String,
         distribution: Option<Distribution>,
-        platform: Platform
-    ): Either<DatabaseFailure, Int>
+        platform: Platform,
+        tags: List<String>
+    ): Either<DatabaseFailure, Unit>
 
-    suspend fun deleteByTagAndScope(
-        candidate: String,
-        tag: String,
-        distribution: Option<Distribution>,
-        platform: Platform
-    ): Either<DatabaseFailure, Int>
+    suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int>
+
+    suspend fun hasTagsForVersion(versionId: Int): Either<DatabaseFailure, Boolean>
 }
 ```
 
-Note:
-- Simplified from current 6-method `TagsRepository`
-- Complex orchestration (`replaceTags`, tag mutual exclusivity enforcement) moves to `TagService`
-- `findTagNamesByVersionIds` added for batch tag fetching (replaces duplicate table definition in VersionsRepository)
+**Design Decision — `replaceTags` in Repository vs Service:**
+The original spec proposed granular `create`/`deleteByVersionIdAndScope`/`deleteByTagAndScope` methods with orchestration in `TagService`. The implementation keeps `replaceTags` as a single repository method because the delete-existing + enforce-mutual-exclusivity + insert-new sequence must execute within a single database transaction for consistency. Splitting it across service-level calls would require distributed transaction coordination. `deleteTag` is a separate method because tag deletion is an independent operation with its own audit semantics.
 
 **AuditRepository.kt**
 ```kotlin
@@ -354,8 +358,15 @@ interface TagService {
         username: String,
         uniqueTag: UniqueTag
     ): Either<DomainError, Unit>
+
+    suspend fun findTagNamesByVersionId(
+        versionId: Int
+    ): Either<DatabaseFailure, List<String>>
 }
 ```
+
+**Design Decision — `findTagNamesByVersionId` on `TagService`:**
+This method was added to `TagService` (not in the original spec draft) so that `VersionServiceImpl` can check for tag conflicts during delete without needing a direct `TagRepository` dependency. This keeps the dependency graph clean: `VersionServiceImpl(VersionRepository, TagService, AuditRepository)`.
 
 ---
 
@@ -382,28 +393,34 @@ interface TagService {
 
 **VersionServiceImpl.kt** - implements `VersionService`
 
+Constructor: `VersionServiceImpl(versionRepository: VersionRepository, tagService: TagService, auditRepository: AuditRepository)`
+
 Key responsibilities:
+- Delegate reads to `VersionRepository`
 - Validate incoming requests using validators
-- Check for tag conflicts before deletion (call `tagRepository.findTagNamesByVersionId`)
+- Check for tag conflicts before deletion (call `tagService.findTagNamesByVersionId`)
 - Record audit events on create/delete
-- Orchestrate tag replacement via TagService after version create/update
+- Orchestrate tag replacement via `TagService` after version create/update
 
 **TagServiceImpl.kt** - implements `TagService`
 
+Constructor: `TagServiceImpl(tagRepository: TagRepository, auditRepository: AuditRepository)`
+
 Key responsibilities:
-- Implement `replaceTags` orchestration (delete existing tags, enforce mutual exclusivity, insert new)
+- Delegate `replaceTags` to `TagRepository` (transactional tag replacement)
+- Delegate `findTagNamesByVersionId` to `TagRepository`
 - Record audit events on tag deletion
-- Coordinate version ID lookup via VersionRepository
+- Coordinate version ID lookup via `VersionRepository` (for deleteTag)
 
 ### 3.2 Application Validation
 
 **Current:** `VersionRequestValidator` does both JSON parsing AND validation in 273 lines.
 
 **Target:** Move validators to `application/validation/`:
-- `VersionRequestValidator.kt` - receives pre-parsed DTO, validates domain rules only
+- `VersionRequestValidator.kt` - receives pre-parsed DTO (`VersionRequest`), validates domain rules
 - `UniqueVersionValidator.kt` - validates UniqueVersion domain rules
 - `UniqueTagValidator.kt` - validates UniqueTag domain rules
-- `ValidationErrors.kt` - validation error types
+- `ValidationErrors.kt` - validation error types (sealed `ValidationError` hierarchy)
 
 **Validation flow:**
 1. REST adapter receives JSON, parses to DTO (e.g. `VersionRequest`)
@@ -426,6 +443,7 @@ Key responsibilities:
 | `VersionRoutes.kt` | `GET /versions/{candidate}`, `GET /versions/{candidate}/{version}`, `POST /versions`, `DELETE /versions` |
 | `TagRoutes.kt` | `DELETE /versions/tags` |
 | `HealthRoutes.kt` | `GET /meta/health` |
+| `Routing.kt` | 22-line composition function wiring `healthRoutes`, `versionReadRoutes`, `versionWriteRoutes`, `tagRoutes` |
 
 **Route responsibilities (thin adapters):**
 - Extract HTTP parameters
@@ -434,23 +452,28 @@ Key responsibilities:
 - Map `Either` results to HTTP responses using `fold()`
 - **No business logic**
 
+**Design Decision — Version Routes Auth Split:**
+Version routes are split into `versionReadRoutes()` (GET, unauthenticated) and `versionWriteRoutes()` (POST/DELETE, inside `authenticate("auth-basic")` block) because a single `versionRoutes()` function can't serve both authenticated and unauthenticated contexts.
+
 **RequestExtensions.kt** - shared HTTP helper functions:
 - `ApplicationCall.authenticatedUsername(): String`
 - `ApplicationRequest.visibleQueryParam(): Option<Boolean>`
-- Other request parsing utilities
+- `String.toDistribution(): Either<DomainError.ValidationFailed, Option<Distribution>>`
+- `ApplicationCall.respondDomainError(error: DomainError)` — maps all `DomainError` variants to HTTP status codes, converting `FieldError` to `ValidationFailure` DTO at the boundary
 
-**Ktor plugins moved to adapter:**
-- `Compression.kt` - HTTP compression configuration
+**Ktor plugins in adapter:**
+- `HTTP.kt` - HTTP compression, caching headers, Swagger UI at `/swagger`
 - `Serialization.kt` - JSON content negotiation with `explicitNulls = false`
 
 **Request/Response DTOs** in `dto/` sub-package (all `@Serializable`):
-- `VersionRequest.kt` - unvalidated version create/update request
-- `UniqueVersionRequest.kt` - unvalidated version delete request
-- `UniqueTagRequest.kt` - unvalidated tag delete request
+- `VersionRequest.kt` - unvalidated version create/update request (all `Option` fields defaulting to `None`)
+- `VersionDto.kt` - version response DTO with `toDto()`/`toDomain()` mappers
+- `UniqueVersionDto.kt` - version delete request/response DTO (serves both roles)
+- `UniqueTagDto.kt` - tag delete request/response DTO (serves both roles)
 - `ErrorResponse.kt` - generic error response
 - `TagConflictResponse.kt` - tag conflict error with tag list
 - `HealthCheckResponse.kt` - health check response (no HealthStatus enum, just message)
-- `ValidationErrorResponse.kt` - validation error with failure list
+- `ValidationErrorResponse.kt` - validation error with failure list + `ValidationFailure` type
 
 ### 4.2 Secondary Adapters (Persistence)
 
@@ -464,9 +487,12 @@ Key responsibilities:
 - `PostgresAuditRepository.kt` - implements `AuditRepository`, contains `internal object AuditTable`
 - `PostgresHealthRepository.kt` - implements `HealthRepository`
 
-**PostgresConnectivity.kt** - database connection management, shared `dbQuery` helper
+**PostgresConnectivity.kt** - shared infrastructure:
+- `dbQuery` helper wrapping `newSuspendedTransaction(Dispatchers.IO)`
+- `NA_SENTINEL = "NA"` constant for absent distribution in non-nullable DB columns
+- `java.time.Instant.toKotlinTimeInstant()` extension for persistence boundary conversion
 
-**Table visibility:** Tables are `internal object` (not private) so tests in the same module can import them.
+**Table visibility:** Tables are `internal object` (not private) so tests in the same module can import them. `VersionTagsTable` is referenced by both `PostgresTagRepository` (primary owner) and `PostgresVersionRepository` (for batch tag fetching).
 
 ---
 
@@ -497,15 +523,16 @@ class DefaultAppConfig(config: ApplicationConfig) : AppConfig { ... }
 ```
 
 **ConfigExtensions.kt**
-Arrow-based helper functions for configuration loading (e.g., `getStringOrDefault`, `getOptionString`).
+Arrow-based helper functions for configuration loading (e.g., `getStringOrDefault`, `getIntOrDefault`, `getOptionString`). Includes `AppConfig.jdbcUrl` extension property.
 
-**CandidateLoader.kt** - moved to `config/` (loads allowed candidates from `/candidates.txt` at startup)
+**CandidateLoader.kt** - moved to `config/` (loads allowed candidates from `/candidates.txt` at startup using `Option.fromNullable` for resource loading)
 
 **Ktor plugins kept in config/:**
 - `Authentication.kt` - Ktor basic auth plugin
+- `Databases.kt` - Database connection setup
 - `Migration.kt` - Flyway migration runner
 
-**Dependency Injection:** Manual constructor injection in `App.kt` (no DI framework).
+**Dependency Injection:** Manual constructor injection in `Application.kt` (no DI framework).
 
 ---
 
@@ -521,7 +548,7 @@ Mixed blocking and suspend patterns in repositories:
 
 ### Target State
 
-All repository methods use consistent `suspend` functions with `newSuspendedTransaction(Dispatchers.IO)`.
+All repository methods use consistent `suspend` functions via a shared `dbQuery` helper that wraps `newSuspendedTransaction(Dispatchers.IO)`. No bare `transaction {}` calls anywhere in the codebase.
 
 Service layer methods are suspend where they call repositories, non-suspend for simple operations.
 
@@ -595,32 +622,48 @@ Three-layer testing structure with Testcontainers (postgres:16):
 
 ```
 src/test/kotlin/io/sdkman/state/
-├── acceptance/                               # E2E API tests
-│   ├── VersionAcceptanceSpec.kt
-│   ├── TagAcceptanceSpec.kt
-│   └── HealthAcceptanceSpec.kt
+├── acceptance/                                       # E2E API tests (12 focused specs)
+│   ├── GetVersionsAcceptanceSpec.kt
+│   ├── GetVersionAcceptanceSpec.kt
+│   ├── GetVersionTagsAcceptanceSpec.kt
+│   ├── PostVersionAcceptanceSpec.kt
+│   ├── PostVersionTagsAcceptanceSpec.kt
+│   ├── PostVersionVisibilityAcceptanceSpec.kt
+│   ├── IdempotentPostVersionAcceptanceSpec.kt
+│   ├── DeleteVersionAcceptanceSpec.kt
+│   ├── DeleteTagAcceptanceSpec.kt
+│   ├── DeleteTaggedVersionAcceptanceSpec.kt
+│   ├── HealthCheckAcceptanceSpec.kt
+│   └── VendorAuditAcceptanceSpec.kt
 ├── adapter/
 │   └── secondary/
-│       └── persistence/                      # Repository integration tests
+│       └── persistence/                              # Repository integration tests
 │           ├── PostgresVersionRepositoryIntegrationSpec.kt
 │           ├── PostgresTagRepositoryIntegrationSpec.kt
 │           ├── PostgresAuditRepositoryIntegrationSpec.kt
 │           └── PostgresHealthRepositoryIntegrationSpec.kt
 ├── application/
-│   └── service/                              # Service unit tests
-│       ├── VersionServiceUnitSpec.kt
-│       └── TagServiceUnitSpec.kt
-├── domain/
-│   └── model/                                # Pure domain logic tests
-│       └── [domain model tests as needed]
+│   ├── service/                                      # Service unit tests (MockK)
+│   │   ├── VersionServiceUnitSpec.kt
+│   │   └── TagServiceUnitSpec.kt
+│   └── validation/                                   # Validator unit tests
+│       ├── VersionRequestValidatorSpec.kt
+│       ├── UniqueVersionValidatorSpec.kt
+│       └── UniqueTagValidatorSpec.kt
 └── support/
-    ├── KotestConfig.kt                       # Parallelism, extensions
-    ├── PostgresTestListener.kt               # Testcontainer lifecycle (postgres:16)
-    ├── TestDependencyInjection.kt            # Test DI container
-    ├── VendorAuditRecord.kt                  # Test-only type for reading audit table
-    ├── EitherMatchers.kt                     # Arrow test matchers
-    └── OptionMatchers.kt                     # Arrow test matchers
+    ├── PostgresTestContainer.kt                      # Singleton Testcontainer (postgres:16, withReuse)
+    ├── Application.kt                                # Test app wiring with MapApplicationConfig
+    ├── Postgres.kt                                   # DB helpers, VendorAuditRecord, withCleanDatabase
+    ├── Json.kt                                       # Serialisation helpers (toJson, toJsonString, etc.)
+    ├── EitherMatchers.kt                             # shouldBeRight(), shouldBeLeft() Arrow matchers
+    └── OptionMatchers.kt                             # shouldBeSome(), shouldBeNone() Arrow matchers
 ```
+
+**Design Decision — 12 Focused Acceptance Specs:**
+Acceptance specs are kept as 12 separate focused files rather than consolidating into 3 mega-files. Each spec tests a cohesive feature area (GET versions, POST versions, DELETE tags, etc.) and consolidation would create files with 70+ tests that are harder to navigate and maintain.
+
+**Design Decision — `PostgresTestContainer` vs `PostgresTestListener`/`KotestConfig`/`TestDependencyInjection`:**
+The original spec proposed separate `PostgresTestListener.kt`, `KotestConfig.kt`, and `TestDependencyInjection.kt` files. The implementation uses a simpler `PostgresTestContainer` singleton + `withCleanDatabase` approach which is functionally equivalent with less ceremony. The `withTestApplication` helper in `Application.kt` handles test DI wiring.
 
 **Layer Responsibilities:**
 
@@ -629,11 +672,11 @@ src/test/kotlin/io/sdkman/state/
 | `acceptance/` | E2E API tests | Full app, Testcontainers (postgres:16) |
 | `adapter/.../persistence/` | Repository integration tests | Testcontainers (postgres:16) |
 | `application/service/` | Service unit tests | MockK |
-| `domain/model/` | Pure domain logic tests | None |
+| `application/validation/` | Validator unit tests | None (pure functions) |
 
 **Test Tagging:**
-- Slow tests tagged with `@Tag("acceptance")` or `@Tag("integration")`
-- Fast unit tests untagged
+- Slow tests tagged with `@Tags("acceptance")` or `@Tags("integration")`
+- Fast unit tests untagged (always run)
 
 **Table imports:** Test support imports `internal object` table definitions from main source (no re-declaration).
 
@@ -651,10 +694,14 @@ Two different Instant types in use:
 
 ### Target State
 
-All timestamps normalised to `kotlinx.datetime.Instant`:
-- `VersionTag.createdAt` and `VersionTag.lastUpdatedAt` change to `kotlinx.datetime.Instant`
-- Repository implementations convert to/from `java.time.Instant` at persistence boundary
-- No timestamp type conversions in test code
+Domain timestamps use `kotlin.time.Instant` (Kotlin 2.3.10 stdlib):
+- `VersionTag.createdAt` and `VersionTag.lastUpdatedAt` use `kotlin.time.Instant` with `kotlin.time.Clock.System.now()` defaults
+- Repository implementations convert via `java.time.Instant.toKotlinTimeInstant()` extension at the persistence boundary
+- Persistence adapters use `java.time.Instant` internally (required by Exposed's `timestamp()` column type)
+- No timestamp type conversions needed in test code
+
+**Why `kotlin.time.Instant` instead of `kotlinx.datetime.Instant`:**
+Kotlin 2.3.10 includes `kotlin.time.Instant` in the standard library, making the `kotlinx-datetime` dependency unnecessary for timestamp representation. The `kotlinx-datetime:0.7.1-0.6.x-compat` library's `toKotlinInstant()` conversion function is `internal`, so a manual `toKotlinTimeInstant()` extension using `Instant.fromEpochSeconds()` handles the conversion at the persistence boundary.
 
 ---
 
@@ -662,33 +709,19 @@ All timestamps normalised to `kotlinx.datetime.Instant`:
 
 Per `rules/kotlin.md` RULE-001: NEVER use nullable types. Convert to `Option<A>` at boundaries.
 
-### Current Violations
+### Target State
 
-**Main Source:**
-
-| File | Line | Violation | Fix |
-|------|------|-----------|-----|
-| `Routing.kt` | 48 | `val message: String? = null` in HealthCheckResponse | Use `Option<String> = None` |
-| `Routing.kt` | 280, 323 | `it.message ?: "Unknown error"` | Use `Option.fromNullable(it.message).getOrElse { "Unknown error" }` |
-| `HTTP.kt` | 27 | `content.contentType?.withoutParameters()` | Use `.toOption()` and `.map` |
-| `VersionRequestValidator.kt` | 67 | `(item as? JsonPrimitive)?.takeIf` | Use pattern matching or `Option` |
-| `VersionRequestValidator.kt` | 99-107 | `.swap().getOrNull()` pattern | Use `Option` throughout |
-| `CandidateLoader.kt` | 13 | `?: throw IllegalStateException` | Use `Either` or `Option.fromNullable` |
-
-**Test Source:**
-
-| File | Line | Violation | Fix |
-|------|------|-----------|-----|
-| `DeleteTagApiSpec.kt` | 305-399, 488-490 | `body["key"]?.jsonPrimitive?.content` | Use Arrow test matchers or `.toOption()` chains |
-| `DeleteTaggedVersionApiSpec.kt` | 69-72, 122 | `body["key"]?.jsonArray?.map` | Use Arrow test matchers |
-| `HealthCheckApiSpec.kt` | 44 | `contentType()?.withoutParameters()` | Use `.toOption()` |
-| `TagsRepositorySpec.kt` | 162-389 | `getOrNull()!!` pattern (14 instances) | Use `EitherMatchers.shouldBeRight()` |
+- All main source code uses `Option<A>` for optional values
+- All test assertions use Arrow matchers (`shouldBeRight`, `shouldBeSome`) instead of `getOrNull()!!`
+- Exception messages wrapped with `Option.fromNullable()` at catch boundaries
+- JSON parsing uses `Option` chains with `.map` and `.getOrElse` instead of nullable safe calls
+- Custom detekt rule `NoNullableTypes` (from `com.github.marc0der:detekt-rules:1.0.0`) enforces no explicit nullable types in source
 
 ### Acceptable Boundary Nullables
 
 The following are **acceptable** as they exist at the persistence boundary where Exposed ORM requires nullable columns:
 
-- `varchar().nullable()` in table definitions (`VersionsRepository.kt:27,31-33`, `TagsRepositoryImpl.kt`, `Postgres.kt`)
+- `varchar().nullable()` in table definitions
 - `getOrNull()` when writing `Option` values to nullable DB columns (converting Arrow → JDBC)
 - `toOption()` when reading nullable DB columns (converting JDBC → Arrow)
 
@@ -707,20 +740,13 @@ option.onSome { doSomething(it) }
 option?.let { process(it) } ?: defaultValue
 ```
 
-### Target State
-
-- All main source code uses `Option<A>` for optional values
-- All test assertions use Arrow matchers (`shouldBeRight`, `shouldBeSome`) instead of `getOrNull()!!`
-- Exception messages wrapped with `Option.fromNullable()` at catch boundaries
-- JSON parsing uses `Option` chains with `.map` and `.getOrElse` instead of nullable safe calls
-
 ---
 
 ## 11. Implementation Notes
 
 ### Dependency Injection
 
-Manual constructor injection in `App.kt`:
+Manual constructor injection in `Application.kt`:
 ```kotlin
 fun Application.module() {
     val appConfig = DefaultAppConfig(environment.config)
@@ -731,14 +757,14 @@ fun Application.module() {
     val auditRepository = PostgresAuditRepository()
     val healthRepository = PostgresHealthRepository()
 
-    // Services
+    // Services (tagService first — VersionServiceImpl depends on it)
     val tagService = TagServiceImpl(tagRepository, auditRepository)
     val versionService = VersionServiceImpl(
-        versionRepository, tagRepository, tagService, auditRepository
+        versionRepository, tagService, auditRepository
     )
 
     // Configure adapters
-    configureRoutes(versionService, tagService, healthRepository)
+    configureRouting(versionService, tagService, healthRepository)
 }
 ```
 
