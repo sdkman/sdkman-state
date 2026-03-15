@@ -324,3 +324,22 @@ Each entry must follow this structure exactly:
 - _Context:_ Phase 3.1 still has one remaining item: normalise `VersionTag` timestamps (already using `kotlin.time.Instant` in domain, `toKotlinTimeInstant()` at persistence boundary — may already be complete, needs verification)
 
 ---
+
+### [2026-03-15 25:00] — Phase 7.1: Testcontainers Infrastructure Migration
+
+**Summary:** Replaced hardcoded `localhost:5432` PostgreSQL dependency with Testcontainers (`postgres:16`) across all test infrastructure. Created `PostgresTestContainer` singleton with `withReuse(true)` for fast test execution. Updated test `Application.kt` to use `MapApplicationConfig` with container-provided values instead of `ApplicationConfig("application.conf")`, making test configuration explicit. Updated `HealthCheckApiSpec` to use the same pattern with explicit plugin installation.
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/support/PostgresTestContainer.kt` — new file; singleton Testcontainers lifecycle object providing `host`, `port`, `username`, `password`, `jdbcUrl` from a `postgres:16` container
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — replaced `const val DB_HOST/DB_PORT/DB_USERNAME/DB_PASSWORD` with computed properties delegating to `PostgresTestContainer`
+- `src/test/kotlin/io/sdkman/state/support/Application.kt` — replaced `ApplicationConfig("application.conf")` with `MapApplicationConfig` using container values; added explicit `configureHTTP`, `configureSerialization`, `configureBasicAuthentication` calls (previously auto-loaded from main module); extracted `testApplicationConfig()` for reuse
+- `src/test/kotlin/io/sdkman/state/HealthCheckApiSpec.kt` — switched from `ApplicationConfig("application.conf")` to `testApplicationConfig()`; added explicit `configureSerialization()` and `configureBasicAuthentication()` calls
+
+**Test outcome:** PASS — all 151 tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Using `MapApplicationConfig` instead of `ApplicationConfig("application.conf")` prevents Ktor's auto-module loading (from `ktor.application.modules` config key), which means the test `application {}` block must explicitly install all plugins (Serialization, Authentication) — this is better for test clarity since dependencies are explicit
+- _Gotchas:_ `configureRouting` calls `authenticate("auth-basic")` which requires the Authentication plugin to be installed — forgetting `configureBasicAuthentication()` in the test's `application {}` block causes `MissingApplicationPluginException` at route registration time, not at request time
+- _Context:_ Tests no longer require a pre-running PostgreSQL instance — Testcontainers starts/manages the container automatically, enabling CI/CD without external database dependencies
+
+---

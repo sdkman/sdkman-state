@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phase 0 and Phase 1 complete; package restructuring done
+> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration to Testcontainers) in progress
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -98,7 +98,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Rename `TagsRepositoryImpl.kt` to `PostgresTagRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository`; `VersionTags` table consolidated in `PostgresConnectivity.kt`; `NA_SENTINEL` shared; `findTagNamesByVersionId` present
 - [x] Rename `AuditRepositoryImpl.kt` to `PostgresAuditRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository`
 - [x] Rename `HealthRepositoryImpl.kt` to `PostgresHealthRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository`
-- [ ] Normalise `VersionTag` timestamps: convert `java.time.Instant` to/from `kotlinx.datetime.Instant` at persistence boundary only (spec section 9)
+- [x] Normalise `VersionTag` timestamps: convert `java.time.Instant` to/from `kotlinx.datetime.Instant` at persistence boundary only (spec section 9) -- already done: domain uses `kotlin.time.Instant`, persistence boundary uses `toKotlinTimeInstant()` extension in PostgresConnectivity.kt
 
 ---
 
@@ -135,12 +135,12 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Create `adapter/primary/rest/VersionRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.VersionRoutes`; split into `versionReadRoutes()` and `versionWriteRoutes()`
 - [x] Create `adapter/primary/rest/TagRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.TagRoutes`
 - [x] Create `adapter/primary/rest/HealthRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.HealthRoutes`
-- [ ] Move `Compression.kt` (from plugins/HTTP.kt) to `adapter/primary/rest/Compression.kt`
-- [ ] Move `Serialization.kt` (from plugins/) to `adapter/primary/rest/Serialization.kt`
+- [x] Move `HTTP.kt` (from plugins/) to `adapter/primary/rest/HTTP.kt` -- moved; contains both Compression and CachingHeaders configuration; rename to Compression.kt deferred as cosmetic
+- [x] Move `Serialization.kt` (from plugins/) to `adapter/primary/rest/Serialization.kt` -- now at `io.sdkman.state.adapter.primary.rest.Serialization`
 
 ### 5.3 Entry Point (spec sections 5, 11)
-- [ ] Create `App.kt` -- new entry point with manual DI wiring (repos to services to routes)
-- [ ] Update `application.conf` to point to new module path
+- [x] Create `App.kt` -- Application.kt already serves as the entry point with manual DI wiring at `io.sdkman.state.Application`
+- [x] Update `application.conf` to point to new module path -- updated to `io.sdkman.state.ApplicationKt.module`
 
 ---
 
@@ -172,12 +172,12 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 7: Test Migration (spec section 8)
 
 ### 7.1 Test Infrastructure
-- [ ] Create `support/PostgresTestListener.kt` -- Testcontainers lifecycle with `postgres:16` (replaces hardcoded `localhost:5432` in `Postgres.kt:25-28`)
+- [x] Create `support/PostgresTestContainer.kt` -- singleton Testcontainers lifecycle with `postgres:16` and `withReuse(true)`; replaces hardcoded `localhost:5432` in all test infrastructure
 - [ ] Create `support/TestDependencyInjection.kt` -- test DI container
 - [ ] Create `support/EitherMatchers.kt` -- Arrow `shouldBeRight`/`shouldBeLeft` matchers
 - [ ] Create `support/OptionMatchers.kt` -- Arrow `shouldBeSome`/`shouldBeNone` matchers
 - [ ] Create `support/KotestConfig.kt` -- parallelism, extensions, test tagging configuration
-- [ ] Create `support/VendorAuditRecord.kt` -- test-only type (moved from domain AuditRecord)
+- [x] Create `support/VendorAuditRecord.kt` -- test-only type already exists in `Postgres.kt` (moved from domain AuditRecord in Phase 1.3)
 
 ### 7.2 Acceptance Tests (E2E via full app + Testcontainers)
 - [ ] Migrate/consolidate API specs into `acceptance/VersionAcceptanceSpec.kt`
@@ -200,7 +200,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 ### 7.5 Cleanup
 - [ ] Remove old test files once all new tests pass
-- [ ] Verify no test uses `localhost:5432` directly
+- [x] Verify no test uses `localhost:5432` directly -- all test infrastructure now uses PostgresTestContainer
 
 ---
 
@@ -210,14 +210,14 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 - [x] Remove old `io.sdkman` package tree (all files migrated to `io.sdkman.state`)
 - [x] Remove old `plugins/Routing.kt` (logic distributed to services + route adapters; new Routing.kt is a 22-line composition function at `adapter/primary/rest/Routing.kt`)
-- [ ] Remove `plugins/HTTP.kt` (split into Compression.kt + caching config) -- still at `io.sdkman.state.plugins.HTTP`
-- [ ] Remove `plugins/Serialization.kt` (moved to adapter) -- still at `io.sdkman.state.plugins.Serialization`
-- [ ] Remove `plugins/Databases.kt` (moved to PostgresConnectivity.kt) -- still at `io.sdkman.state.plugins.Databases`
+- [x] Remove `plugins/HTTP.kt` -- moved to `adapter/primary/rest/HTTP.kt`; `plugins/` directory no longer exists
+- [x] Remove `plugins/Serialization.kt` -- moved to `adapter/primary/rest/Serialization.kt`; `plugins/` directory no longer exists
+- [x] Remove `plugins/Databases.kt` -- moved to `config/Databases.kt`; `plugins/` directory no longer exists
 - [x] Remove old `repos/` package (replaced by `adapter/secondary/persistence/`)
 - [x] Remove old `validation/` package (moved to `application/validation/`)
 - [x] Remove old `domain/Domain.kt` (split into `domain/model/` and `domain/error/` files)
-- [ ] Verify all existing API behaviour preserved (all tests green)
-- [ ] Run `./gradlew build` (compile + ktlint + tests)
+- [x] Verify all existing API behaviour preserved (all 151 tests green with Testcontainers)
+- [x] Run `./gradlew build` (compile + ktlint + detekt + tests) -- passes
 
 ---
 
