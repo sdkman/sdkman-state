@@ -25,7 +25,7 @@ private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 class IdempotentPostVersionApiSpec :
     ShouldSpec({
 
-        should("POST be idempotent - same version posted twice should succeed with 201") {
+        should("POST be idempotent - same version posted twice should succeed with 204") {
             val version =
                 Version(
                     candidate = "java",
