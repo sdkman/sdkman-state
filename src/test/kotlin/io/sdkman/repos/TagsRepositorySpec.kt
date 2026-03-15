@@ -1,6 +1,7 @@
 package io.sdkman.repos
 
 import arrow.core.None
+import arrow.core.getOrElse
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
@@ -155,13 +156,12 @@ class TagsRepositorySpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest", "27"))
 
                     // when: querying tags by version ID
-                    val result = repo.findTagsByVersionId(versionId)
+                    val tags = repo.findTagsByVersionId(versionId).getOrElse { error("expected Right") }
 
                     // then: correct tags returned
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldHaveSize 2
-                    result.getOrNull()!!.map { it.tag } shouldContainExactlyInAnyOrder listOf("latest", "27")
-                    result.getOrNull()!!.forEach {
+                    tags shouldHaveSize 2
+                    tags.map { it.tag } shouldContainExactlyInAnyOrder listOf("latest", "27")
+                    tags.forEach {
                         it.versionId shouldBe versionId
                         it.candidate shouldBe "java"
                         it.distribution shouldBe Distribution.TEMURIN.some()
@@ -186,11 +186,10 @@ class TagsRepositorySpec :
                         )
 
                     // when: querying tags
-                    val result = repo.findTagsByVersionId(versionId)
+                    val tags = repo.findTagsByVersionId(versionId).getOrElse { error("expected Right") }
 
                     // then: empty list returned
-                    result.isRight() shouldBe true
-                    result.getOrNull()!!.shouldBeEmpty()
+                    tags.shouldBeEmpty()
                 }
             }
         }
@@ -213,22 +212,26 @@ class TagsRepositorySpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
 
                     // when: resolving the tag
-                    val result = repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    val resolved =
+                        repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64).getOrElse {
+                            error("expected Right")
+                        }
 
                     // then: correct version ID returned
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe versionId.some()
+                    resolved shouldBe versionId.some()
                 }
             }
 
             should("return None for a non-existent tag") {
                 withCleanDatabase {
                     // when: resolving a tag that does not exist
-                    val result = repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    val resolved =
+                        repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64).getOrElse {
+                            error("expected Right")
+                        }
 
                     // then: None returned
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe None
+                    resolved shouldBe None
                 }
             }
         }
@@ -251,19 +254,19 @@ class TagsRepositorySpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest", "27"))
 
                     // when: deleting one tag
-                    val result =
-                        repo.deleteTag(
-                            UniqueTag(
-                                candidate = "java",
-                                tag = "latest",
-                                distribution = Distribution.TEMURIN.some(),
-                                platform = Platform.LINUX_X64,
-                            ),
-                        )
+                    val deletedCount =
+                        repo
+                            .deleteTag(
+                                UniqueTag(
+                                    candidate = "java",
+                                    tag = "latest",
+                                    distribution = Distribution.TEMURIN.some(),
+                                    platform = Platform.LINUX_X64,
+                                ),
+                            ).getOrElse { error("expected Right") }
 
                     // then: only that tag is removed
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe 1
+                    deletedCount shouldBe 1
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("27")
                 }
             }
@@ -271,19 +274,19 @@ class TagsRepositorySpec :
             should("return 0 when deleting a non-existent tag") {
                 withCleanDatabase {
                     // when: deleting a tag that does not exist
-                    val result =
-                        repo.deleteTag(
-                            UniqueTag(
-                                candidate = "java",
-                                tag = "nonexistent",
-                                distribution = Distribution.TEMURIN.some(),
-                                platform = Platform.LINUX_X64,
-                            ),
-                        )
+                    val deletedCount =
+                        repo
+                            .deleteTag(
+                                UniqueTag(
+                                    candidate = "java",
+                                    tag = "nonexistent",
+                                    distribution = Distribution.TEMURIN.some(),
+                                    platform = Platform.LINUX_X64,
+                                ),
+                            ).getOrElse { error("expected Right") }
 
                     // then: 0 rows affected
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe 0
+                    deletedCount shouldBe 0
                 }
             }
         }
@@ -306,9 +309,8 @@ class TagsRepositorySpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
 
                     // when/then
-                    val result = repo.hasTagsForVersion(versionId)
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe true
+                    val hasTags = repo.hasTagsForVersion(versionId).getOrElse { error("expected Right") }
+                    hasTags shouldBe true
                 }
             }
 
@@ -328,9 +330,8 @@ class TagsRepositorySpec :
                         )
 
                     // when/then
-                    val result = repo.hasTagsForVersion(versionId)
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldBe false
+                    val hasTags = repo.hasTagsForVersion(versionId).getOrElse { error("expected Right") }
+                    hasTags shouldBe false
                 }
             }
         }
@@ -353,11 +354,10 @@ class TagsRepositorySpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest", "27", "27.0"))
 
                     // when: querying tag names
-                    val result = repo.findTagNamesByVersionId(versionId)
+                    val tagNames = repo.findTagNamesByVersionId(versionId).getOrElse { error("expected Right") }
 
                     // then: correct names returned
-                    result.isRight() shouldBe true
-                    result.getOrNull()!! shouldContainExactlyInAnyOrder listOf("latest", "27", "27.0")
+                    tagNames shouldContainExactlyInAnyOrder listOf("latest", "27", "27.0")
                 }
             }
         }
@@ -384,9 +384,15 @@ class TagsRepositorySpec :
                     // then: tags are stored and retrievable
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest", "8")
 
-                    val resolved = repo.findVersionIdByTag("gradle", "latest", None, Platform.UNIVERSAL)
-                    resolved.isRight() shouldBe true
-                    resolved.getOrNull()!! shouldBe versionId.some()
+                    val resolved =
+                        repo
+                            .findVersionIdByTag(
+                                "gradle",
+                                "latest",
+                                None,
+                                Platform.UNIVERSAL,
+                            ).getOrElse { error("expected Right") }
+                    resolved shouldBe versionId.some()
                 }
             }
 
