@@ -51,3 +51,22 @@ Each entry must follow this structure exactly:
 - _Context:_ Test support Postgres.kt duplicates table definitions from main source — these will be consolidated in Phase 3 when table objects become `internal`
 
 ---
+
+### [2026-03-15 13:00] — Phase 0.2 + Phase 1.4: Test Deps and VersionRepository Port
+
+**Summary:** Added Testcontainers/MockK/Kotest extensions test deps; created VersionRepository port interface; normalised create return type to Either<DatabaseFailure, Int>.
+
+**Files changed:**
+- `build.gradle.kts` — added Testcontainers BOM, PostgreSQL, MockK, Kotest extensions
+- `src/main/kotlin/io/sdkman/domain/Domain.kt` — added VersionRepository interface with 5 methods; changed create signature to Either<DatabaseFailure, Int>
+- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt` — implements VersionRepository; create wrapped in Either.catch; private helpers return Int directly
+- `src/main/kotlin/io/sdkman/plugins/Routing.kt` — depends on VersionRepository interface (not concrete class); uses error.message for DatabaseFailure
+
+**Test outcome:** PASS — all tests green
+
+**Learnings:**
+- _Patterns:_ All 4 repository interfaces now follow the same error pattern: Either<DatabaseFailure, T>. The routing layer is the boundary where DatabaseFailure.message is extracted for HTTP responses.
+- _Gotchas:_ When wrapping existing code in Either.catch, the private helper methods should return plain values (not Either) since the Either wrapping happens at the public method level. This avoids double-wrapping.
+- _Context:_ VersionRepository interface created in Domain.kt alongside other port interfaces for consistency. Will move to its own file during package restructuring in later phases.
+
+---
