@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.2 acceptance + 7.3 integration + 7.4 unit tests done
+> **Status:** In progress -- Phases 0-5, 7, and 8 complete; Phase 2.1 config interface done; Phase 6 (detekt rules) blocked on external artifact
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -80,8 +80,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 2: Configuration & Infrastructure
 
 ### 2.1 Configuration (spec section 5)
-- [ ] Create `config/AppConfig.kt` -- interface + `DefaultAppConfig` implementation (currently just data classes)
-- [ ] Create `config/ConfigExtensions.kt` -- Arrow-based config helpers
+- [x] Create `config/AppConfig.kt` -- `interface AppConfig` with flat properties (`databaseHost`, `databasePort`, `databaseName`, `databaseUsername: Option<String>`, `databasePassword: Option<String>`, `authUsername`, `authPassword`, `cacheMaxAge`) and `DefaultAppConfig(config: ApplicationConfig)` implementation; replaces `DatabaseConfig`, `ApiAuthenticationConfig`, `ApiCacheConfig`, `ApplicationConfig` data classes and `configureAppConfig()` function
+- [x] Create `config/ConfigExtensions.kt` -- Arrow-based config helpers (`getStringOrDefault`, `getIntOrDefault`, `getOptionString`) and `AppConfig.jdbcUrl` extension property
 - [x] Extract JDBC URL construction to shared config -- done in `ApplicationConfig.kt` (`DatabaseConfig.jdbcUrl` property)
 - [x] Move `CandidateLoader.kt` to `application/validation/` -- moved to `io.sdkman.state.application.validation.CandidateLoader` (kept with validation infrastructure since it loads valid candidates for validation)
 - [x] Move `Authentication.kt` from `plugins/` to `config/` -- now at `io.sdkman.state.config.Authentication`
@@ -173,10 +173,10 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 ### 7.1 Test Infrastructure
 - [x] Create `support/PostgresTestContainer.kt` -- singleton Testcontainers lifecycle with `postgres:16` and `withReuse(true)`; replaces hardcoded `localhost:5432` in all test infrastructure
-- [ ] Create `support/TestDependencyInjection.kt` -- test DI container
-- [ ] Create `support/EitherMatchers.kt` -- Arrow `shouldBeRight`/`shouldBeLeft` matchers
-- [ ] Create `support/OptionMatchers.kt` -- Arrow `shouldBeSome`/`shouldBeNone` matchers
-- [ ] Create `support/KotestConfig.kt` -- parallelism, extensions, test tagging configuration
+- [x] ~~Create `support/TestDependencyInjection.kt`~~ -- NOT NEEDED: test DI wiring handled inline by `withTestApplication {}` in Application.kt and MockK in unit tests
+- [x] ~~Create `support/EitherMatchers.kt`~~ -- NOT NEEDED: tests use Arrow's structural methods directly (`isRight()/isLeft()`, `onRight{}/onLeft{}`) with Kotest `shouldBe`; Kotest Arrow assertions via kotest-assertions-core
+- [x] ~~Create `support/OptionMatchers.kt`~~ -- NOT NEEDED: tests use direct Option comparison (`shouldBe x.some()`, `shouldBe None`, `isSome()`) which is sufficient
+- [x] ~~Create `support/KotestConfig.kt`~~ -- NOT NEEDED: singleton PostgresTestContainer with withReuse(true) handles container lifecycle; no additional config needed
 - [x] Create `support/VendorAuditRecord.kt` -- test-only type already exists in `Postgres.kt` (moved from domain AuditRecord in Phase 1.3)
 
 ### 7.2 Acceptance Tests (E2E via full app + Testcontainers)
@@ -199,7 +199,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Migrate validator specs to new package paths -- `VersionRequestValidatorSpec` and `UniqueVersionValidatorSpec` already at `application/validation/`; created new `UniqueTagValidatorSpec` (5 tests: valid with/without distribution, blank candidate, blank tag, accumulated errors)
 
 ### 7.5 Cleanup
-- [ ] Remove old test files once all new tests pass
+- [x] Remove old test files once all new tests pass -- verified: no old test files remain; all files properly migrated to acceptance/, integration/, and unit directories
 - [x] Verify no test uses `localhost:5432` directly -- all test infrastructure now uses PostgresTestContainer
 
 ---

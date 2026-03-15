@@ -413,3 +413,29 @@ Each entry must follow this structure exactly:
 - _Context:_ This completes Phase 7.3 of the implementation plan; the only remaining test infrastructure items are Phase 7.1 helpers (EitherMatchers, OptionMatchers, KotestConfig, TestDependencyInjection)
 
 ---
+
+### [2026-03-15 29:00] — Phase 2.1: AppConfig Interface and ConfigExtensions
+
+**Summary:** Replaced nested config data classes (`DatabaseConfig`, `ApiAuthenticationConfig`, `ApiCacheConfig`, `ApplicationConfig`) with a flat `AppConfig` interface and `DefaultAppConfig` implementation per spec section 5. Created `ConfigExtensions.kt` with Arrow-based config helpers (`getStringOrDefault`, `getIntOrDefault`, `getOptionString`) and `AppConfig.jdbcUrl` extension property. Updated all consumers (Databases, Migration, Authentication, HTTP, Application, tests) to use `AppConfig` interface. Deleted `ApplicationConfig.kt`.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/config/AppConfig.kt` — new file; `interface AppConfig` with 8 flat properties + `DefaultAppConfig(config: ApplicationConfig)` implementation
+- `src/main/kotlin/io/sdkman/state/config/ConfigExtensions.kt` — new file; Arrow-based config loading helpers and `AppConfig.jdbcUrl` extension
+- `src/main/kotlin/io/sdkman/state/config/ApplicationConfig.kt` — **deleted** (replaced by AppConfig.kt)
+- `src/main/kotlin/io/sdkman/state/config/Databases.kt` — accepts `AppConfig` instead of `DatabaseConfig`; uses `databaseUsername.getOrElse` pattern
+- `src/main/kotlin/io/sdkman/state/config/Migration.kt` — accepts `AppConfig` instead of `DatabaseConfig`; uses `databaseUsername.getOrElse` pattern
+- `src/main/kotlin/io/sdkman/state/config/Authentication.kt` — accepts `AppConfig` instead of `ApiAuthenticationConfig`; uses `authUsername`/`authPassword` properties
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/HTTP.kt` — accepts `AppConfig` instead of `ApiCacheConfig`; uses `cacheMaxAge` property
+- `src/main/kotlin/io/sdkman/state/Application.kt` — uses `DefaultAppConfig(environment.config)` instead of `configureAppConfig(environment)`; passes single `appConfig` to all configure functions
+- `src/test/kotlin/io/sdkman/state/support/Application.kt` — uses `DefaultAppConfig(environment.config)` instead of `configureAppConfig`
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — uses `DefaultAppConfig(testApplicationConfig())` with `jdbcUrl` extension instead of `DatabaseConfig`
+- `src/test/kotlin/io/sdkman/state/acceptance/HealthCheckAcceptanceSpec.kt` — uses `DefaultAppConfig`; FAILURE test uses Kotlin delegation (`object : AppConfig by appConfig { override val databasePort = 9999 }`) instead of `data class .copy()`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Kotlin interface delegation (`object : AppConfig by appConfig { override val ... }`) cleanly replaces `data class .copy()` for test scenarios that need to override one property — avoids making the config implementation a data class
+- _Gotchas:_ Extension properties defined in the same package are visible without explicit imports for files in that package, but test files in other packages must explicitly import them (e.g., `import io.sdkman.state.config.jdbcUrl`)
+- _Context:_ `databaseUsername` and `databasePassword` are `Option<String>` per the spec, even though `application.conf` always provides defaults — this models the real-world case where credentials might come from external secret stores and might be absent in some configurations
+
+---

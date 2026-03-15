@@ -15,14 +15,14 @@ fun main(args: Array<String>) =
         .main(args)
 
 fun Application.module() {
-    val appConfig = configureAppConfig(environment)
+    val appConfig = DefaultAppConfig(environment.config)
 
-    configureDatabaseMigration(appConfig.databaseConfig)
-    configureDatabase(appConfig.databaseConfig)
+    configureDatabaseMigration(appConfig)
+    configureDatabase(appConfig)
 
-    configureHTTP(appConfig.apiCacheConfig)
+    configureHTTP(appConfig)
     configureSerialization()
-    configureBasicAuthentication(appConfig.apiAuthenticationConfig)
+    configureBasicAuthentication(appConfig)
 
     val versionsRepo = PostgresVersionRepository()
     val tagsRepo = PostgresTagRepository()
