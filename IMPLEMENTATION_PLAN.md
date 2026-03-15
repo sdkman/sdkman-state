@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.4 unit tests done
+> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.3 integration + 7.4 unit tests done
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -186,17 +186,17 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Add `@Tag("acceptance")` to all acceptance specs
 
 ### 7.3 Integration Tests (Repository + Testcontainers)
-- [ ] Migrate `VersionsRepositorySpec` to `adapter/secondary/persistence/PostgresVersionRepositoryIntegrationSpec.kt`
-- [ ] Migrate `TagsRepositorySpec` to `adapter/secondary/persistence/PostgresTagRepositoryIntegrationSpec.kt`
-- [ ] Create `adapter/secondary/persistence/PostgresAuditRepositoryIntegrationSpec.kt` (audit repo currently only tested indirectly via API specs)
-- [ ] Migrate `HealthRepositorySpec` to `adapter/secondary/persistence/PostgresHealthRepositoryIntegrationSpec.kt`
-- [ ] Add `@Tag("integration")` to all integration specs
+- [x] Migrate `VersionsRepositorySpec` to `adapter/secondary/persistence/PostgresVersionRepositoryIntegrationSpec.kt` -- renamed with `@Tags("integration")` annotation
+- [x] Migrate `TagsRepositorySpec` to `adapter/secondary/persistence/PostgresTagRepositoryIntegrationSpec.kt` -- renamed with `@Tags("integration")` annotation
+- [x] Create `adapter/secondary/persistence/PostgresAuditRepositoryIntegrationSpec.kt` -- 5 tests: CREATE audit for Version, DELETE audit for UniqueTag, multiple usernames, filter by operation, version without distribution
+- [x] Migrate `HealthRepositorySpec` to `adapter/secondary/persistence/PostgresHealthRepositoryIntegrationSpec.kt` -- renamed with `@Tags("integration")` annotation
+- [x] Add `@Tags("integration")` to all integration specs -- applied via `io.kotest.core.annotation.Tags`
 - [ ] Remove duplicate table definitions from test support (import `internal object` tables from main source)
 
 ### 7.4 Unit Tests (Services with MockK)
 - [x] Create `application/service/VersionServiceUnitSpec.kt` -- test service orchestration with mocked repos (13 tests: findAll delegation/filtering, findOne found/not-found, createOrUpdate with/without tags + DB error + audit failure + tag failure, delete happy path + VersionNotFound + ID not found + TagConflict + DB error + race condition)
 - [x] Create `application/service/TagServiceUnitSpec.kt` -- test tag orchestration with mocked repos (5 tests: delete success + TagNotFound + DB error + audit failure + username propagation)
-- [ ] Migrate validator specs to new package paths
+- [x] Migrate validator specs to new package paths -- `VersionRequestValidatorSpec` and `UniqueVersionValidatorSpec` already at `application/validation/`; created new `UniqueTagValidatorSpec` (5 tests: valid with/without distribution, blank candidate, blank tag, accumulated errors)
 
 ### 7.5 Cleanup
 - [ ] Remove old test files once all new tests pass

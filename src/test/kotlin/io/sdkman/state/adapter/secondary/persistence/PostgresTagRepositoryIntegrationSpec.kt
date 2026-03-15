@@ -3,6 +3,7 @@ package io.sdkman.state.adapter.secondary.persistence
 import arrow.core.None
 import arrow.core.getOrElse
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
@@ -16,7 +17,8 @@ import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.selectTagNames
 import io.sdkman.state.support.withCleanDatabase
 
-class TagsRepositorySpec :
+@Tags("integration")
+class PostgresTagRepositoryIntegrationSpec :
     ShouldSpec({
 
         val repo = PostgresTagRepository()
