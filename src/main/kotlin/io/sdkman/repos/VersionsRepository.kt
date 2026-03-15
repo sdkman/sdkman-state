@@ -127,7 +127,7 @@ class VersionsRepository : VersionRepository {
                     if (exists) updateVersion(cv) else insertVersion(cv)
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to create version: ${error.message}",
                     cause = error,
                 )

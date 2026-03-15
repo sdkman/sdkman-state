@@ -128,3 +128,23 @@ Each entry must follow this structure exactly:
 - _Context:_ `TagsRepositoryImpl.replaceTags` still contains the DB-level tag mutual exclusivity logic (delete-from-other-versions-then-insert) — this is appropriate for the persistence layer as it's transactional DB work, not business orchestration
 
 ---
+
+### [2026-03-15 17:00] — Phase 1.2 + 1.3 + 1.4: DatabaseFailure Sealed Class and HealthCheckSuccess
+
+**Summary:** Enhanced `DatabaseFailure` from a simple data class to a sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants; added `data object HealthCheckSuccess`; updated `HealthRepository` return type to `Either<DatabaseFailure, HealthCheckSuccess>`.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/domain/Domain.kt` — DatabaseFailure becomes sealed class with two variants; added HealthCheckSuccess data object; updated HealthRepository return type
+- `src/main/kotlin/io/sdkman/repos/HealthRepositoryImpl.kt` — returns HealthCheckSuccess; uses DatabaseFailure.ConnectionFailure
+- `src/main/kotlin/io/sdkman/repos/AuditRepositoryImpl.kt` — uses DatabaseFailure.QueryExecutionFailure
+- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt` — uses DatabaseFailure.QueryExecutionFailure
+- `src/main/kotlin/io/sdkman/repos/TagsRepositoryImpl.kt` — uses DatabaseFailure.QueryExecutionFailure (5 occurrences)
+
+**Test outcome:** PASS — all tests green, ktlint clean
+
+**Learnings:**
+- _Patterns:_ DatabaseFailure variants allow distinguishing connection-level failures (health check) from query-level failures (CRUD operations) — this enables more precise error handling in consumers
+- _Gotchas:_ Sealed class constructors pass (message, cause) to Throwable superclass, preserving stack traces and message accessibility through the parent type
+- _Context:_ HealthStatus enum retained temporarily for DTO serialization compatibility; will be removed when HealthCheckResponse DTO moves to adapter layer (Phase 5.1)
+
+---

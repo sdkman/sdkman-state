@@ -49,7 +49,7 @@ class TagsRepositoryImpl : TagsRepository {
                         .map { it.toVersionTag() }
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to find tags by version ID: ${error.message}",
                     cause = error,
                 )
@@ -75,7 +75,7 @@ class TagsRepositoryImpl : TagsRepository {
                         .firstOrNone()
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to find version ID by tag: ${error.message}",
                     cause = error,
                 )
@@ -123,7 +123,7 @@ class TagsRepositoryImpl : TagsRepository {
                     }
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to replace tags: ${error.message}",
                     cause = error,
                 )
@@ -141,7 +141,7 @@ class TagsRepositoryImpl : TagsRepository {
                     }
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to delete tag: ${error.message}",
                     cause = error,
                 )
@@ -157,7 +157,7 @@ class TagsRepositoryImpl : TagsRepository {
                         .count() > 0
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to check tags for version: ${error.message}",
                     cause = error,
                 )
@@ -173,7 +173,7 @@ class TagsRepositoryImpl : TagsRepository {
                         .map { it[VersionTags.tag] }
                 }
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to find tag names by version ID: ${error.message}",
                     cause = error,
                 )

@@ -49,7 +49,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create test directory tree under `src/test/kotlin/io/sdkman/state/`
 
 ### 1.2 Domain Error Types (spec section 2.2)
-- [ ] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants (currently a simple data class in Domain.kt)
+- [x] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants (currently a simple data class in Domain.kt) -- done in `Domain.kt`; will move to separate file during package restructuring
 - [ ] Create `domain/error/ValidationError.kt` -- move validation error hierarchy from `validation/ValidationErrors.kt`
 - [ ] Create `domain/error/DomainError.kt` -- unified sealed class consolidating `DeleteError`/`DeleteTagError` from Routing.kt (currently private sealed interfaces at lines 51-83)
 
@@ -59,14 +59,14 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create `domain/model/Version.kt` -- extract Version + UniqueVersion from Domain.kt, **remove @Serializable**
 - [ ] Create `domain/model/VersionTag.kt` -- extract VersionTag + UniqueTag, **remove @Serializable**, change `java.time.Instant` to `kotlinx.datetime.Instant` (spec section 9)
 - [ ] Create `domain/model/Audit.kt` -- extract Auditable sealed interface + AuditOperation enum, **remove @Serializable**
-- [ ] Create `domain/model/HealthCheckSuccess.kt` -- new `data object HealthCheckSuccess` (replaces HealthStatus enum)
+- [~] Create `domain/model/HealthCheckSuccess.kt` -- new `data object HealthCheckSuccess` (replaces HealthStatus enum) -- `HealthCheckSuccess` data object created in `Domain.kt`; `HealthStatus` enum kept temporarily for DTO layer compatibility
 - [ ] Move `AuditRecord` to test sources as `VendorAuditRecord` (only used in test assertions)
 
 ### 1.4 Repository Port Interfaces (spec section 2.3)
 - [x] Create `domain/repository/VersionRepository.kt` -- **new interface** (created in Domain.kt alongside other port interfaces; VersionsRepository now implements it; Routing depends on interface)
 - [ ] Create `domain/repository/TagRepository.kt` -- simplified from current `TagsRepository` (complex orchestration moves to service layer)
 - [ ] Create `domain/repository/AuditRepository.kt` -- refine existing interface from Domain.kt
-- [ ] Create `domain/repository/HealthRepository.kt` -- change return type to `Either<DatabaseFailure, HealthCheckSuccess>`
+- [x] Create `domain/repository/HealthRepository.kt` -- change return type to `Either<DatabaseFailure, HealthCheckSuccess>` -- return type updated in existing `HealthRepository` interface in `Domain.kt`
 
 ### 1.5 Domain Service Interfaces (spec section 2.4)
 - [x] Create `domain/service/VersionService.kt` -- created in `Domain.kt` alongside other port interfaces; covers findAll, findOne, createOrUpdate, delete
