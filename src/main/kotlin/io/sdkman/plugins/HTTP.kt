@@ -23,6 +23,8 @@ fun Application.configureHTTP(apiCacheConfig: ApiCacheConfig) {
         }
     }
     install(CachingHeaders) {
+        // Ktor CachingHeaders API requires CachingOptions? return type and contentType is nullable
+        @Suppress("detekt:UnsafeCallOnNullableType")
         options { _, content ->
             when (content.contentType?.withoutParameters()) {
                 ContentType.Application.Json ->
