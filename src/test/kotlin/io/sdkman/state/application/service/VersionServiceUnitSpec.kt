@@ -21,6 +21,8 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
+import io.sdkman.state.support.shouldBeLeft
+import io.sdkman.state.support.shouldBeRight
 
 class VersionServiceUnitSpec :
     ShouldSpec({
@@ -150,7 +152,7 @@ class VersionServiceUnitSpec :
                 val result = service.createOrUpdate(version, "admin")
 
                 // then: succeeds and calls all three operations
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
                 coVerify { auditRepo.recordAudit("admin", AuditOperation.CREATE, version) }
                 coVerify {
@@ -176,7 +178,7 @@ class VersionServiceUnitSpec :
                 val result = service.createOrUpdate(version, "admin")
 
                 // then: succeeds and does not call replaceTags
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
                 coVerify { auditRepo.recordAudit("admin", AuditOperation.CREATE, version) }
                 coVerify(exactly = 0) { tagService.replaceTags(any(), any(), any(), any(), any()) }
@@ -202,7 +204,7 @@ class VersionServiceUnitSpec :
                 val result = service.createOrUpdate(version, "admin")
 
                 // then: returns a DatabaseError wrapping the failure
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
@@ -234,7 +236,7 @@ class VersionServiceUnitSpec :
                 val result = service.createOrUpdate(version, "admin")
 
                 // then: still succeeds (audit failure is logged but non-fatal)
-                result.isRight() shouldBe true
+                result.shouldBeRight()
             }
 
             should("still succeed when tag processing fails") {
@@ -267,7 +269,7 @@ class VersionServiceUnitSpec :
                 val result = service.createOrUpdate(version, "admin")
 
                 // then: still succeeds (tag failure is logged but non-fatal)
-                result.isRight() shouldBe true
+                result.shouldBeRight()
             }
         }
 
@@ -303,7 +305,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify(ordering = io.mockk.Ordering.ORDERED) {
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
                     versionsRepo.findVersionId(uniqueVersion)
@@ -330,7 +332,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: returns VersionNotFound
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.VersionNotFound>()
                     error.candidate shouldBe "java"
@@ -364,7 +366,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: returns VersionNotFound
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.VersionNotFound>()
                 }
@@ -399,7 +401,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: returns TagConflict with the tag names
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.TagConflict>()
                     error.tags shouldBe listOf("lts", "latest")
@@ -441,7 +443,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: returns DatabaseError
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
@@ -479,7 +481,7 @@ class VersionServiceUnitSpec :
                 val result = service.delete(uniqueVersion, "admin")
 
                 // then: returns VersionNotFound
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.VersionNotFound>()
                 }

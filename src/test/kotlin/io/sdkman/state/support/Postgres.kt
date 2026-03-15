@@ -145,7 +145,7 @@ fun selectLastUpdatedAt(
     version: String,
     distribution: Option<Distribution>,
     platform: Platform,
-): Option<Instant> =
+): Option<kotlin.time.Instant> =
     dbQuery {
         VersionsTable
             .selectAll()
@@ -155,7 +155,8 @@ fun selectLastUpdatedAt(
                     distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name }) and
                     (VersionsTable.platform eq platform.name)
             }.map {
-                it[VersionsTable.lastUpdatedAt]
+                val javaInstant = it[VersionsTable.lastUpdatedAt]
+                kotlin.time.Instant.fromEpochSeconds(javaInstant.epochSecond, javaInstant.nano.toLong())
             }.firstOrNone()
     }
 

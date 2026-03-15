@@ -8,6 +8,8 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.support.shouldBeLeft
+import io.sdkman.state.support.shouldBeRight
 
 class VersionRequestValidatorSpec :
     ShouldSpec({
@@ -30,7 +32,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.candidate shouldBe "java"
                     version.version shouldBe "17.0.1"
@@ -63,7 +65,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds with hash fields as Some
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.candidate shouldBe "gradle"
                     version.md5sum shouldBe "abc123def456abc123def456abc123de".some()
@@ -94,7 +96,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds with distribution as Some
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.distribution shouldBe Distribution.TEMURIN.some()
                 }
@@ -117,7 +119,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds with visible as Some
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.visible shouldBe true.some()
                 }
@@ -139,7 +141,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.version shouldBe "1.9.0-RC1"
                 }
@@ -161,7 +163,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.version shouldBe "3.0.0-beta-1"
                 }
@@ -184,7 +186,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.md5sum shouldBe "AbC123DeF456AbC123DeF456AbC123dE".some()
                 }
@@ -207,7 +209,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 result.onRight { version ->
                     version.sha256sum shouldBe "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC1".some()
                 }
@@ -231,7 +233,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 1
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
@@ -255,7 +257,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 1
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
@@ -278,7 +280,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 1
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
@@ -301,7 +303,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 1
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
@@ -325,7 +327,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
                     errors.head.field shouldBe "candidate"
@@ -348,7 +350,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
                     errors.head.field shouldBe "version"
@@ -371,7 +373,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<EmptyFieldError>()
                     errors.head.field shouldBe "url"
@@ -397,7 +399,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidCandidateError>()
                     errors.head.message shouldContain "Candidate 'invalid-candidate' is not valid"
@@ -421,7 +423,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidUrlError>()
                     errors.head.message shouldBe "URL 'http://example.com/java-17.0.1.tar.gz' must be a valid HTTPS URL"
@@ -444,7 +446,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidUrlError>()
                 }
@@ -466,7 +468,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidPlatformError>()
                     errors.head.message shouldBe "Platform 'INVALID_PLATFORM' is not valid"
@@ -490,7 +492,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidDistributionError>()
                     errors.head.message shouldBe "Distribution 'INVALID_DISTRO' is not valid"
@@ -514,7 +516,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidHashFormatError>()
                     errors.head.message shouldBe "md5sum must be a valid hexadecimal hash of 32 characters, got: 'tooshort'"
@@ -538,7 +540,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidHashFormatError>()
                 }
@@ -561,7 +563,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidHashFormatError>()
                     errors.head.message shouldBe "sha256sum must be a valid hexadecimal hash of 64 characters, got: 'abc123'"
@@ -585,7 +587,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidHashFormatError>()
                     errors.head.message shouldBe "sha512sum must be a valid hexadecimal hash of 128 characters, got: 'abc123'"
@@ -609,7 +611,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: validation fails
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidOptionalFieldError>()
                     errors.head.message shouldBe "md5sum is invalid: field cannot be empty"
@@ -632,7 +634,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: all errors are accumulated
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 4
                     errors.map { it.field }.toSet() shouldBe setOf("candidate", "version", "platform", "url")
@@ -656,7 +658,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: all errors are accumulated
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 5
                     errors.any { it is InvalidCandidateError } shouldBe true
@@ -686,7 +688,7 @@ class VersionRequestValidatorSpec :
                 val result = VersionRequestValidator.validateRequest(json)
 
                 // then: all hash errors are accumulated
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.size shouldBe 3
                     errors.all { it is InvalidHashFormatError } shouldBe true

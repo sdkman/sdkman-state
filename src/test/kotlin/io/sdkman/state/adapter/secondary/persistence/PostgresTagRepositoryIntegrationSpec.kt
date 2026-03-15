@@ -1,7 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.None
-import arrow.core.getOrElse
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -15,6 +14,7 @@ import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.selectTagNames
+import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.withCleanDatabase
 
 @Tags("integration")
@@ -50,7 +50,7 @@ class PostgresTagRepositoryIntegrationSpec :
                         )
 
                     // then: tags are stored
-                    result.isRight() shouldBe true
+                    result.shouldBeRight()
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest", "27")
                 }
             }
@@ -158,7 +158,7 @@ class PostgresTagRepositoryIntegrationSpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest", "27"))
 
                     // when: querying tags by version ID
-                    val tags = repo.findTagsByVersionId(versionId).getOrElse { error("expected Right") }
+                    val tags = repo.findTagsByVersionId(versionId).shouldBeRight()
 
                     // then: correct tags returned
                     tags shouldHaveSize 2
@@ -188,7 +188,7 @@ class PostgresTagRepositoryIntegrationSpec :
                         )
 
                     // when: querying tags
-                    val tags = repo.findTagsByVersionId(versionId).getOrElse { error("expected Right") }
+                    val tags = repo.findTagsByVersionId(versionId).shouldBeRight()
 
                     // then: empty list returned
                     tags.shouldBeEmpty()
@@ -223,7 +223,7 @@ class PostgresTagRepositoryIntegrationSpec :
                                     distribution = Distribution.TEMURIN.some(),
                                     platform = Platform.LINUX_X64,
                                 ),
-                            ).getOrElse { error("expected Right") }
+                            ).shouldBeRight()
 
                     // then: only that tag is removed
                     deletedCount shouldBe 1
@@ -243,7 +243,7 @@ class PostgresTagRepositoryIntegrationSpec :
                                     distribution = Distribution.TEMURIN.some(),
                                     platform = Platform.LINUX_X64,
                                 ),
-                            ).getOrElse { error("expected Right") }
+                            ).shouldBeRight()
 
                     // then: 0 rows affected
                     deletedCount shouldBe 0
@@ -269,7 +269,7 @@ class PostgresTagRepositoryIntegrationSpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
 
                     // when/then
-                    val hasTags = repo.hasTagsForVersion(versionId).getOrElse { error("expected Right") }
+                    val hasTags = repo.hasTagsForVersion(versionId).shouldBeRight()
                     hasTags shouldBe true
                 }
             }
@@ -290,7 +290,7 @@ class PostgresTagRepositoryIntegrationSpec :
                         )
 
                     // when/then
-                    val hasTags = repo.hasTagsForVersion(versionId).getOrElse { error("expected Right") }
+                    val hasTags = repo.hasTagsForVersion(versionId).shouldBeRight()
                     hasTags shouldBe false
                 }
             }
@@ -314,7 +314,7 @@ class PostgresTagRepositoryIntegrationSpec :
                     repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest", "27", "27.0"))
 
                     // when: querying tag names
-                    val tagNames = repo.findTagNamesByVersionId(versionId).getOrElse { error("expected Right") }
+                    val tagNames = repo.findTagNamesByVersionId(versionId).shouldBeRight()
 
                     // then: correct names returned
                     tagNames shouldContainExactlyInAnyOrder listOf("latest", "27", "27.0")
@@ -352,7 +352,7 @@ class PostgresTagRepositoryIntegrationSpec :
                                 "latest",
                                 None,
                                 Platform.UNIVERSAL,
-                            ).getOrElse { error("expected Right") }
+                            ).shouldBeRight()
                     resolved shouldBe versionId.some()
                 }
             }

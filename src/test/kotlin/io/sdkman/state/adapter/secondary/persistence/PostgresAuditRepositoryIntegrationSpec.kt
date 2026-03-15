@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.selectAuditRecords
 import io.sdkman.state.support.selectAuditRecordsByOperation
 import io.sdkman.state.support.selectAuditRecordsByUsername
+import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.withCleanDatabase
 
 @Tags("integration")
@@ -42,7 +43,7 @@ class PostgresAuditRepositoryIntegrationSpec :
                     val result = repo.recordAudit("test-admin", AuditOperation.CREATE, version)
 
                     // then: audit record is persisted
-                    result.isRight() shouldBe true
+                    result.shouldBeRight()
                     val records = selectAuditRecords()
                     records shouldHaveSize 1
                     records.first().username shouldBe "test-admin"
@@ -68,7 +69,7 @@ class PostgresAuditRepositoryIntegrationSpec :
                     val result = repo.recordAudit("tag-admin", AuditOperation.DELETE, uniqueTag)
 
                     // then: audit record is persisted
-                    result.isRight() shouldBe true
+                    result.shouldBeRight()
                     val records = selectAuditRecords()
                     records shouldHaveSize 1
                     records.first().username shouldBe "tag-admin"
@@ -170,7 +171,7 @@ class PostgresAuditRepositoryIntegrationSpec :
                     val result = repo.recordAudit("admin", AuditOperation.CREATE, version)
 
                     // then: audit record stores version data without distribution
-                    result.isRight() shouldBe true
+                    result.shouldBeRight()
                     val records = selectAuditRecords()
                     records shouldHaveSize 1
                     records.first().versionData shouldContain "gradle"

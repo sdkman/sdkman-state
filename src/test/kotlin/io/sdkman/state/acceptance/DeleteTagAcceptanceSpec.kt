@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
+import io.sdkman.state.support.shouldBeSome
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -162,7 +163,7 @@ class DeleteTagAcceptanceSpec :
                 }
 
                 // then: the version still exists
-                selectVersion(candidate, version, distribution.some(), platform).isSome() shouldBe true
+                selectVersion(candidate, version, distribution.some(), platform).shouldBeSome()
             }
         }
 

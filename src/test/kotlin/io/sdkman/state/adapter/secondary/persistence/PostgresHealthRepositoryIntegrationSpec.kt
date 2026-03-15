@@ -2,7 +2,7 @@ package io.sdkman.state.adapter.secondary.persistence
 
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.shouldBe
+import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.withCleanDatabase
 import kotlinx.coroutines.runBlocking
 
@@ -16,7 +16,7 @@ class PostgresHealthRepositoryIntegrationSpec :
 
                 runBlocking {
                     val result = healthRepo.checkDatabaseConnection()
-                    result.isRight() shouldBe true
+                    result.shouldBeRight()
                 }
             }
         }
