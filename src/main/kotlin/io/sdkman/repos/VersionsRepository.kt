@@ -32,11 +32,6 @@ class VersionsRepository : VersionRepository {
         val lastUpdatedAt = timestamp("last_updated_at")
     }
 
-    private object VersionTags : Table("version_tags") {
-        val versionId = integer("version_id")
-        val tag = text("tag")
-    }
-
     private fun ResultRow.toVersion(): Version =
         Version(
             candidate = this[Versions.candidate],
