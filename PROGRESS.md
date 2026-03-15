@@ -462,3 +462,21 @@ Each entry must follow this structure exactly:
 - _Context:_ The `FieldError` domain type mirrors `ValidationFailure` DTO structurally (`field: String, message: String`) but lives in the domain layer without `@Serializable`, respecting RULE-004 (domain entities must not reference infrastructure annotations). Conversion happens at the adapter boundary in `respondDomainError`.
 
 ---
+
+### [2026-03-15 31:00] — Phase 9.1: Co-locate Table Definitions per Repository
+
+**Summary:** Moved Exposed table object definitions from shared `PostgresConnectivity.kt` into their respective repository implementation files, per spec sections 4.2 and 7. Renamed tables to match spec naming convention: `Versions` → `VersionsTable`, `VersionTags` → `VersionTagsTable`, `VendorAuditTable` → `AuditTable`.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresConnectivity.kt` — removed three table definitions; now contains only `NA_SENTINEL`, `dbQuery`, and `toKotlinTimeInstant()`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepository.kt` — added `internal object VersionsTable`; updated all `Versions.` references to `VersionsTable.`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresTagRepository.kt` — added `internal object VersionTagsTable`; updated all `VersionTags.` references to `VersionTagsTable.`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepository.kt` — added `internal object AuditTable`; updated `VendorAuditTable.` references to `AuditTable.`
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — updated imports and all table references to new names
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Co-locating table definitions with their repository implementations follows the DDD principle of keeping related concerns together — each repository owns its schema definition
+- _Gotchas:_ `VersionTagsTable` is referenced by both `PostgresTagRepository` (primary owner) and `PostgresVersionRepository` (for batch tag fetching) — `internal` visibility allows cross-file access within the same module package
+- _Context:_ `PostgresConnectivity.kt` is now a minimal shared infrastructure file (3 items) rather than a catch-all for persistence concerns; this aligns with the spec's intent that each repository is self-contained

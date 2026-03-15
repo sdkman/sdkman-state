@@ -12,13 +12,29 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.VersionTag
 import io.sdkman.state.domain.repository.TagsRepository
+import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.selectAll
 import java.time.Instant
+
+internal object VersionTagsTable : IntIdTable("version_tags") {
+    val candidate = text("candidate")
+    val tag = text("tag")
+    val distribution = text("distribution")
+    val platform = text("platform")
+    val versionId = integer("version_id")
+    val createdAt = timestamp("created_at")
+    val lastUpdatedAt = timestamp("last_updated_at")
+
+    init {
+        uniqueIndex(candidate, tag, distribution, platform)
+    }
+}
 
 class PostgresTagRepository : TagsRepository {
     private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
@@ -28,23 +44,23 @@ class PostgresTagRepository : TagsRepository {
 
     private fun ResultRow.toVersionTag(): VersionTag =
         VersionTag(
-            id = this[VersionTags.id].value,
-            candidate = this[VersionTags.candidate],
-            tag = this[VersionTags.tag],
-            distribution = dbToDistribution(this[VersionTags.distribution]),
-            platform = Platform.valueOf(this[VersionTags.platform]),
-            versionId = this[VersionTags.versionId],
-            createdAt = this[VersionTags.createdAt].toKotlinTimeInstant(),
-            lastUpdatedAt = this[VersionTags.lastUpdatedAt].toKotlinTimeInstant(),
+            id = this[VersionTagsTable.id].value,
+            candidate = this[VersionTagsTable.candidate],
+            tag = this[VersionTagsTable.tag],
+            distribution = dbToDistribution(this[VersionTagsTable.distribution]),
+            platform = Platform.valueOf(this[VersionTagsTable.platform]),
+            versionId = this[VersionTagsTable.versionId],
+            createdAt = this[VersionTagsTable.createdAt].toKotlinTimeInstant(),
+            lastUpdatedAt = this[VersionTagsTable.lastUpdatedAt].toKotlinTimeInstant(),
         )
 
     override suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>> =
         Either
             .catch {
                 dbQuery {
-                    VersionTags
+                    VersionTagsTable
                         .selectAll()
-                        .where { VersionTags.versionId eq versionId }
+                        .where { VersionTagsTable.versionId eq versionId }
                         .map { it.toVersionTag() }
                 }
             }.mapLeft { error ->
@@ -63,14 +79,14 @@ class PostgresTagRepository : TagsRepository {
         Either
             .catch {
                 dbQuery {
-                    VersionTags
+                    VersionTagsTable
                         .selectAll()
                         .where {
-                            (VersionTags.candidate eq candidate) and
-                                (VersionTags.tag eq tag) and
-                                (VersionTags.distribution eq distributionToDb(distribution)) and
-                                (VersionTags.platform eq platform.name)
-                        }.map { it[VersionTags.versionId] }
+                            (VersionTagsTable.candidate eq candidate) and
+                                (VersionTagsTable.tag eq tag) and
+                                (VersionTagsTable.distribution eq distributionToDb(distribution)) and
+                                (VersionTagsTable.platform eq platform.name)
+                        }.map { it[VersionTagsTable.versionId] }
                         .firstOrNone()
                 }
             }.mapLeft { error ->
@@ -94,23 +110,23 @@ class PostgresTagRepository : TagsRepository {
                     val platformDb = platform.name
 
                     // Remove all existing tags for this version in this scope
-                    VersionTags.deleteWhere {
-                        (VersionTags.versionId eq versionId) and
-                            (VersionTags.candidate eq candidate) and
-                            (VersionTags.distribution eq distDb) and
-                            (VersionTags.platform eq platformDb)
+                    VersionTagsTable.deleteWhere {
+                        (VersionTagsTable.versionId eq versionId) and
+                            (VersionTagsTable.candidate eq candidate) and
+                            (VersionTagsTable.distribution eq distDb) and
+                            (VersionTagsTable.platform eq platformDb)
                     }
 
                     // For each tag, remove from other versions in the same scope and insert
                     tags.forEach { tagName ->
-                        VersionTags.deleteWhere {
-                            (VersionTags.candidate eq candidate) and
-                                (VersionTags.tag eq tagName) and
-                                (VersionTags.distribution eq distDb) and
-                                (VersionTags.platform eq platformDb)
+                        VersionTagsTable.deleteWhere {
+                            (VersionTagsTable.candidate eq candidate) and
+                                (VersionTagsTable.tag eq tagName) and
+                                (VersionTagsTable.distribution eq distDb) and
+                                (VersionTagsTable.platform eq platformDb)
                         }
 
-                        VersionTags.insert {
+                        VersionTagsTable.insert {
                             it[this.candidate] = candidate
                             it[this.tag] = tagName
                             it[this.distribution] = distDb
@@ -132,7 +148,7 @@ class PostgresTagRepository : TagsRepository {
         Either
             .catch {
                 dbQuery {
-                    VersionTags.deleteWhere {
+                    VersionTagsTable.deleteWhere {
                         (candidate eq uniqueTag.candidate) and
                             (tag eq uniqueTag.tag) and
                             (distribution eq distributionToDb(uniqueTag.distribution)) and
@@ -150,9 +166,9 @@ class PostgresTagRepository : TagsRepository {
         Either
             .catch {
                 dbQuery {
-                    VersionTags
+                    VersionTagsTable
                         .selectAll()
-                        .where { VersionTags.versionId eq versionId }
+                        .where { VersionTagsTable.versionId eq versionId }
                         .count() > 0
                 }
             }.mapLeft { error ->
@@ -166,10 +182,10 @@ class PostgresTagRepository : TagsRepository {
         Either
             .catch {
                 dbQuery {
-                    VersionTags
-                        .select(VersionTags.tag)
-                        .where { VersionTags.versionId eq versionId }
-                        .map { it[VersionTags.tag] }
+                    VersionTagsTable
+                        .select(VersionTagsTable.tag)
+                        .where { VersionTagsTable.versionId eq versionId }
+                        .map { it[VersionTagsTable.tag] }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(

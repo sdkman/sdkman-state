@@ -6,10 +6,10 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.state.adapter.primary.rest.dto.VersionDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
+import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
-import io.sdkman.state.adapter.secondary.persistence.VendorAuditTable
-import io.sdkman.state.adapter.secondary.persistence.VersionTags
-import io.sdkman.state.adapter.secondary.persistence.Versions
+import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
+import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.jdbcUrl
 import io.sdkman.state.domain.model.AuditOperation
@@ -41,7 +41,7 @@ data class VendorAuditRecord(
 fun insertVersions(vararg cvs: Version) =
     transaction {
         cvs.forEach { cv ->
-            Versions.insert {
+            VersionsTable.insert {
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[platform] = cv.platform.name
@@ -57,7 +57,7 @@ fun insertVersions(vararg cvs: Version) =
 
 fun insertVersionWithId(cv: Version): Int =
     transaction {
-        Versions
+        VersionsTable
             .insert {
                 it[candidate] = cv.candidate
                 it[version] = cv.version
@@ -68,7 +68,7 @@ fun insertVersionWithId(cv: Version): Int =
                 it[md5sum] = cv.md5sum.getOrNull()
                 it[sha256sum] = cv.sha256sum.getOrNull()
                 it[sha512sum] = cv.sha512sum.getOrNull()
-            }[Versions.id]
+            }[VersionsTable.id]
             .value
     }
 
@@ -79,7 +79,7 @@ fun insertTag(
     platform: Platform,
     versionId: Int,
 ) = transaction {
-    VersionTags.insert {
+    VersionTagsTable.insert {
         it[this.candidate] = candidate
         it[this.tag] = tag
         it[this.distribution] = distribution.map { it.name }.getOrElse { NA_SENTINEL }
@@ -92,17 +92,17 @@ fun insertTag(
 
 fun selectTagNames(versionId: Int): List<String> =
     dbQuery {
-        VersionTags
+        VersionTagsTable
             .selectAll()
-            .where { VersionTags.versionId eq versionId }
-            .map { it[VersionTags.tag] }
+            .where { VersionTagsTable.versionId eq versionId }
+            .map { it[VersionTagsTable.tag] }
     }
 
 fun selectAllTags(): List<Pair<Int, String>> =
     dbQuery {
-        VersionTags
+        VersionTagsTable
             .selectAll()
-            .map { it[VersionTags.versionId] to it[VersionTags.tag] }
+            .map { it[VersionTagsTable.versionId] to it[VersionTagsTable.tag] }
     }
 
 private fun <T> dbQuery(block: suspend () -> T): T =
@@ -117,24 +117,24 @@ fun selectVersion(
     platform: Platform,
 ): Option<Version> =
     dbQuery {
-        Versions
+        VersionsTable
             .selectAll()
             .where {
-                (Versions.candidate eq candidate) and
-                    (Versions.version eq version) and
-                    distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
-                    (Versions.platform eq platform.name)
+                (VersionsTable.candidate eq candidate) and
+                    (VersionsTable.version eq version) and
+                    distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name }) and
+                    (VersionsTable.platform eq platform.name)
             }.map {
                 Version(
-                    candidate = it[Versions.candidate],
-                    version = it[Versions.version],
-                    distribution = it[Versions.distribution].toOption().map { Distribution.valueOf(it) },
-                    platform = Platform.valueOf(it[Versions.platform]),
-                    url = it[Versions.url],
-                    visible = it[Versions.visible].toOption(),
-                    md5sum = it[Versions.md5sum].toOption(),
-                    sha256sum = it[Versions.sha256sum].toOption(),
-                    sha512sum = it[Versions.sha512sum].toOption(),
+                    candidate = it[VersionsTable.candidate],
+                    version = it[VersionsTable.version],
+                    distribution = it[VersionsTable.distribution].toOption().map { Distribution.valueOf(it) },
+                    platform = Platform.valueOf(it[VersionsTable.platform]),
+                    url = it[VersionsTable.url],
+                    visible = it[VersionsTable.visible].toOption(),
+                    md5sum = it[VersionsTable.md5sum].toOption(),
+                    sha256sum = it[VersionsTable.sha256sum].toOption(),
+                    sha512sum = it[VersionsTable.sha512sum].toOption(),
                 )
             }.firstOrNone()
     }
@@ -146,15 +146,15 @@ fun selectLastUpdatedAt(
     platform: Platform,
 ): Option<Instant> =
     dbQuery {
-        Versions
+        VersionsTable
             .selectAll()
             .where {
-                (Versions.candidate eq candidate) and
-                    (Versions.version eq version) and
-                    distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name }) and
-                    (Versions.platform eq platform.name)
+                (VersionsTable.candidate eq candidate) and
+                    (VersionsTable.version eq version) and
+                    distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name }) and
+                    (VersionsTable.platform eq platform.name)
             }.map {
-                it[Versions.lastUpdatedAt]
+                it[VersionsTable.lastUpdatedAt]
             }.firstOrNone()
     }
 
@@ -180,51 +180,51 @@ private fun initialisePostgres() =
 
 fun selectAuditRecords(): List<VendorAuditRecord> =
     dbQuery {
-        VendorAuditTable.selectAll().map { row ->
+        AuditTable.selectAll().map { row ->
             VendorAuditRecord(
-                id = row[VendorAuditTable.id],
-                username = row[VendorAuditTable.username],
+                id = row[AuditTable.id],
+                username = row[AuditTable.username],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
-                        row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano.toLong(),
+                        row[AuditTable.timestamp].epochSecond,
+                        row[AuditTable.timestamp].nano.toLong(),
                     ),
-                operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = row[VendorAuditTable.versionData].toString(),
+                operation = AuditOperation.valueOf(row[AuditTable.operation]),
+                versionData = row[AuditTable.versionData].toString(),
             )
         }
     }
 
 fun selectAuditRecordsByUsername(username: String): List<VendorAuditRecord> =
     dbQuery {
-        VendorAuditTable.selectAll().where { VendorAuditTable.username eq username }.map { row ->
+        AuditTable.selectAll().where { AuditTable.username eq username }.map { row ->
             VendorAuditRecord(
-                id = row[VendorAuditTable.id],
-                username = row[VendorAuditTable.username],
+                id = row[AuditTable.id],
+                username = row[AuditTable.username],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
-                        row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano.toLong(),
+                        row[AuditTable.timestamp].epochSecond,
+                        row[AuditTable.timestamp].nano.toLong(),
                     ),
-                operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = row[VendorAuditTable.versionData].toString(),
+                operation = AuditOperation.valueOf(row[AuditTable.operation]),
+                versionData = row[AuditTable.versionData].toString(),
             )
         }
     }
 
 fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRecord> =
     dbQuery {
-        VendorAuditTable.selectAll().where { VendorAuditTable.operation eq operation.name }.map { row ->
+        AuditTable.selectAll().where { AuditTable.operation eq operation.name }.map { row ->
             VendorAuditRecord(
-                id = row[VendorAuditTable.id],
-                username = row[VendorAuditTable.username],
+                id = row[AuditTable.id],
+                username = row[AuditTable.username],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
-                        row[VendorAuditTable.timestamp].epochSecond,
-                        row[VendorAuditTable.timestamp].nano.toLong(),
+                        row[AuditTable.timestamp].epochSecond,
+                        row[AuditTable.timestamp].nano.toLong(),
                     ),
-                operation = AuditOperation.valueOf(row[VendorAuditTable.operation]),
-                versionData = row[VendorAuditTable.versionData].toString(),
+                operation = AuditOperation.valueOf(row[AuditTable.operation]),
+                versionData = row[AuditTable.versionData].toString(),
             )
         }
     }
@@ -234,9 +234,9 @@ fun deserializeVersionData(versionData: String): Version = Json.decodeFromString
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()
     transaction {
-        VersionTags.deleteAll()
-        VendorAuditTable.deleteAll()
-        Versions.deleteAll()
+        VersionTagsTable.deleteAll()
+        AuditTable.deleteAll()
+        VersionsTable.deleteAll()
     }
     runBlocking { fn() }
 }
