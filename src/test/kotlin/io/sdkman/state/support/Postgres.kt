@@ -4,12 +4,12 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.toOption
-import io.sdkman.state.adapter.primary.rest.dto.VersionDto
-import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
+import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
 import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
+import io.sdkman.state.adapter.secondary.persistence.toDomain
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.jdbcUrl
 import io.sdkman.state.domain.model.AuditOperation
@@ -231,7 +231,7 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRe
         }
     }
 
-fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(VersionDto.serializer(), versionData).toDomain()
+fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(AuditVersionData.serializer(), versionData).toDomain()
 
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()
