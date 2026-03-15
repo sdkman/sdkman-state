@@ -15,12 +15,12 @@ Resolve build configuration issues and known defects before any structural work 
 - [x] Align Ktor plugin version with runtime: change `io.ktor.plugin` from `3.4.0` to `3.3.3` in `build.gradle.kts` (or upgrade `ktor_version` in `gradle.properties` to `3.4.0`) -- currently plugin is 3.4.0 but all runtime deps use `ktor_version=3.3.3`
 
 ### 0.2 Missing Test Dependencies
-- [ ] Add Testcontainers BOM: `testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))`
-- [ ] Add Testcontainers PostgreSQL module: `testImplementation("org.testcontainers:postgresql")`
-- [ ] Add Testcontainers core: `testImplementation("org.testcontainers:testcontainers")`
-- [ ] Add MockK: `testImplementation("io.mockk:mockk:1.13.13")`
-- [ ] Add Kotest Testcontainers extension: `testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")`
-- [ ] Add `kotlinx-datetime` dependency (already present: `0.7.1-0.6.x-compat`) -- verify compatibility with `kotlinx.datetime.Instant` for domain models
+- [x] Add Testcontainers BOM: `testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))`
+- [x] Add Testcontainers PostgreSQL module: `testImplementation("org.testcontainers:postgresql")`
+- [x] Add Testcontainers core: `testImplementation("org.testcontainers:testcontainers")`
+- [x] Add MockK: `testImplementation("io.mockk:mockk:1.13.13")`
+- [x] Add Kotest Testcontainers extension: `testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")`
+- [x] Add `kotlinx-datetime` dependency (already present: `0.7.1-0.6.x-compat`) -- verify compatibility with `kotlinx.datetime.Instant` for domain models
 
 ### 0.3 Existing Code Defects
 - [x] Fix `VendorAuditSpec` dead code: `insertVersions` call at line 73 outside `withCleanDatabase` block at line 85 (data inserted then immediately wiped by `withCleanDatabase`) -- `src/test/kotlin/io/sdkman/VendorAuditSpec.kt:73`
@@ -63,7 +63,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Move `AuditRecord` to test sources as `VendorAuditRecord` (only used in test assertions)
 
 ### 1.4 Repository Port Interfaces (spec section 2.3)
-- [ ] Create `domain/repository/VersionRepository.kt` -- **new interface** (currently `VersionsRepository` is concrete with no interface)
+- [x] Create `domain/repository/VersionRepository.kt` -- **new interface** (created in Domain.kt alongside other port interfaces; VersionsRepository now implements it; Routing depends on interface)
 - [ ] Create `domain/repository/TagRepository.kt` -- simplified from current `TagsRepository` (complex orchestration moves to service layer)
 - [ ] Create `domain/repository/AuditRepository.kt` -- refine existing interface from Domain.kt
 - [ ] Create `domain/repository/HealthRepository.kt` -- change return type to `Either<DatabaseFailure, HealthCheckSuccess>`
