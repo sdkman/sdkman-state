@@ -41,10 +41,11 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val versionsRepo = PostgresVersionRepository()
             val tagsRepo = PostgresTagRepository()
             val auditRepo = PostgresAuditRepository()
+            val tagService = TagServiceImpl(tagsRepo, auditRepo)
 
             configureRouting(
-                versionService = VersionServiceImpl(versionsRepo, tagsRepo, auditRepo),
-                tagService = TagServiceImpl(tagsRepo, auditRepo),
+                versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
+                tagService = tagService,
                 healthRepo = PostgresHealthRepository(),
             )
         }

@@ -11,38 +11,44 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
-import io.sdkman.state.domain.repository.TagsRepository
 import io.sdkman.state.domain.repository.VersionRepository
+import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.VersionService
 import org.slf4j.LoggerFactory
 
 class VersionServiceImpl(
     private val versionsRepo: VersionRepository,
-    private val tagsRepo: TagsRepository,
+    private val tagService: TagService,
     private val auditRepo: AuditRepository,
 ) : VersionService {
     private val logger = LoggerFactory.getLogger(VersionServiceImpl::class.java)
 
-    override suspend fun findAll(
+    override suspend fun findByCandidate(
         candidate: String,
         platform: Option<Platform>,
         distribution: Option<Distribution>,
         visible: Option<Boolean>,
-    ): List<Version> = versionsRepo.read(candidate, platform, distribution, visible)
+    ): Either<DomainError, List<Version>> =
+        versionsRepo
+            .findByCandidate(candidate, platform, distribution, visible)
+            .mapLeft { DomainError.DatabaseError(it) }
 
-    override suspend fun findOne(
+    override suspend fun findUnique(
         candidate: String,
         version: String,
         platform: Platform,
         distribution: Option<Distribution>,
-    ): Option<Version> = versionsRepo.read(candidate, version, platform, distribution)
+    ): Either<DomainError, Option<Version>> =
+        versionsRepo
+            .findUnique(candidate, version, platform, distribution)
+            .mapLeft { DomainError.DatabaseError(it) }
 
     override suspend fun createOrUpdate(
         version: Version,
         username: String,
     ): Either<DomainError, Unit> =
         versionsRepo
-            .create(version)
+            .createOrUpdate(version)
             .mapLeft { DomainError.DatabaseError(it) }
             .map { versionId ->
                 logAudit(username, AuditOperation.CREATE, version)
@@ -56,28 +62,35 @@ class VersionServiceImpl(
         either {
             val versionToDelete =
                 versionsRepo
-                    .read(
+                    .findUnique(
                         candidate = uniqueVersion.candidate,
                         version = uniqueVersion.version,
                         platform = uniqueVersion.platform,
                         distribution = uniqueVersion.distribution,
-                    ).toEither {
+                    ).mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+                    .toEither {
                         DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version)
                     }.bind()
             val versionId =
                 versionsRepo
                     .findVersionId(uniqueVersion)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
                     .toEither {
                         DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version)
                     }.bind()
             val tagNames =
-                tagsRepo
+                tagService
                     .findTagNamesByVersionId(versionId)
-                    .mapLeft { DomainError.DatabaseError(it) }
                     .bind()
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
             logAudit(username, AuditOperation.DELETE, versionToDelete)
-            val deleted = versionsRepo.delete(uniqueVersion)
+            val deleted =
+                versionsRepo
+                    .delete(uniqueVersion)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
             if (deleted == 0) {
                 raise(DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version))
             }
@@ -98,7 +111,7 @@ class VersionServiceImpl(
         version: Version,
     ) {
         version.tags.onSome { tagList ->
-            tagsRepo
+            tagService
                 .replaceTags(
                     versionId = versionId,
                     candidate = version.candidate,
@@ -106,7 +119,7 @@ class VersionServiceImpl(
                     platform = version.platform,
                     tags = tagList,
                 ).onLeft { error ->
-                    logger.warn("Tag processing failed: ${error.message}", error)
+                    logger.warn("Tag processing failed: $error")
                 }
         }
     }

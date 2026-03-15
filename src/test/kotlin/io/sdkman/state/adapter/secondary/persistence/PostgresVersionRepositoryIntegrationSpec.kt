@@ -1,6 +1,7 @@
 package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.None
+import arrow.core.getOrElse
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -36,17 +37,18 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    val result = repo.create(version)
+                    val result = repo.createOrUpdate(version)
                     result.isRight() shouldBe true
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = version.candidate,
                             version = version.version,
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe version.copy(tags = emptyList<String>().some()).some()
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe version.copy(tags = emptyList<String>().some()).some() }
                 }
             }
 
@@ -63,17 +65,18 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    val result = repo.create(version)
+                    val result = repo.createOrUpdate(version)
                     result.isRight() shouldBe true
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = version.candidate,
                             version = version.version,
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe version.copy(tags = emptyList<String>().some()).some()
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe version.copy(tags = emptyList<String>().some()).some() }
                 }
             }
 
@@ -99,17 +102,18 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(originalVersion)
-                    repo.create(updatedVersion)
+                    repo.createOrUpdate(originalVersion)
+                    repo.createOrUpdate(updatedVersion)
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = updatedVersion.candidate,
                             version = updatedVersion.version,
                             platform = updatedVersion.platform,
                             distribution = updatedVersion.distribution,
                         )
-                    retrieved shouldBe updatedVersion.copy(tags = emptyList<String>().some()).some()
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe updatedVersion.copy(tags = emptyList<String>().some()).some() }
                 }
             }
 
@@ -127,7 +131,7 @@ class PostgresVersionRepositoryIntegrationSpec :
 
                 withCleanDatabase {
                     // First insert
-                    repo.create(version)
+                    repo.createOrUpdate(version)
                     val firstTimestamp =
                         selectLastUpdatedAt(
                             candidate = version.candidate,
@@ -143,7 +147,7 @@ class PostgresVersionRepositoryIntegrationSpec :
 
                     // Upsert with different data
                     val updatedVersion = version.copy(url = "https://groovy-4.0.0-updated")
-                    repo.create(updatedVersion)
+                    repo.createOrUpdate(updatedVersion)
 
                     val secondTimestamp =
                         selectLastUpdatedAt(
@@ -184,17 +188,19 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(version1)
-                    repo.create(version2)
+                    repo.createOrUpdate(version1)
+                    repo.createOrUpdate(version2)
 
-                    val versions =
-                        repo.read(
+                    val result =
+                        repo.findByCandidate(
                             candidate = "java",
                             platform = None,
                             distribution = None,
                             visible = None,
                         )
 
+                    result.isRight() shouldBe true
+                    val versions = result.getOrElse { emptyList() }
                     versions shouldHaveSize 2
                     versions shouldContain version1
                     versions shouldContain version2
@@ -224,17 +230,19 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(linuxVersion)
-                    repo.create(macVersion)
+                    repo.createOrUpdate(linuxVersion)
+                    repo.createOrUpdate(macVersion)
 
-                    val versions =
-                        repo.read(
+                    val result =
+                        repo.findByCandidate(
                             candidate = "java",
                             platform = Platform.LINUX_X64.some(),
                             distribution = None,
                             visible = None,
                         )
 
+                    result.isRight() shouldBe true
+                    val versions = result.getOrElse { emptyList() }
                     versions shouldHaveSize 1
                     versions.first() shouldBe linuxVersion
                 }
@@ -263,17 +271,19 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(temurinVersion)
-                    repo.create(zulu)
+                    repo.createOrUpdate(temurinVersion)
+                    repo.createOrUpdate(zulu)
 
-                    val versions =
-                        repo.read(
+                    val result =
+                        repo.findByCandidate(
                             candidate = "java",
                             platform = None,
                             distribution = Distribution.TEMURIN.some(),
                             visible = None,
                         )
 
+                    result.isRight() shouldBe true
+                    val versions = result.getOrElse { emptyList() }
                     versions shouldHaveSize 1
                     versions.first() shouldBe temurinVersion
                 }
@@ -303,28 +313,32 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(visibleVersion)
-                    repo.create(hiddenVersion)
+                    repo.createOrUpdate(visibleVersion)
+                    repo.createOrUpdate(hiddenVersion)
 
-                    val visibleVersions =
-                        repo.read(
+                    val visibleResult =
+                        repo.findByCandidate(
                             candidate = "java",
                             platform = None,
                             distribution = None,
                             visible = true.some(),
                         )
 
+                    visibleResult.isRight() shouldBe true
+                    val visibleVersions = visibleResult.getOrElse { emptyList() }
                     visibleVersions shouldHaveSize 1
                     visibleVersions.first() shouldBe visibleVersion
 
-                    val hiddenVersions =
-                        repo.read(
+                    val hiddenResult =
+                        repo.findByCandidate(
                             candidate = "java",
                             platform = None,
                             distribution = None,
                             visible = false.some(),
                         )
 
+                    hiddenResult.isRight() shouldBe true
+                    val hiddenVersions = hiddenResult.getOrElse { emptyList() }
                     hiddenVersions shouldHaveSize 1
                     hiddenVersions.first() shouldBe hiddenVersion
                 }
@@ -334,15 +348,16 @@ class PostgresVersionRepositoryIntegrationSpec :
                 val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
-                    val versions =
-                        repo.read(
+                    val result =
+                        repo.findByCandidate(
                             candidate = "nonexistent",
                             platform = None,
                             distribution = None,
                             visible = None,
                         )
 
-                    versions.shouldBeEmpty()
+                    result.isRight() shouldBe true
+                    result.getOrElse { emptyList() }.shouldBeEmpty()
                 }
             }
         }
@@ -362,17 +377,18 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(version)
+                    repo.createOrUpdate(version)
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = "kotlin",
                             version = "1.9.0",
                             platform = Platform.UNIVERSAL,
                             distribution = Distribution.JETBRAINS.some(),
                         )
 
-                    retrieved shouldBe version.some()
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe version.some() }
                 }
             }
 
@@ -390,17 +406,18 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(version)
+                    repo.createOrUpdate(version)
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = "scala",
                             version = "3.3.1",
                             platform = Platform.UNIVERSAL,
                             distribution = None,
                         )
 
-                    retrieved shouldBe version.some()
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe version.some() }
                 }
             }
 
@@ -409,14 +426,61 @@ class PostgresVersionRepositoryIntegrationSpec :
 
                 withCleanDatabase {
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = "nonexistent",
                             version = "1.0.0",
                             platform = Platform.UNIVERSAL,
                             distribution = None,
                         )
 
-                    retrieved shouldBe None
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe None }
+                }
+            }
+        }
+
+        context("findVersionIdByTag") {
+            should("resolve a tag to the correct version ID") {
+                val repo = PostgresVersionRepository()
+                val tagRepo = PostgresTagRepository()
+
+                withCleanDatabase {
+                    // given: a tagged version
+                    val version =
+                        Version(
+                            candidate = "java",
+                            version = "27.0.2",
+                            platform = Platform.LINUX_X64,
+                            url = "https://java-27.0.2",
+                            visible = true.some(),
+                            distribution = Distribution.TEMURIN.some(),
+                        )
+                    val versionId = repo.createOrUpdate(version).getOrElse { error("expected Right") }
+                    tagRepo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
+
+                    // when: resolving the tag
+                    val resolved =
+                        repo
+                            .findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .getOrElse { error("expected Right") }
+
+                    // then: correct version ID returned
+                    resolved shouldBe versionId.some()
+                }
+            }
+
+            should("return None for a non-existent tag") {
+                val repo = PostgresVersionRepository()
+
+                withCleanDatabase {
+                    // when: resolving a tag that does not exist
+                    val resolved =
+                        repo
+                            .findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .getOrElse { error("expected Right") }
+
+                    // then: None returned
+                    resolved shouldBe None
                 }
             }
         }
@@ -435,7 +499,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(version)
+                    repo.createOrUpdate(version)
 
                     val uniqueVersion =
                         UniqueVersion(
@@ -445,17 +509,19 @@ class PostgresVersionRepositoryIntegrationSpec :
                             platform = version.platform,
                         )
 
-                    val deletedCount = repo.delete(uniqueVersion)
-                    deletedCount shouldBe 1
+                    val deleteResult = repo.delete(uniqueVersion)
+                    deleteResult.isRight() shouldBe true
+                    deleteResult.onRight { it shouldBe 1 }
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = version.candidate,
                             version = version.version,
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe None
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe None }
                 }
             }
 
@@ -472,7 +538,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    repo.create(version)
+                    repo.createOrUpdate(version)
 
                     val uniqueVersion =
                         UniqueVersion(
@@ -482,17 +548,19 @@ class PostgresVersionRepositoryIntegrationSpec :
                             platform = version.platform,
                         )
 
-                    val deletedCount = repo.delete(uniqueVersion)
-                    deletedCount shouldBe 1
+                    val deleteResult = repo.delete(uniqueVersion)
+                    deleteResult.isRight() shouldBe true
+                    deleteResult.onRight { it shouldBe 1 }
 
                     val retrieved =
-                        repo.read(
+                        repo.findUnique(
                             candidate = version.candidate,
                             version = version.version,
                             platform = version.platform,
                             distribution = version.distribution,
                         )
-                    retrieved shouldBe None
+                    retrieved.isRight() shouldBe true
+                    retrieved.onRight { it shouldBe None }
                 }
             }
 
@@ -508,8 +576,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                             platform = Platform.UNIVERSAL,
                         )
 
-                    val deletedCount = repo.delete(uniqueVersion)
-                    deletedCount shouldBe 0
+                    val deleteResult = repo.delete(uniqueVersion)
+                    deleteResult.isRight() shouldBe true
+                    deleteResult.onRight { it shouldBe 0 }
                 }
             }
         }

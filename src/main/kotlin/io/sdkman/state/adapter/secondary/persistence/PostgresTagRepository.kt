@@ -3,7 +3,6 @@ package io.sdkman.state.adapter.secondary.persistence
 import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
-import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.some
 import io.sdkman.state.domain.error.DatabaseFailure
@@ -11,7 +10,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.VersionTag
-import io.sdkman.state.domain.repository.TagsRepository
+import io.sdkman.state.domain.repository.TagRepository
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -36,7 +35,7 @@ internal object VersionTagsTable : IntIdTable("version_tags") {
     }
 }
 
-class PostgresTagRepository : TagsRepository {
+class PostgresTagRepository : TagRepository {
     private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
 
     private fun dbToDistribution(value: String): Option<Distribution> =
@@ -70,28 +69,23 @@ class PostgresTagRepository : TagsRepository {
                 )
             }
 
-    override suspend fun findVersionIdByTag(
-        candidate: String,
-        tag: String,
-        distribution: Option<Distribution>,
-        platform: Platform,
-    ): Either<DatabaseFailure, Option<Int>> =
+    override suspend fun findTagNamesByVersionIds(versionIds: List<Int>): Either<DatabaseFailure, Map<Int, List<String>>> =
         Either
             .catch {
                 dbQuery {
-                    VersionTagsTable
-                        .selectAll()
-                        .where {
-                            (VersionTagsTable.candidate eq candidate) and
-                                (VersionTagsTable.tag eq tag) and
-                                (VersionTagsTable.distribution eq distributionToDb(distribution)) and
-                                (VersionTagsTable.platform eq platform.name)
-                        }.map { it[VersionTagsTable.versionId] }
-                        .firstOrNone()
+                    if (versionIds.isEmpty()) {
+                        emptyMap()
+                    } else {
+                        VersionTagsTable
+                            .select(VersionTagsTable.versionId, VersionTagsTable.tag)
+                            .where { VersionTagsTable.versionId inList versionIds }
+                            .groupBy { it[VersionTagsTable.versionId] }
+                            .mapValues { (_, rows) -> rows.map { it[VersionTagsTable.tag] } }
+                    }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to find version ID by tag: ${error.message}",
+                    message = "Failed to find tag names by version IDs: ${error.message}",
                     cause = error,
                 )
             }

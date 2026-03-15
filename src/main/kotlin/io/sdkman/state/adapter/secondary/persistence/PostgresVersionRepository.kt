@@ -70,68 +70,87 @@ class PostgresVersionRepository : VersionRepository {
             (cv.distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name })) and
             (VersionsTable.platform eq cv.platform.name)
 
-    override suspend fun read(
+    override suspend fun findByCandidate(
         candidate: String,
         platform: Option<Platform>,
         distribution: Option<Distribution>,
         visible: Option<Boolean>,
-    ): List<Version> =
-        dbQuery {
-            val rows =
-                VersionsTable
-                    .selectAll()
-                    .where {
-                        (VersionsTable.candidate eq candidate) and
-                            platform.map { VersionsTable.platform eq it.name }.getOrElse { Op.TRUE } and
-                            distribution.fold({ Op.TRUE }, { VersionsTable.distribution eq it.name }) and
-                            visible.map { VersionsTable.visible eq it }.getOrElse { Op.TRUE }
-                    }.map { it[VersionsTable.id].value to it.toVersion() }
+    ): Either<DatabaseFailure, List<Version>> =
+        Either
+            .catch {
+                dbQuery {
+                    val rows =
+                        VersionsTable
+                            .selectAll()
+                            .where {
+                                (VersionsTable.candidate eq candidate) and
+                                    platform.map { VersionsTable.platform eq it.name }.getOrElse { Op.TRUE } and
+                                    distribution.fold({ Op.TRUE }, { VersionsTable.distribution eq it.name }) and
+                                    visible.map { VersionsTable.visible eq it }.getOrElse { Op.TRUE }
+                            }.map { it[VersionsTable.id].value to it.toVersion() }
 
-            val tagsByVersionId = batchFetchTags(rows.map { it.first })
+                    val tagsByVersionId = batchFetchTags(rows.map { it.first })
 
-            rows
-                .map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
-                .sortedWith(
-                    compareBy(
-                        { it.candidate },
-                        { it.version },
-                        { it.distribution.map { d -> d.name }.getOrElse { "" } },
-                        { it.platform },
-                    ),
+                    rows
+                        .map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
+                        .sortedWith(
+                            compareBy(
+                                { it.candidate },
+                                { it.version },
+                                { it.distribution.map { d -> d.name }.getOrElse { "" } },
+                                { it.platform },
+                            ),
+                        )
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find versions by candidate: ${error.message}",
+                    cause = error,
                 )
-        }
+            }
 
-    override suspend fun read(
+    override suspend fun findUnique(
         candidate: String,
         version: String,
         platform: Platform,
         distribution: Option<Distribution>,
-    ): Option<Version> =
-        dbQuery {
-            VersionsTable
-                .selectAll()
-                .where {
-                    (VersionsTable.candidate eq candidate) and
-                        (VersionsTable.version eq version) and
-                        (VersionsTable.platform eq platform.name) and
-                        distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name })
-                }.map { it[VersionsTable.id].value to it.toVersion() }
-                .firstOrNone()
-                .map { (id, v) -> v.withTags(fetchTagNames(id)) }
-        }
+    ): Either<DatabaseFailure, Option<Version>> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable
+                        .selectAll()
+                        .where {
+                            (VersionsTable.candidate eq candidate) and
+                                (VersionsTable.version eq version) and
+                                (VersionsTable.platform eq platform.name) and
+                                distribution.fold(
+                                    { VersionsTable.distribution eq null },
+                                    { VersionsTable.distribution eq it.name },
+                                )
+                        }.map { it[VersionsTable.id].value to it.toVersion() }
+                        .firstOrNone()
+                        .map { (id, v) -> v.withTags(fetchTagNames(id)) }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find unique version: ${error.message}",
+                    cause = error,
+                )
+            }
 
-    override suspend fun create(cv: Version): Either<DatabaseFailure, Int> =
+    override suspend fun createOrUpdate(version: Version): Either<DatabaseFailure, Int> =
         Either
             .catch {
                 dbQuery {
                     val exists =
                         VersionsTable
                             .selectAll()
-                            .where { matchesVersion(cv) }
+                            .where { matchesVersion(version) }
                             .empty()
                             .not()
 
-                    if (exists) updateVersion(cv) else insertVersion(cv)
+                    if (exists) updateVersion(version) else insertVersion(version)
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
@@ -170,35 +189,80 @@ class PostgresVersionRepository : VersionRepository {
                 it[sha512sum] = cv.sha512sum.getOrNull()
             }.value
 
-    override suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int> =
-        dbQuery {
-            VersionsTable
-                .select(VersionsTable.id)
-                .where {
-                    val baseCondition =
-                        (VersionsTable.candidate eq uniqueVersion.candidate) and
-                            (VersionsTable.version eq uniqueVersion.version) and
-                            (VersionsTable.platform eq uniqueVersion.platform.name)
-                    uniqueVersion.distribution.fold(
-                        { baseCondition and (VersionsTable.distribution eq null) },
-                        { distributionValue -> baseCondition and (VersionsTable.distribution eq distributionValue.name) },
-                    )
-                }.map { it[VersionsTable.id].value }
-                .firstOrNone()
-        }
-
-    override suspend fun delete(version: UniqueVersion): Int =
-        dbQuery {
-            VersionsTable.deleteWhere {
-                val baseCondition =
-                    (candidate eq version.candidate) and
-                        (this.version eq version.version) and
-                        (platform eq version.platform.name)
-
-                version.distribution.fold(
-                    { baseCondition and (distribution eq null) },
-                    { distributionValue -> baseCondition and (distribution eq distributionValue.name) },
+    override suspend fun findVersionId(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Option<Int>> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable
+                        .select(VersionsTable.id)
+                        .where {
+                            val baseCondition =
+                                (VersionsTable.candidate eq uniqueVersion.candidate) and
+                                    (VersionsTable.version eq uniqueVersion.version) and
+                                    (VersionsTable.platform eq uniqueVersion.platform.name)
+                            uniqueVersion.distribution.fold(
+                                { baseCondition and (VersionsTable.distribution eq null) },
+                                { distributionValue ->
+                                    baseCondition and (VersionsTable.distribution eq distributionValue.name)
+                                },
+                            )
+                        }.map { it[VersionsTable.id].value }
+                        .firstOrNone()
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find version ID: ${error.message}",
+                    cause = error,
                 )
             }
-        }
+
+    override suspend fun findVersionIdByTag(
+        candidate: String,
+        tag: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, Option<Int>> =
+        Either
+            .catch {
+                dbQuery {
+                    val distDb = distribution.map { it.name }.getOrElse { NA_SENTINEL }
+                    VersionTagsTable
+                        .selectAll()
+                        .where {
+                            (VersionTagsTable.candidate eq candidate) and
+                                (VersionTagsTable.tag eq tag) and
+                                (VersionTagsTable.distribution eq distDb) and
+                                (VersionTagsTable.platform eq platform.name)
+                        }.map { it[VersionTagsTable.versionId] }
+                        .firstOrNone()
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find version ID by tag: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    override suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable.deleteWhere {
+                        val baseCondition =
+                            (candidate eq uniqueVersion.candidate) and
+                                (this.version eq uniqueVersion.version) and
+                                (platform eq uniqueVersion.platform.name)
+
+                        uniqueVersion.distribution.fold(
+                            { baseCondition and (distribution eq null) },
+                            { distributionValue -> baseCondition and (distribution eq distributionValue.name) },
+                        )
+                    }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to delete version: ${error.message}",
+                    cause = error,
+                )
+            }
 }
