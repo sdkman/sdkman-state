@@ -1,253 +1,202 @@
 # SDKMAN State API - Insomnia Collection
 
-This directory contains an Insomnia API test collection for the SDKMAN State API. The collection provides comprehensive coverage of all API endpoints including versions management, tags, health checks, and various validation scenarios.
+This directory contains an Insomnia v4 JSON collection for testing the SDKMAN State API. All tests are self-contained, meaning each test creates its own data, verifies it, and cleans up after itself.
 
-## Importing the Collection
+## Files
+
+- `sdkman-state-api.json` - Insomnia v4 export with all test flows
+
+## Import into Insomnia
 
 1. Open Insomnia
-2. Click the **Import** button (or use `Ctrl+I` / `Cmd+I`)
-3. Select **Import From File**
-4. Navigate to this directory and select `sdkman-state-api.json`
-5. Click **Import**
+2. Go to **Application Menu** > **Preferences** > **Data** > **Import Data** > **From File**
+3. Select `sdkman-state-api.json`
+4. Select the workspace to import into
 
-The collection will be imported as "SDKMAN State API" with all requests organized by feature.
+## Environments
 
-## Environment Setup
+The collection includes two environments:
 
-The collection includes two pre-configured environments:
+| Environment | Base URL | Auth |
+|-------------|----------|------|
+| **Local** | `http://localhost:8080` | testuser:password123 |
+| **Deployed** | `https://state.sdkman.io` | Configure `username` and `password` |
 
-### Local Environment
+### Default Credentials (Base Environment)
+
+The collection includes default credentials that work out of the box for local testing:
 - **base_url**: `http://localhost:8080`
 - **username**: `testuser`
 - **password**: `password123`
 
-Use this environment when testing against a locally running instance of the SDKMAN State API.
+### Setting Up Deployed Environment
 
-### Deployed Environment
-- **base_url**: `https://state.sdkman.io`
-- **username**: (empty - set your credentials)
-- **password**: (empty - set your credentials)
+For the deployed environment, override the credentials:
 
-Use this environment when testing against the deployed production/staging API.
+1. In Insomnia, go to **Manage Environments**
+2. Select **Deployed**
+3. Add `username` and `password` keys with your actual credentials
 
-### Environment Variables
+## Test Flows
 
-| Variable | Description | Default (Local) |
-|----------|-------------|-----------------|
-| `base_url` | Base URL of the API | `http://localhost:8080` |
-| `username` | Basic Auth username for write operations | `testuser` |
-| `password` | Basic Auth password for write operations | `password123` |
+Each test flow is completely **self-contained** and **idempotent**:
 
-### Switching Environments
+### 1. Health Check
+Simple standalone test - no setup or cleanup needed.
+- GET `/meta/health` -> 200, status=SUCCESS
 
-1. Click the environment dropdown in the top-left of Insomnia
-2. Select either "Local" or "Deployed"
-3. For the Deployed environment, click **Manage Environments** to set your credentials
+### 2. Test Universal Version
+Tests creating/reading/deleting a version without distribution.
+- POST scala/3.1.0 UNIVERSAL -> 204
+- GET scala/3.1.0 -> 200, verify fields
+- DELETE scala/3.1.0 -> 204
 
-## Collection Structure
+### 3. Test Platform-Specific Version
+Tests platform and distribution fields.
+- POST java/17.0.1 TEMURIN MAC_X64 -> 204
+- GET java/17.0.1?platform=darwinx64&distribution=TEMURIN -> 200
+- DELETE java/17.0.1 TEMURIN MAC_X64 -> 204
 
-The collection is organized by feature, not HTTP method:
+### 4. Test Version Visibility
+Tests hidden versions (visible=false).
+- POST gradle/8.0.0 UNIVERSAL visible=false -> 204
+- GET gradle/8.0.0?visible=all -> 200, verify visible=false
+- DELETE gradle/8.0.0 -> 204
 
-```
-SDKMAN State API/
-├── 1. Health Check
-│   └── Health Check - Database Available
-├── 2. Get Version List
-│   ├── Get All Versions for Candidate
-│   ├── Get Visible Versions Only
-│   ├── Get Hidden Versions Only
-│   ├── Get All Versions (Visible and Hidden)
-│   ├── Get Universal Platform Versions
-│   ├── Get Linux ARM64 Versions
-│   ├── Get Linux x64 Versions
-│   ├── Get Universal Visible Versions
-│   ├── Get Universal Hidden Versions
-│   └── Get Versions with Tags
-├── 3. Get Single Version
-│   ├── Get Universal Version
-│   ├── Get Platform-Specific Version
-│   ├── Get Version Without Distribution
-│   ├── Get Version with Tags
-│   ├── Get Non-Existent Version - 404
-│   ├── Get Platform-Specific Version Not Found - 404
-│   └── Get Version Empty Candidate - 400
-├── 4. Create Version
-│   ├── Create Version with Distribution
-│   ├── Create Version Without Distribution
-│   ├── Create Version with -RC1 Suffix
-│   ├── Create Hidden Version (visible=false)
-│   ├── Create Version with All Checksums
-│   ├── Create Version with Tags
-│   ├── Create Version with Tags (No Distribution)
-│   ├── Create Version Invalid Distribution - 400
-│   ├── Create Version Multiple Invalid Fields - 400
-│   ├── Create Version Missing Required Fields - 400
-│   ├── Create Version Invalid Tag Characters - 400
-│   ├── Create Version Blank Tag - 400
-│   ├── Create Version Tag Too Long - 400
-│   ├── Create Version Tag Starts with Dot - 400
-│   └── Create Version No Authentication - 401
-├── 5. Idempotent Version Updates
-│   ├── 1. First POST - Create Version
-│   ├── 2. Second POST - Idempotent (Same Data)
-│   ├── 3. Third POST - Update Existing Version
-│   └── 4. Idempotent Without Distribution
-├── 6. Delete Version
-│   ├── Delete Version with Distribution
-│   ├── Delete Version Without Distribution
-│   ├── Delete Version with -RC1 Suffix
-│   ├── Delete Version Empty Candidate - 400
-│   ├── Delete Version Empty Version - 400
-│   ├── Delete Non-Existent Version - 404
-│   ├── Delete Version Invalid Distribution - 400
-│   ├── Delete Version Malformed JSON - 400
-│   └── Delete Version No Authentication - 401
-├── 7. Delete Tagged Versions
-│   ├── Delete Tagged Version - 409 Conflict
-│   └── Delete Untagged Version - 204
-└── 8. Delete Tags
-    ├── Delete Tag - Success
-    ├── Delete Tag Without Distribution
-    ├── Delete Non-Existent Tag - 404
-    ├── Delete Tag Blank Candidate - 400
-    ├── Delete Tag Blank Tag Name - 400
-    ├── Delete Tag Invalid Distribution - 400
-    ├── Delete Tag Invalid Platform - 400
-    ├── Delete Tag Multiple Validation Errors - 400
-    ├── Delete Tag No Authentication - 401
-    └── Delete Tag Malformed JSON - 400
-```
+### 5. Test Version with Tags
+Tests tag creation and deletion workflow.
+- POST java/21.0.1 TEMURIN LINUX_X64 tags=["latest","21"] -> 204
+- GET java/21.0.1 -> 200, verify tags
+- DELETE tag "latest" -> 204
+- DELETE tag "21" -> 204
+- DELETE java/21.0.1 -> 204
 
-## Test Execution Order
+### 6. Test Delete Tagged Version Conflict
+Tests that versions with tags cannot be deleted directly.
+- POST kotlin/2.0.0 UNIVERSAL tags=["latest"] -> 204
+- DELETE kotlin/2.0.0 -> **409 Conflict**
+- DELETE tag "latest" -> 204
+- DELETE kotlin/2.0.0 -> 204
 
-For a complete test workflow, execute requests in the following order:
+### 7. Test POST Idempotency
+Tests that POST is idempotent and can update existing versions.
+- POST maven/3.9.0 UNIVERSAL url=original -> 204
+- POST maven/3.9.0 UNIVERSAL url=original (same) -> 204
+- POST maven/3.9.0 UNIVERSAL url=updated -> 204
+- GET maven/3.9.0 -> 200, verify url=updated
+- DELETE maven/3.9.0 -> 204
 
-### 1. Verify Service Health
-- Run **Health Check - Database Available** to ensure the API is running
+### 8. Validation Error Tests
+Standalone tests for error responses - no cleanup needed.
+- POST with invalid distribution -> 400
+- POST with missing required fields -> 400
+- POST with invalid tag characters -> 400
+- POST without auth -> 401
+- DELETE with empty candidate -> 400
+- DELETE without auth -> 401
+- DELETE non-existent version -> 404
+- DELETE tag without auth -> 401
+- DELETE non-existent tag -> 404
 
-### 2. Create Test Data
-Execute the following POST requests to set up test versions:
-- **Create Version with Distribution** - Creates `java/17.0.1` on MAC_X64
-- **Create Version Without Distribution** - Creates `maven/3.9.0` UNIVERSAL
-- **Create Version with Tags** - Creates `java/27.0.2` with tags
-
-### 3. Test Read Operations
-- Run various GET requests from "Get Version List" and "Get Single Version"
-- Verify filtering by platform, visibility, and distribution
-
-### 4. Test Idempotent Updates
-Execute in order:
-1. **1. First POST - Create Version**
-2. **2. Second POST - Idempotent (Same Data)** - Should return 204
-3. **3. Third POST - Update Existing Version** - Should update and return 204
-
-### 5. Test Tag Operations
-- Create a version with tags
-- Verify tags appear in GET responses
-- Test tag deletion via DELETE /versions/tags
-- Verify 409 Conflict when deleting version with active tags
-
-### 6. Clean Up Test Data
-Delete test versions in reverse order:
-- First remove tags if present
-- Then delete versions
-
-### 7. Validation Tests
-Test error handling scenarios:
-- Run requests marked with `- 400` suffix for validation errors
-- Run requests marked with `- 401` suffix for authentication errors
-- Run requests marked with `- 404` suffix for not found scenarios
-- Run requests marked with `- 409` suffix for conflict scenarios
-
-## Test Data Considerations
+## Running Tests with Inso CLI
 
 ### Prerequisites
-1. **PostgreSQL**: Ensure PostgreSQL is running and accessible
-   ```bash
-   docker run --restart=always \
-       --name postgres \
-       -p 5432:5432 \
-       -e POSTGRES_USER=postgres \
-       -e POSTGRES_PASSWORD=postgres \
-       -e POSTGRES_DB=sdkman \
-       -d postgres
-   ```
 
-2. **Application**: Start the SDKMAN State API
-   ```bash
-   ./gradlew run
-   ```
+Install the Inso CLI:
 
-### Data Isolation
+```bash
+npm install -g insomnia-inso
+```
 
-- Each test should ideally be run against a clean database
-- The collection does not automatically clean up data
-- For integration testing, consider:
-  - Running database migrations before tests
-  - Truncating tables between test runs
-  - Using unique version identifiers per test run
+### Run All Tests
 
-### Idempotency
+```bash
+# Run against local environment
+inso run test "SDKMAN State API" --env "Local"
 
-POST operations are idempotent:
-- Posting the same version twice returns 204 both times
-- Posting with updated fields overwrites the existing version
-- This allows safe re-running of test sequences
+# Run against deployed environment (after configuring credentials)
+inso run test "SDKMAN State API" --env "Deployed"
+```
 
-### Tags and Deletion
+### Run Specific Test Flow
 
-Versions with active tags cannot be deleted:
-- Delete all tags first using DELETE /versions/tags
-- Then delete the version using DELETE /versions
-- The 409 Conflict response includes the list of active tags
+```bash
+# Run only the health check test
+inso run test "SDKMAN State API" --env "Local" --test-name-pattern "Health"
 
-## Valid Enum Values
+# Run all validation error tests
+inso run test "SDKMAN State API" --env "Local" --test-name-pattern "Validation"
+```
 
-### Platforms
-Use lowercase in query parameters:
-- `linuxx32`, `linuxx64`, `linuxarm32hf`, `linuxarm32sf`, `linuxarm64`
-- `darwinx64`, `darwinarm64`
-- `windowsx64`
-- `universal`
+### Verbose Output
 
-Use uppercase in request bodies:
-- `LINUX_X32`, `LINUX_X64`, `LINUX_ARM32HF`, `LINUX_ARM32SF`, `LINUX_ARM64`
-- `MAC_X64`, `MAC_ARM64`
-- `WINDOWS_X64`
-- `UNIVERSAL`
+```bash
+inso run test "SDKMAN State API" --env "Local" --verbose
+```
 
-### Distributions
-- `BISHENG`, `CORRETTO`, `GRAALCE`, `GRAALVM`, `JETBRAINS`, `KONA`
-- `LIBERICA`, `LIBERICA_NIK`, `MANDREL`, `MICROSOFT`, `OPENJDK`
-- `ORACLE`, `SAP_MACHINE`, `SEMERU`, `TEMURIN`, `ZULU`
+## API Reference
 
-## Expected Response Codes
+### Endpoints
 
-| Endpoint | Success | Auth Error | Validation Error | Not Found | Conflict |
-|----------|---------|------------|------------------|-----------|----------|
-| GET /meta/health | 200 | - | - | - | - |
-| GET /versions/{candidate} | 200 | - | 400 | - | - |
-| GET /versions/{candidate}/{version} | 200 | - | 400 | 404 | - |
-| POST /versions | 204 | 401 | 400 | - | - |
-| DELETE /versions | 204 | 401 | 400 | 404 | 409 |
-| DELETE /versions/tags | 204 | 401 | 400 | 404 | - |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/meta/health` | No | Health check |
+| GET | `/versions/{candidate}` | No | List versions |
+| GET | `/versions/{candidate}/{version}` | No | Get specific version |
+| POST | `/versions` | Yes | Create/update version |
+| DELETE | `/versions` | Yes | Delete version |
+| DELETE | `/versions/tags` | Yes | Delete tag |
 
-## Troubleshooting
+### Authentication
 
-### 401 Unauthorized
-- Verify username and password are set in the environment
-- Ensure Basic Auth is enabled on the request
-- Check that credentials match the server configuration
+Basic authentication is required for POST and DELETE operations.
 
-### 404 Not Found
-- Ensure test data has been created before running GET/DELETE requests
-- Verify candidate, version, platform, and distribution match exactly
+**Default test credentials:**
+- Username: `testuser`
+- Password: `password123`
+- Base64: `dGVzdHVzZXI6cGFzc3dvcmQxMjM=`
 
-### 409 Conflict
-- Version has active tags that must be removed first
-- Use DELETE /versions/tags to remove tags before deleting version
+### Query Parameters
 
-### Connection Refused
-- Verify the API server is running
-- Check the base_url matches your server configuration
-- Ensure PostgreSQL is running and accessible
+| Endpoint | Parameter | Values | Description |
+|----------|-----------|--------|-------------|
+| GET `/versions/*` | platform | linuxx64, darwinx64, etc. | Filter by platform |
+| GET `/versions/*` | distribution | TEMURIN, CORRETTO, etc. | Filter by distribution |
+| GET `/versions/*` | visible | true, false, all | Filter by visibility |
+
+### Platform Values
+
+| Enum Value | Platform ID |
+|------------|-------------|
+| LINUX_X32 | linuxx32 |
+| LINUX_X64 | linuxx64 |
+| LINUX_ARM32HF | linuxarm32hf |
+| LINUX_ARM32SF | linuxarm32sf |
+| LINUX_ARM64 | linuxarm64 |
+| MAC_X64 | darwinx64 |
+| MAC_ARM64 | darwinarm64 |
+| WINDOWS_X64 | windowsx64 |
+| UNIVERSAL | universal |
+
+### Distribution Values
+
+BISHENG, CORRETTO, GRAALCE, GRAALVM, JETBRAINS, KONA, LIBERICA, LIBERICA_NIK, MANDREL, MICROSOFT, OPENJDK, ORACLE, SAP_MACHINE, SEMERU, TEMURIN, ZULU
+
+## Assertion Format
+
+Tests use the Insomnia `afterResponseScript` format:
+
+```javascript
+insomnia.test('Status is 200', () => {
+  insomnia.expect(insomnia.response.code).to.equal(200);
+});
+
+insomnia.test('Body contains expected value', () => {
+  const body = JSON.parse(insomnia.response.body);
+  insomnia.expect(body.candidate).to.equal('java');
+  insomnia.expect(body.tags).to.be.an('array');
+  insomnia.expect(body.tags).to.include('latest');
+});
+```
+
+**Note:** Use `insomnia.response.code` for numeric status codes (200, 204, 400, etc.) and `insomnia.response.status` for status text ("OK", "No Content", etc.).

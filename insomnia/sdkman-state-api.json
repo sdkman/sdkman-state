@@ -2,43 +2,24 @@
   "_type": "export",
   "__export_format": 4,
   "__export_date": "2026-03-14T00:00:00.000Z",
-  "__export_source": "insomnia.desktop.app:v2024.1.0",
+  "__export_source": "insomnia.desktop.app:v2025.1.0",
   "resources": [
     {
       "_id": "wrk_sdkman_state",
       "parentId": null,
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "name": "SDKMAN State API",
-      "description": "API test collection for SDKMAN State API - manages candidate and version state through JSON API",
+      "description": "Self-contained test flows for the SDKMAN State API. Each test creates its own data, verifies it, and cleans up after itself.",
       "scope": "collection",
       "_type": "workspace"
     },
     {
       "_id": "env_base",
       "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "name": "Base Environment",
-      "data": {
-        "base_url": "http://localhost:8080",
-        "username": "",
-        "password": ""
-      },
-      "dataPropertyOrder": {
-        "&": ["base_url", "username", "password"]
-      },
-      "color": null,
-      "isPrivate": false,
-      "metaSortKey": 1,
-      "_type": "environment"
-    },
-    {
-      "_id": "env_local",
-      "parentId": "env_base",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "Local",
       "data": {
         "base_url": "http://localhost:8080",
         "username": "testuser",
@@ -47,50 +28,57 @@
       "dataPropertyOrder": {
         "&": ["base_url", "username", "password"]
       },
-      "color": "#7ED321",
+      "color": null,
       "isPrivate": false,
-      "metaSortKey": 1,
+      "_type": "environment"
+    },
+    {
+      "_id": "env_local",
+      "parentId": "env_base",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "Local",
+      "data": {},
+      "dataPropertyOrder": {
+        "&": []
+      },
+      "color": "#7d69cb",
+      "isPrivate": false,
       "_type": "environment"
     },
     {
       "_id": "env_deployed",
       "parentId": "env_base",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "name": "Deployed",
       "data": {
-        "base_url": "https://state.sdkman.io",
-        "username": "",
-        "password": ""
+        "base_url": "https://state.sdkman.io"
       },
       "dataPropertyOrder": {
-        "&": ["base_url", "username", "password"]
+        "&": ["base_url"]
       },
-      "color": "#4A90D9",
+      "color": "#7ecf5a",
       "isPrivate": false,
-      "metaSortKey": 2,
       "_type": "environment"
     },
     {
-      "_id": "fld_health",
+      "_id": "fld_health_check",
       "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "name": "1. Health Check",
-      "description": "Health check endpoints for monitoring service status",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -1000,
+      "description": "Standalone health check - no setup or cleanup required",
       "_type": "request_group"
     },
     {
-      "_id": "req_health_success",
-      "parentId": "fld_health",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_health_check",
+      "parentId": "fld_health_check",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/meta/health",
-      "name": "Health Check - Database Available",
-      "description": "Returns SUCCESS when database connection is healthy.\n\nExpected Response (200 OK):\n```json\n{\"status\":\"SUCCESS\",\"message\":null}\n```",
+      "name": "GET Health Check",
+      "description": "Verify the API health endpoint returns SUCCESS status",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -101,7 +89,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": -1000,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -109,28 +97,62 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Status is SUCCESS', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.status).to.equal('SUCCESS');\n});"
     },
     {
-      "_id": "fld_get_versions",
+      "_id": "fld_universal_version",
       "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "2. Get Version List",
-      "description": "GET /versions/{candidate} - Retrieve lists of versions for a candidate with optional filtering by platform, visibility, and vendor",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -900,
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "2. Test Universal Version",
+      "description": "Self-contained test: Create, verify, and delete a universal version (no distribution)",
       "_type": "request_group"
     },
     {
-      "_id": "req_get_versions_all",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get All Versions for Candidate",
-      "description": "Retrieves all versions for a candidate without any filtering.\n\nExpected: 200 OK with JSON array of versions",
+      "_id": "req_create_universal",
+      "parentId": "fld_universal_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "1. Create Universal Version",
+      "description": "POST scala/3.1.0 UNIVERSAL",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.1.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://github.com/lampepfl/dotty/releases/download/3.1.0/scala3-3.1.0.tar.gz\",\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_get_universal",
+      "parentId": "fld_universal_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/scala/3.1.0",
+      "name": "2. Verify Universal Version",
+      "description": "GET scala/3.1.0 and verify fields",
       "method": "GET",
       "body": {},
       "parameters": [],
@@ -141,7 +163,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": -1000,
+      "metaSortKey": 2,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -149,33 +171,35 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version fields are correct', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('scala');\n  insomnia.expect(body.version).to.equal('3.1.0');\n  insomnia.expect(body.platform).to.equal('UNIVERSAL');\n  insomnia.expect(body.visible).to.equal(true);\n  insomnia.expect(body.url).to.contain('scala3-3.1.0');\n});"
     },
     {
-      "_id": "req_get_versions_visible_true",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Visible Versions Only",
-      "description": "Retrieves only visible versions for a candidate.\n\nExpected: 200 OK with JSON array of visible versions only",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "visible",
-          "value": "true",
-          "disabled": false
-        }
-      ],
+      "_id": "req_delete_universal",
+      "parentId": "fld_universal_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "3. Cleanup Universal Version",
+      "description": "DELETE scala/3.1.0",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.1.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
+      },
+      "parameters": [],
       "headers": [
         {
-          "name": "Accept",
+          "name": "Content-Type",
           "value": "application/json"
         }
       ],
-      "authentication": {},
-      "metaSortKey": -900,
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 3,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -183,321 +207,44 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
     },
     {
-      "_id": "req_get_versions_visible_false",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Hidden Versions Only",
-      "description": "Retrieves only hidden versions for a candidate.\n\nExpected: 200 OK with JSON array of hidden versions only",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "visible",
-          "value": "false",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -800,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_visible_all",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get All Versions (Visible and Hidden)",
-      "description": "Retrieves all versions regardless of visibility status.\n\nExpected: 200 OK with JSON array of all versions",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "visible",
-          "value": "all",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -700,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_universal",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Universal Platform Versions",
-      "description": "Retrieves versions for the universal platform.\n\nExpected: 200 OK with JSON array of universal versions",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "universal",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -600,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_linuxarm64",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Linux ARM64 Versions",
-      "description": "Retrieves versions for the Linux ARM64 platform.\n\nExpected: 200 OK with JSON array of Linux ARM64 versions",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "linuxarm64",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -500,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_linuxx64",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Linux x64 Versions",
-      "description": "Retrieves versions for the Linux x64 platform.\n\nExpected: 200 OK with JSON array of Linux x64 versions",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "linuxx64",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -400,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_platform_visible_true",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Universal Visible Versions",
-      "description": "Retrieves visible versions for the universal platform.\n\nExpected: 200 OK with JSON array",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "universal",
-          "disabled": false
-        },
-        {
-          "name": "visible",
-          "value": "true",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -300,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_platform_visible_false",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Universal Hidden Versions",
-      "description": "Retrieves hidden versions for the universal platform.\n\nExpected: 200 OK with JSON array",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "universal",
-          "disabled": false
-        },
-        {
-          "name": "visible",
-          "value": "false",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -200,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_versions_with_tags",
-      "parentId": "fld_get_versions",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java",
-      "name": "Get Versions with Tags",
-      "description": "Retrieves versions including their tags array.\n\nExpected: 200 OK with JSON array, each version includes a 'tags' field",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "linuxx64",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -100,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "fld_get_version",
+      "_id": "fld_platform_version",
       "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "3. Get Single Version",
-      "description": "GET /versions/{candidate}/{version} - Retrieve a specific version with optional platform and distribution filtering",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -800,
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "3. Test Platform-Specific Version",
+      "description": "Self-contained test: Create, verify, and delete a platform-specific version with distribution",
       "_type": "request_group"
     },
     {
-      "_id": "req_get_version_universal",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/kotlin/2.1.0",
-      "name": "Get Universal Version",
-      "description": "Retrieves a specific UNIVERSAL version.\n\nExpected Response (200 OK):\n```json\n{\"candidate\":\"kotlin\",\"version\":\"2.1.0\",\"platform\":\"UNIVERSAL\",\"url\":\"...\",\"visible\":true,\"distribution\":null,\"tags\":[]}\n```",
-      "method": "GET",
-      "body": {},
+      "_id": "req_create_platform",
+      "parentId": "fld_platform_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "1. Create Platform-Specific Version",
+      "description": "POST java/17.0.1 TEMURIN MAC_X64",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"MAC_X64\",\n  \"url\": \"https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.1/OpenJDK17U-jdk_x64_mac_hotspot_17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"3bc0c1d7b4805831680ee5a8690ebb6e\",\n  \"sha256sum\": \"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\"\n}"
+      },
       "parameters": [],
       "headers": [
         {
-          "name": "Accept",
+          "name": "Content-Type",
           "value": "application/json"
         }
       ],
-      "authentication": {},
-      "metaSortKey": -1000,
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -505,28 +252,27 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
     },
     {
-      "_id": "req_get_version_platform_specific",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java/21.0.1",
-      "name": "Get Platform-Specific Version",
-      "description": "Retrieves a platform-specific version with distribution.\n\nExpected: 200 OK with version details",
+      "_id": "req_get_platform",
+      "parentId": "fld_platform_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/java/17.0.1",
+      "name": "2. Verify Platform-Specific Version",
+      "description": "GET java/17.0.1 with platform and distribution query params",
       "method": "GET",
       "body": {},
       "parameters": [
         {
           "name": "platform",
-          "value": "darwinx64",
-          "disabled": false
+          "value": "darwinx64"
         },
         {
           "name": "distribution",
-          "value": "TEMURIN",
-          "disabled": false
+          "value": "TEMURIN"
         }
       ],
       "headers": [
@@ -536,7 +282,7 @@
         }
       ],
       "authentication": {},
-      "metaSortKey": -900,
+      "metaSortKey": 2,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -544,987 +290,17 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version fields are correct', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('17.0.1');\n  insomnia.expect(body.platform).to.equal('MAC_X64');\n  insomnia.expect(body.distribution).to.equal('TEMURIN');\n  insomnia.expect(body.visible).to.equal(true);\n  insomnia.expect(body.md5sum).to.equal('3bc0c1d7b4805831680ee5a8690ebb6e');\n});"
     },
     {
-      "_id": "req_get_version_no_distribution",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/scala/3.1.2",
-      "name": "Get Version Without Distribution",
-      "description": "Retrieves a version that has no distribution.\n\nExpected: 200 OK with version details where distribution is null",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -800,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_version_with_tags",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java/27.0.2",
-      "name": "Get Version with Tags",
-      "description": "Retrieves a version that has tags.\n\nExpected Response (200 OK):\n```json\n{\"candidate\":\"java\",\"version\":\"27.0.2\",...,\"tags\":[\"latest\",\"27\",\"27.0\"]}\n```",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "linuxx64",
-          "disabled": false
-        },
-        {
-          "name": "distribution",
-          "value": "TEMURIN",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -700,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_version_not_found",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/scala/99.99.99",
-      "name": "Get Non-Existent Version - 404",
-      "description": "Attempts to retrieve a version that does not exist.\n\nExpected: 404 Not Found",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -600,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_version_platform_not_found",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/java/21.0.1",
-      "name": "Get Platform-Specific Version Not Found - 404",
-      "description": "Attempts to retrieve a version for a platform/distribution that does not exist.\n\nExpected: 404 Not Found",
-      "method": "GET",
-      "body": {},
-      "parameters": [
-        {
-          "name": "platform",
-          "value": "darwinx64",
-          "disabled": false
-        },
-        {
-          "name": "distribution",
-          "value": "TEMURIN",
-          "disabled": false
-        }
-      ],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -500,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_get_version_empty_candidate",
-      "parentId": "fld_get_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/%20/1.0.0",
-      "name": "Get Version Empty Candidate - 400",
-      "description": "Attempts to retrieve a version with an empty candidate.\n\nExpected: 400 Bad Request",
-      "method": "GET",
-      "body": {},
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -400,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "fld_post_version",
-      "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "4. Create Version",
-      "description": "POST /versions - Create new versions with various configurations. Requires Basic authentication.",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -700,
-      "_type": "request_group"
-    },
-    {
-      "_id": "req_post_version_with_distribution",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_delete_platform",
+      "parentId": "fld_platform_version",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Create Version with Distribution",
-      "description": "Creates a new platform-specific version with distribution.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"MAC_X64\",\n  \"url\": \"https://example.com/java-17.0.1-tem.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"3bc0c1d7b4805831680ee5a8690ebb6e\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -1000,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_without_distribution",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Without Distribution",
-      "description": "Creates a new UNIVERSAL version without distribution.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"maven\",\n  \"version\": \"3.9.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://example.com/maven-3.9.0.zip\",\n  \"visible\": true\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -900,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_with_rc_suffix",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version with -RC1 Suffix",
-      "description": "Creates a version with release candidate suffix.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"kotlin\",\n  \"version\": \"1.9.0-RC1\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://github.com/JetBrains/kotlin/releases/download/1.9.0-RC1/kotlin.zip\",\n  \"visible\": true\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -800,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_visible_false",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Hidden Version (visible=false)",
-      "description": "Creates a version with visible set to false.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.2\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.2.tar.gz\",\n  \"visible\": false,\n  \"distribution\": \"TEMURIN\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -700,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_with_all_checksums",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version with All Checksums",
-      "description": "Creates a version with md5sum, sha256sum, and sha512sum.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.0\",\n  \"platform\": \"LINUX_ARM64\",\n  \"url\": \"https://example.com/java-21.0.0.tar.gz\",\n  \"visible\": false,\n  \"distribution\": \"ZULU\",\n  \"md5sum\": \"d41d8cd98f00b204e9800998ecf8427e\",\n  \"sha256sum\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\n  \"sha512sum\": \"cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -600,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_with_tags",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version with Tags",
-      "description": "Creates a version with tags array.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"27.0.2\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-27.0.2.tar.gz\",\n  \"visible\": true,\n  \"tags\": [\"latest\", \"27\", \"27.0\", \"lts\"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -550,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_tags_without_distribution",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version with Tags (No Distribution)",
-      "description": "Creates a version with tags for a candidate without distribution.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"gradle\",\n  \"version\": \"8.12\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://example.com/gradle-8.12.zip\",\n  \"visible\": true,\n  \"tags\": [\"latest\", \"8\"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -540,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_invalid_distribution",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Invalid Distribution - 400",
-      "description": "Attempts to create a version with invalid distribution value.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"INVALID_DISTRO\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -500,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_multiple_invalid",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Multiple Invalid Fields - 400",
-      "description": "Attempts to create a version with multiple invalid fields.\n\nExpected: 400 Bad Request with accumulated errors",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"invalid-candidate\",\n  \"version\": \"\",\n  \"platform\": \"INVALID_PLATFORM\",\n  \"url\": \"http://not-https.com/file.zip\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -400,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_missing_required",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Missing Required Fields - 400",
-      "description": "Attempts to create a version with missing required fields.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"visible\": true\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -300,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_invalid_tag_chars",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Invalid Tag Characters - 400",
-      "description": "Attempts to create a version with tags containing invalid characters.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"inv@lid!\"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -250,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_blank_tag",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Blank Tag - 400",
-      "description": "Attempts to create a version with a blank tag.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"   \"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -240,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_tag_too_long",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Tag Too Long - 400",
-      "description": "Attempts to create a version with a tag exceeding 50 characters.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"this-tag-is-way-too-long-and-exceeds-the-fifty-character-limit\"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -230,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_tag_starts_with_dot",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version Tag Starts with Dot - 400",
-      "description": "Attempts to create a version with a tag starting with a dot.\n\nExpected: 400 Bad Request",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\".hidden\"]\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -220,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_post_version_no_auth",
-      "parentId": "fld_post_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Create Version No Authentication - 401",
-      "description": "Attempts to create a version without authentication.\n\nExpected: 401 Unauthorized",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.1.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://example.com/scala-3.1.0.zip\",\n  \"visible\": true\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -200,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "fld_idempotent_post",
-      "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "5. Idempotent Version Updates",
-      "description": "POST /versions - Demonstrates idempotent behavior when posting the same version multiple times or updating existing versions",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -650,
-      "_type": "request_group"
-    },
-    {
-      "_id": "req_idempotent_first_post",
-      "parentId": "fld_idempotent_post",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "1. First POST - Create Version",
-      "description": "Creates a new version. Execute this first.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.3\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.3-original.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"abc123def456789\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -1000,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_idempotent_second_post",
-      "parentId": "fld_idempotent_post",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "2. Second POST - Idempotent (Same Data)",
-      "description": "Posts identical version data. Should be idempotent.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.3\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.3-original.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"abc123def456789\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -900,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_idempotent_update_post",
-      "parentId": "fld_idempotent_post",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "3. Third POST - Update Existing Version",
-      "description": "Updates existing version with new URL and visibility. POST overwrites existing.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.3\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java-17.0.3-updated.tar.gz\",\n  \"visible\": false,\n  \"distribution\": \"TEMURIN\",\n  \"sha256sum\": \"abc123def456789abcdef\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -800,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_idempotent_universal",
-      "parentId": "fld_idempotent_post",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "4. Idempotent Without Distribution",
-      "description": "Tests idempotency for UNIVERSAL candidate without distribution.\n\nExpected: 204 No Content",
-      "method": "POST",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.2.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://example.com/scala-3.2.0.zip\",\n  \"visible\": true\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -700,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "fld_delete_version",
-      "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "6. Delete Version",
-      "description": "DELETE /versions - Remove versions from the system. Requires Basic authentication.",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -600,
-      "_type": "request_group"
-    },
-    {
-      "_id": "req_delete_version_with_distribution",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version with Distribution",
-      "description": "Deletes a platform-specific version with distribution.\n\nExpected: 204 No Content",
+      "name": "3. Cleanup Platform-Specific Version",
+      "description": "DELETE java/17.0.1 TEMURIN MAC_X64",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
@@ -1535,20 +311,14 @@
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -1000,
+      "metaSortKey": 3,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1556,40 +326,44 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
     },
     {
-      "_id": "req_delete_version_without_distribution",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "fld_visibility",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "4. Test Version Visibility",
+      "description": "Self-contained test: Create, verify, and delete a hidden version",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_hidden",
+      "parentId": "fld_visibility",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version Without Distribution",
-      "description": "Deletes a version without distribution.\n\nExpected: 204 No Content",
-      "method": "DELETE",
+      "name": "1. Create Hidden Version",
+      "description": "POST gradle/8.0.0 UNIVERSAL visible=false",
+      "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.1.2\",\n  \"distribution\": null,\n  \"platform\": \"LINUX_X64\"\n}"
+        "text": "{\n  \"candidate\": \"gradle\",\n  \"version\": \"8.0.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://services.gradle.org/distributions/gradle-8.0.0-bin.zip\",\n  \"visible\": false\n}"
       },
       "parameters": [],
       "headers": [
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -900,
+      "metaSortKey": 1,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1597,40 +371,69 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
     },
     {
-      "_id": "req_delete_version_rc_suffix",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_get_hidden",
+      "parentId": "fld_visibility",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/gradle/8.0.0",
+      "name": "2. Verify Hidden Version",
+      "description": "GET gradle/8.0.0 and verify visible=false",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "visible",
+          "value": "all"
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version is hidden', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('gradle');\n  insomnia.expect(body.version).to.equal('8.0.0');\n  insomnia.expect(body.visible).to.equal(false);\n});"
+    },
+    {
+      "_id": "req_delete_hidden",
+      "parentId": "fld_visibility",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version with -RC1 Suffix",
-      "description": "Deletes a version with release candidate suffix.\n\nExpected: 204 No Content",
+      "name": "3. Cleanup Hidden Version",
+      "description": "DELETE gradle/8.0.0",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"kotlin\",\n  \"version\": \"1.9.0-RC1\",\n  \"distribution\": null,\n  \"platform\": \"LINUX_X64\"\n}"
+        "text": "{\n  \"candidate\": \"gradle\",\n  \"version\": \"8.0.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
       },
       "parameters": [],
       "headers": [
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -800,
+      "metaSortKey": 3,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1638,16 +441,692 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
     },
     {
-      "_id": "req_delete_version_empty_candidate",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "fld_tags",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "5. Test Version with Tags",
+      "description": "Self-contained test: Create version with tags, verify, delete tags, delete version",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_tagged",
+      "parentId": "fld_tags",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version Empty Candidate - 400",
-      "description": "Attempts to delete with empty candidate field.\n\nExpected: 400 Bad Request",
+      "name": "1. Create Version with Tags",
+      "description": "POST java/21.0.1 TEMURIN LINUX_X64 tags=[\"latest\",\"21\"]",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"latest\", \"21\"]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_get_tagged",
+      "parentId": "fld_tags",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/java/21.0.1",
+      "name": "2. Verify Tags on Version",
+      "description": "GET java/21.0.1 and verify tags",
+      "method": "GET",
+      "body": {},
+      "parameters": [
+        {
+          "name": "platform",
+          "value": "linuxx64"
+        },
+        {
+          "name": "distribution",
+          "value": "TEMURIN"
+        }
+      ],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version has correct tags', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('21.0.1');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n  insomnia.expect(body.tags).to.include('21');\n});"
+    },
+    {
+      "_id": "req_delete_tag_latest",
+      "parentId": "fld_tags",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/tags",
+      "name": "3. Delete Tag 'latest'",
+      "description": "DELETE tag 'latest' from java TEMURIN LINUX_X64",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"latest\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_delete_tag_21",
+      "parentId": "fld_tags",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/tags",
+      "name": "4. Delete Tag '21'",
+      "description": "DELETE tag '21' from java TEMURIN LINUX_X64",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"21\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_delete_tagged_version",
+      "parentId": "fld_tags",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "5. Cleanup Tagged Version",
+      "description": "DELETE java/21.0.1 (after tags removed)",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "fld_tag_conflict",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "6. Test Delete Tagged Version Conflict",
+      "description": "Self-contained test: Create tagged version, attempt delete (should fail), remove tag, delete version",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_create_conflict_version",
+      "parentId": "fld_tag_conflict",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "1. Create Version with Tag",
+      "description": "POST kotlin/2.0.0 UNIVERSAL tags=[\"latest\"]",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"kotlin\",\n  \"version\": \"2.0.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://github.com/JetBrains/kotlin/releases/download/v2.0.0/kotlin-compiler-2.0.0.zip\",\n  \"visible\": true,\n  \"tags\": [\"latest\"]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_delete_conflict_fails",
+      "parentId": "fld_tag_conflict",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "2. Delete Version Should Fail (409)",
+      "description": "DELETE kotlin/2.0.0 - should return 409 Conflict",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"kotlin\",\n  \"version\": \"2.0.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 409', () => {\n  insomnia.expect(insomnia.response.code).to.equal(409);\n});\n\ninsomnia.test('Response contains conflict details', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Conflict');\n  insomnia.expect(body.message).to.contain('Cannot delete version with active tags');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n});"
+    },
+    {
+      "_id": "req_delete_conflict_tag",
+      "parentId": "fld_tag_conflict",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/tags",
+      "name": "3. Delete Tag 'latest'",
+      "description": "DELETE tag 'latest' from kotlin UNIVERSAL",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"kotlin\",\n  \"tag\": \"latest\",\n  \"platform\": \"UNIVERSAL\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_delete_conflict_cleanup",
+      "parentId": "fld_tag_conflict",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "4. Cleanup Version",
+      "description": "DELETE kotlin/2.0.0 - should succeed now",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"kotlin\",\n  \"version\": \"2.0.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "fld_idempotency",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "7. Test POST Idempotency",
+      "description": "Self-contained test: Verify POST is idempotent and can update existing versions",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_idempotent_create1",
+      "parentId": "fld_idempotency",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "1. Create Version (First POST)",
+      "description": "POST maven/3.9.0 UNIVERSAL with original URL",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"maven\",\n  \"version\": \"3.9.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://archive.apache.org/dist/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz\",\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_idempotent_create2",
+      "parentId": "fld_idempotency",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "2. Same POST (Idempotent)",
+      "description": "POST maven/3.9.0 UNIVERSAL with same data - should succeed",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"maven\",\n  \"version\": \"3.9.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://archive.apache.org/dist/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz\",\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_idempotent_update",
+      "parentId": "fld_idempotency",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "3. Update POST (Different URL)",
+      "description": "POST maven/3.9.0 UNIVERSAL with updated URL - should overwrite",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"maven\",\n  \"version\": \"3.9.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz\",\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "req_idempotent_verify",
+      "parentId": "fld_idempotency",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions/maven/3.9.0",
+      "name": "4. Verify Updated URL",
+      "description": "GET maven/3.9.0 and verify URL was updated",
+      "method": "GET",
+      "body": {},
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Accept",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('URL was updated', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.url).to.equal('https://dlcdn.apache.org/maven/maven-3/3.9.0/binaries/apache-maven-3.9.0-bin.tar.gz');\n});"
+    },
+    {
+      "_id": "req_idempotent_cleanup",
+      "parentId": "fld_idempotency",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "5. Cleanup",
+      "description": "DELETE maven/3.9.0",
+      "method": "DELETE",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"maven\",\n  \"version\": \"3.9.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+    },
+    {
+      "_id": "fld_validation_errors",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "8. Validation Error Tests",
+      "description": "Standalone validation error tests - no cleanup required",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_validation_invalid_distribution",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "POST Invalid Distribution -> 400",
+      "description": "POST with invalid distribution should return 400",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"INVALID_DISTRO\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('Distribution');\n});"
+    },
+    {
+      "_id": "req_validation_missing_fields",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "POST Missing Required Fields -> 400",
+      "description": "POST with missing required fields should return 400",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation errors for required fields', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('candidate');\n  insomnia.expect(body).to.contain('version');\n  insomnia.expect(body).to.contain('platform');\n  insomnia.expect(body).to.contain('url');\n});"
+    },
+    {
+      "_id": "req_validation_invalid_tag",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "POST Invalid Tag Characters -> 400",
+      "description": "POST with invalid tag characters should return 400",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"gradle\",\n  \"version\": \"8.5.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://services.gradle.org/distributions/gradle-8.5.0-bin.zip\",\n  \"visible\": true,\n  \"tags\": [\"invalid tag with spaces!\", \"@invalid\"]\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "basic",
+        "username": "{{ _.username }}",
+        "password": "{{ _.password }}"
+      },
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n});"
+    },
+    {
+      "_id": "req_validation_no_auth_post",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "POST Without Auth -> 401",
+      "description": "POST without authentication should return 401",
+      "method": "POST",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.3.0\",\n  \"platform\": \"UNIVERSAL\",\n  \"url\": \"https://example.com/scala.tar.gz\",\n  \"visible\": true\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 401', () => {\n  insomnia.expect(insomnia.response.code).to.equal(401);\n});"
+    },
+    {
+      "_id": "req_validation_empty_candidate",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/versions",
+      "name": "DELETE Empty Candidate -> 400",
+      "description": "DELETE with empty candidate should return 400",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
@@ -1658,20 +1137,14 @@
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -700,
+      "metaSortKey": 5,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1679,198 +1152,31 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});"
     },
     {
-      "_id": "req_delete_version_empty_version",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_validation_no_auth_delete",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version Empty Version - 400",
-      "description": "Attempts to delete with empty version field.\n\nExpected: 400 Bad Request",
+      "name": "DELETE Without Auth -> 401",
+      "description": "DELETE without authentication should return 401",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"MAC_X64\"\n}"
       },
       "parameters": [],
       "headers": [
         {
           "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -600,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_version_not_found",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Non-Existent Version - 404",
-      "description": "Attempts to delete a version that does not exist.\n\nExpected: 404 Not Found",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"nonexistent\",\n  \"version\": \"1.0.0\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -500,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_version_invalid_distribution",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version Invalid Distribution - 400",
-      "description": "Attempts to delete with invalid distribution value.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"distribution\": \"INVALID_DISTRO\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -400,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_version_malformed_json",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version Malformed JSON - 400",
-      "description": "Attempts to delete with malformed JSON body.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\"candidate\":\"java\",\"version\":}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -300,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_version_no_auth",
-      "parentId": "fld_delete_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Version No Authentication - 401",
-      "description": "Attempts to delete without authentication.\n\nExpected: 401 Unauthorized",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"scala\",\n  \"version\": \"3.1.2\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
           "value": "application/json"
         }
       ],
       "authentication": {},
-      "metaSortKey": -200,
+      "metaSortKey": 6,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1878,52 +1184,35 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 401', () => {\n  insomnia.expect(insomnia.response.code).to.equal(401);\n});"
     },
     {
-      "_id": "fld_delete_tagged_version",
-      "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "7. Delete Tagged Versions",
-      "description": "DELETE /versions - Demonstrates conflict behavior when attempting to delete versions with active tags",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -550,
-      "_type": "request_group"
-    },
-    {
-      "_id": "req_delete_tagged_version_conflict",
-      "parentId": "fld_delete_tagged_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_validation_not_found",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
-      "name": "Delete Tagged Version - 409 Conflict",
-      "description": "Attempts to delete a version that has active tags.\n\nExpected: 409 Conflict\n```json\n{\"error\":\"Conflict\",\"message\":\"Cannot delete version with active tags...\",\"tags\":[\"latest\",\"27\"]}\n```",
+      "name": "DELETE Non-Existent Version -> 404",
+      "description": "DELETE non-existent version should return 404",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"27.0.2\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
+        "text": "{\n  \"candidate\": \"nonexistent\",\n  \"version\": \"99.99.99\",\n  \"distribution\": null,\n  \"platform\": \"UNIVERSAL\"\n}"
       },
       "parameters": [],
       "headers": [
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -1000,
+      "metaSortKey": 7,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -1931,69 +1220,17 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});"
     },
     {
-      "_id": "req_delete_untagged_version",
-      "parentId": "fld_delete_tagged_version",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions",
-      "name": "Delete Untagged Version - 204",
-      "description": "Deletes a version that has no tags.\n\nExpected: 204 No Content",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -900,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "fld_delete_tag",
-      "parentId": "wrk_sdkman_state",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "name": "8. Delete Tags",
-      "description": "DELETE /versions/tags - Remove tags from versions. Requires Basic authentication.",
-      "environment": {},
-      "environmentPropertyOrder": null,
-      "metaSortKey": -500,
-      "_type": "request_group"
-    },
-    {
-      "_id": "req_delete_tag_success",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_validation_delete_tag_no_auth",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag - Success",
-      "description": "Deletes a tag from a version.\n\nExpected: 204 No Content",
+      "name": "DELETE Tag Without Auth -> 401",
+      "description": "DELETE tag without authentication should return 401",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
@@ -2004,20 +1241,10 @@
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -1000,
+      "authentication": {},
+      "metaSortKey": 8,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2025,57 +1252,17 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 401', () => {\n  insomnia.expect(insomnia.response.code).to.equal(401);\n});"
     },
     {
-      "_id": "req_delete_tag_without_distribution",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
+      "_id": "req_validation_delete_tag_not_found",
+      "parentId": "fld_validation_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
       "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Without Distribution",
-      "description": "Deletes a tag from a UNIVERSAL version without distribution.\n\nExpected: 204 No Content",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"gradle\",\n  \"tag\": \"latest\",\n  \"platform\": \"UNIVERSAL\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -900,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_not_found",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Non-Existent Tag - 404",
-      "description": "Attempts to delete a tag that does not exist.\n\nExpected: 404 Not Found\n```json\n{\"error\":\"Not Found\",\"message\":\"Tag 'nonexistent' not found\"}\n```",
+      "name": "DELETE Non-Existent Tag -> 404",
+      "description": "DELETE non-existent tag should return 404",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
@@ -2086,20 +1273,14 @@
         {
           "name": "Content-Type",
           "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
         }
       ],
       "authentication": {
         "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
         "username": "{{ _.username }}",
         "password": "{{ _.password }}"
       },
-      "metaSortKey": -800,
+      "metaSortKey": 9,
       "isPrivate": false,
       "settingStoreCookies": true,
       "settingSendCookies": true,
@@ -2107,288 +1288,8 @@
       "settingEncodeUrl": true,
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_blank_candidate",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Blank Candidate - 400",
-      "description": "Attempts to delete tag with blank candidate.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"\",\n  \"tag\": \"latest\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -700,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_blank_tag",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Blank Tag Name - 400",
-      "description": "Attempts to delete with blank tag name.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -600,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_invalid_distribution",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Invalid Distribution - 400",
-      "description": "Attempts to delete tag with invalid distribution.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"latest\",\n  \"distribution\": \"INVALID_DISTRO\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -500,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_invalid_platform",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Invalid Platform - 400",
-      "description": "Attempts to delete tag with invalid platform.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"latest\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"INVALID_PLATFORM\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -400,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_multiple_errors",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Multiple Validation Errors - 400",
-      "description": "Attempts to delete with multiple invalid fields.\n\nExpected: 400 Bad Request with accumulated errors",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"\",\n  \"tag\": \"\",\n  \"distribution\": \"INVALID\",\n  \"platform\": \"BAD_PLATFORM\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -300,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_no_auth",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag No Authentication - 401",
-      "description": "Attempts to delete tag without authentication.\n\nExpected: 401 Unauthorized",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"tag\": \"latest\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {},
-      "metaSortKey": -200,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
-    },
-    {
-      "_id": "req_delete_tag_malformed_json",
-      "parentId": "fld_delete_tag",
-      "modified": 1710374400000,
-      "created": 1710374400000,
-      "url": "{{ _.base_url }}/versions/tags",
-      "name": "Delete Tag Malformed JSON - 400",
-      "description": "Attempts to delete tag with malformed JSON.\n\nExpected: 400 Bad Request",
-      "method": "DELETE",
-      "body": {
-        "mimeType": "application/json",
-        "text": "{\"candidate\":\"java\",\"tag\":}"
-      },
-      "parameters": [],
-      "headers": [
-        {
-          "name": "Content-Type",
-          "value": "application/json"
-        },
-        {
-          "name": "Accept",
-          "value": "application/json"
-        }
-      ],
-      "authentication": {
-        "type": "basic",
-        "useISO88591": false,
-        "disabled": false,
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
-      },
-      "metaSortKey": -100,
-      "isPrivate": false,
-      "settingStoreCookies": true,
-      "settingSendCookies": true,
-      "settingDisableRenderRequestBody": false,
-      "settingEncodeUrl": true,
-      "settingRebuildPath": true,
-      "settingFollowRedirects": "global",
-      "_type": "request"
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});\n\ninsomnia.test('Response contains not found message', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Not Found');\n  insomnia.expect(body.message).to.contain('nonexistent');\n});"
     }
   ]
 }
