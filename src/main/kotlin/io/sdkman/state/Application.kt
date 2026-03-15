@@ -9,7 +9,6 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.config.*
-import io.sdkman.state.plugins.*
 
 fun main(args: Array<String>) =
     io.ktor.server.netty.EngineMain
