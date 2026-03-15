@@ -11,6 +11,7 @@ import arrow.core.right
 import arrow.core.some
 import arrow.core.toNonEmptyListOrNone
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
+import io.sdkman.state.config.CandidateLoader
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version

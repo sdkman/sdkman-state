@@ -1,4 +1,4 @@
-package io.sdkman.state.application.validation
+package io.sdkman.state.config
 
 import arrow.core.Option
 import arrow.core.getOrElse
