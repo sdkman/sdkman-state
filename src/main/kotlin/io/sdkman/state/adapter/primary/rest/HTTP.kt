@@ -1,5 +1,6 @@
 package io.sdkman.state.adapter.primary.rest
 
+import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -23,17 +24,17 @@ fun Application.configureHTTP(config: AppConfig) {
         }
     }
     install(CachingHeaders) {
-        // Ktor CachingHeaders API requires CachingOptions? return type and contentType is nullable
-        @Suppress("detekt:UnsafeCallOnNullableType")
         options { _, content ->
-            when (content.contentType?.withoutParameters()) {
-                ContentType.Application.Json ->
+            content.contentType
+                .toOption()
+                .map { it.withoutParameters() }
+                .filter { it == ContentType.Application.Json }
+                .map {
                     CachingOptions(
                         cacheControl = CacheControl.MaxAge(maxAgeSeconds = config.cacheMaxAge),
                         expires = GMTDate(Instant.now().plusSeconds(config.cacheMaxAge.toLong()).toEpochMilli()),
                     )
-                else -> null
-            }
+                }.getOrNull()
         }
     }
     routing {

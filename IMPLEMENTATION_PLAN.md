@@ -50,6 +50,7 @@ All phases below are fully implemented and verified. See `PROGRESS.md` for the d
 - Testcontainers (`postgres:16`) replaces hardcoded `localhost:5432`
 - Three-layer test structure: acceptance (12 specs), integration (4 specs), unit (5 specs)
 - All tests tagged: `@Tags("acceptance")`, `@Tags("integration")`, or untagged (unit)
+- Arrow test matchers (`EitherMatchers.kt`, `OptionMatchers.kt`) for expressive assertions
 
 ### Phase 8: Cleanup & Removal -- COMPLETE
 - Old `io.sdkman` package tree fully removed

@@ -18,6 +18,8 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
+import io.sdkman.state.support.shouldBeLeft
+import io.sdkman.state.support.shouldBeRight
 
 class TagServiceUnitSpec :
     ShouldSpec({
@@ -40,7 +42,7 @@ class TagServiceUnitSpec :
                     service.replaceTags(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts", "latest"))
 
                 // then: succeeds
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify {
                     tagsRepo.replaceTags(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts", "latest"))
                 }
@@ -61,7 +63,7 @@ class TagServiceUnitSpec :
                 val result = service.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
 
                 // then: returns DatabaseError
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
@@ -95,7 +97,7 @@ class TagServiceUnitSpec :
                 val result = service.findTagNamesByVersionId(42)
 
                 // then: returns DatabaseError
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
@@ -123,7 +125,7 @@ class TagServiceUnitSpec :
                 val result = service.deleteTag(uniqueTag, "admin")
 
                 // then: succeeds and records audit
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify { tagsRepo.deleteTag(uniqueTag) }
                 coVerify { auditRepo.recordAudit("admin", AuditOperation.DELETE, uniqueTag) }
             }
@@ -143,7 +145,7 @@ class TagServiceUnitSpec :
                 val result = service.deleteTag(uniqueTag, "admin")
 
                 // then: returns TagNotFound
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.TagNotFound>()
                     error.tagName shouldBe "nonexistent"
@@ -171,7 +173,7 @@ class TagServiceUnitSpec :
                 val result = service.deleteTag(uniqueTag, "admin")
 
                 // then: returns DatabaseError wrapping the failure
-                result.isLeft() shouldBe true
+                result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
@@ -203,7 +205,7 @@ class TagServiceUnitSpec :
                 val result = service.deleteTag(uniqueTag, "admin")
 
                 // then: still succeeds (audit failure is logged but non-fatal)
-                result.isRight() shouldBe true
+                result.shouldBeRight()
             }
 
             should("pass correct username to audit record") {
@@ -224,7 +226,7 @@ class TagServiceUnitSpec :
                 val result = service.deleteTag(uniqueTag, "vendor-user")
 
                 // then: audit records the correct username
-                result.isRight() shouldBe true
+                result.shouldBeRight()
                 coVerify {
                     auditRepo.recordAudit("vendor-user", AuditOperation.DELETE, uniqueTag)
                 }
