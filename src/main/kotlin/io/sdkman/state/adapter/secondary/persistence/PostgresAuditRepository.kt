@@ -1,7 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.Either
-import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Auditable
@@ -30,8 +29,8 @@ internal object AuditTable : Table(name = "vendor_audit") {
 class PostgresAuditRepository : AuditRepository {
     private fun Auditable.toJsonElement(): JsonElement =
         when (this) {
-            is Version -> Json.encodeToJsonElement(this.toDto())
-            is UniqueTag -> Json.encodeToJsonElement(this.toDto())
+            is Version -> Json.encodeToJsonElement(this.toAuditData())
+            is UniqueTag -> Json.encodeToJsonElement(this.toAuditData())
         }
 
     override suspend fun recordAudit(

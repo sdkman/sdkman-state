@@ -65,6 +65,15 @@ All phases below are fully implemented and verified. See `PROGRESS.md` for the d
 
 ---
 
+## Post-Migration Corrective Actions
+
+### Cross-Adapter Dependency Fix -- COMPLETE
+- `PostgresAuditRepository` (secondary adapter) was importing `toDto()` from the primary adapter (REST DTO layer), violating hexagonal RULE-003
+- Created `AuditSerialization.kt` in the persistence package with audit-specific `@Serializable` types (`AuditVersionData`, `AuditTagData`)
+- Each adapter now owns its own serialization concern -- no cross-adapter dependencies remain
+
+---
+
 ## Architecture Reference
 
 ```

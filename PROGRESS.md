@@ -613,3 +613,21 @@ Each entry must follow this structure exactly:
 **Learnings:**
 - _Patterns:_ Spec documents should be updated iteratively during implementation, not left as aspirational — divergence between spec and code creates confusion for future work
 - _Context:_ All 10 phases of the modernisation are fully implemented and verified. The spec now accurately reflects the as-built architecture.
+
+---
+
+### [2026-03-15 37:00] — Post-Migration: Fix Cross-Adapter Dependency in PostgresAuditRepository
+
+**Summary:** Fixed hexagonal architecture violation where `PostgresAuditRepository` (secondary adapter) imported `toDto()` from the primary adapter's REST DTO layer. Created audit-specific `@Serializable` types (`AuditVersionData`, `AuditTagData`) in the persistence package so each adapter owns its own serialization concern.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/AuditSerialization.kt` — new file; `AuditVersionData`, `AuditTagData` with `toAuditData()` and `toDomain()` extensions
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepository.kt` — removed import of `toDto()` from primary adapter; uses `toAuditData()` from persistence package
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — `deserializeVersionData` uses `AuditVersionData.serializer()` instead of `VersionDto.serializer()`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + detektTest + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Each adapter should own its serialization types even when the shape is identical to another adapter's DTOs — this prevents cross-adapter coupling and respects hexagonal boundaries
+- _Gotchas:_ `internal` visibility on the audit types allows test source sets in the same module to access them, but prevents leakage to external modules
+- _Context:_ Test `Json.kt` correctly uses REST DTOs for constructing HTTP request bodies (testing the primary adapter), while test `Postgres.kt` now correctly uses audit types for reading audit table data (testing the secondary adapter)
