@@ -12,32 +12,16 @@ import io.sdkman.domain.Platform
 import io.sdkman.domain.TagsRepository
 import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.VersionTag
-import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import java.time.Instant
 
 class TagsRepositoryImpl : TagsRepository {
-    private object VersionTags : IntIdTable("version_tags") {
-        val candidate = text("candidate")
-        val tag = text("tag")
-        val distribution = text("distribution")
-        val platform = text("platform")
-        val versionId = integer("version_id")
-        val createdAt = timestamp("created_at")
-        val lastUpdatedAt = timestamp("last_updated_at")
-
-        init {
-            uniqueIndex(candidate, tag, distribution, platform)
-        }
-    }
-
     private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
 
     private fun dbToDistribution(value: String): Option<Distribution> =

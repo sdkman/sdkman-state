@@ -11,6 +11,7 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
 import io.sdkman.repos.NA_SENTINEL
+import io.sdkman.repos.VersionTags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -39,16 +40,6 @@ private object Versions : IntIdTable(name = "versions") {
     val md5sum = varchar("md5_sum", length = 32).nullable()
     val sha256sum = varchar("sha_256_sum", length = 64).nullable()
     val sha512sum = varchar("sha_512_sum", length = 128).nullable()
-    val lastUpdatedAt = timestamp("last_updated_at")
-}
-
-private object VersionTags : IntIdTable(name = "version_tags") {
-    val candidate = text("candidate")
-    val tag = text("tag")
-    val distribution = text("distribution")
-    val platform = text("platform")
-    val versionId = integer("version_id")
-    val createdAt = timestamp("created_at")
     val lastUpdatedAt = timestamp("last_updated_at")
 }
 
