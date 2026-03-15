@@ -4,7 +4,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.left
 import arrow.core.right
-import arrow.core.toNonEmptyListOrNull
+import arrow.core.toNonEmptyListOrNone
 import io.sdkman.domain.UniqueTag
 
 object UniqueTagValidator {
@@ -15,8 +15,10 @@ object UniqueTagValidator {
                 if (uniqueTag.tag.isBlank()) add(EmptyFieldError("tag"))
             }
         return errors
-            .toNonEmptyListOrNull()
-            ?.left()
-            ?: uniqueTag.right()
+            .toNonEmptyListOrNone()
+            .fold(
+                { uniqueTag.right() },
+                { nel -> nel.left() },
+            )
     }
 }

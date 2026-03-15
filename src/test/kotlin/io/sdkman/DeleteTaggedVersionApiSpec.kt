@@ -66,10 +66,10 @@ class DeleteTaggedVersionApiSpec :
                     // then: 409 Conflict with tag list
                     response.status shouldBe HttpStatusCode.Conflict
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["error"]?.jsonPrimitive?.content shouldBe "Conflict"
-                    body["message"]?.jsonPrimitive?.content shouldBe
+                    body.getValue("error").jsonPrimitive.content shouldBe "Conflict"
+                    body.getValue("message").jsonPrimitive.content shouldBe
                         "Cannot delete version with active tags. Remove or reassign the following tags first."
-                    body["tags"]?.jsonArray?.map { it.jsonPrimitive.content } shouldContainExactlyInAnyOrder
+                    body.getValue("tags").jsonArray.map { it.jsonPrimitive.content } shouldContainExactlyInAnyOrder
                         listOf("latest", "27")
                 }
 
@@ -119,7 +119,7 @@ class DeleteTaggedVersionApiSpec :
                     // then: 409 Conflict
                     response.status shouldBe HttpStatusCode.Conflict
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["tags"]?.jsonArray?.map { it.jsonPrimitive.content } shouldBe listOf("latest")
+                    body.getValue("tags").jsonArray.map { it.jsonPrimitive.content } shouldBe listOf("latest")
                 }
             }
         }

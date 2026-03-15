@@ -302,8 +302,8 @@ class DeleteTagApiSpec :
 
                     response.status shouldBe HttpStatusCode.NotFound
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["error"]?.jsonPrimitive?.content shouldBe "Not Found"
-                    body["message"]?.jsonPrimitive?.content shouldBe "Tag 'nonexistent' not found"
+                    body.getValue("error").jsonPrimitive.content shouldBe "Not Found"
+                    body.getValue("message").jsonPrimitive.content shouldBe "Tag 'nonexistent' not found"
                 }
             }
         }
@@ -322,7 +322,7 @@ class DeleteTagApiSpec :
 
                     response.status shouldBe HttpStatusCode.BadRequest
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["error"]?.jsonPrimitive?.content shouldBe "Validation Error"
+                    body.getValue("error").jsonPrimitive.content shouldBe "Validation Error"
                 }
             }
         }
@@ -341,7 +341,7 @@ class DeleteTagApiSpec :
 
                     response.status shouldBe HttpStatusCode.BadRequest
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["error"]?.jsonPrimitive?.content shouldBe "Validation Error"
+                    body.getValue("error").jsonPrimitive.content shouldBe "Validation Error"
                 }
             }
         }
@@ -394,10 +394,14 @@ class DeleteTagApiSpec :
 
                     response.status shouldBe HttpStatusCode.BadRequest
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["error"]?.jsonPrimitive?.content shouldBe "Validation Error"
-                    val failures = body["failures"]?.jsonArray
-                    failures?.map { it.jsonObject["field"]?.jsonPrimitive?.content } shouldContainExactlyInAnyOrder
-                        listOf("candidate", "tag")
+                    body.getValue("error").jsonPrimitive.content shouldBe "Validation Error"
+                    val failures = body.getValue("failures").jsonArray
+                    failures
+                        .map {
+                            it.jsonObject
+                                .getValue("field")
+                                .jsonPrimitive.content
+                        }.shouldContainExactlyInAnyOrder(listOf("candidate", "tag"))
                 }
             }
         }
@@ -485,9 +489,9 @@ class DeleteTagApiSpec :
                 record.operation shouldBe io.sdkman.domain.AuditOperation.DELETE
 
                 val auditData = Json.parseToJsonElement(record.versionData).jsonObject
-                auditData["candidate"]?.jsonPrimitive?.content shouldBe candidate
-                auditData["tag"]?.jsonPrimitive?.content shouldBe "latest"
-                auditData["platform"]?.jsonPrimitive?.content shouldBe platform.name
+                auditData.getValue("candidate").jsonPrimitive.content shouldBe candidate
+                auditData.getValue("tag").jsonPrimitive.content shouldBe "latest"
+                auditData.getValue("platform").jsonPrimitive.content shouldBe platform.name
             }
         }
     })
