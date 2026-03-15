@@ -50,7 +50,7 @@ class AuditRepositoryImpl : AuditRepository {
                 }
                 Unit
             }.mapLeft { error ->
-                DatabaseFailure(
+                DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to record audit: ${error.message}",
                     cause = error,
                 )

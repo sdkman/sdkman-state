@@ -77,10 +77,22 @@ enum class Platform(
     }
 }
 
-data class DatabaseFailure(
+sealed class DatabaseFailure(
     override val message: String,
     override val cause: Throwable,
-) : Throwable()
+) : Throwable(message, cause) {
+    data class ConnectionFailure(
+        override val message: String,
+        override val cause: Throwable,
+    ) : DatabaseFailure(message, cause)
+
+    data class QueryExecutionFailure(
+        override val message: String,
+        override val cause: Throwable,
+    ) : DatabaseFailure(message, cause)
+}
+
+data object HealthCheckSuccess
 
 enum class HealthStatus {
     SUCCESS,
@@ -88,7 +100,7 @@ enum class HealthStatus {
 }
 
 interface HealthRepository {
-    suspend fun checkDatabaseConnection(): Either<DatabaseFailure, Unit>
+    suspend fun checkDatabaseConnection(): Either<DatabaseFailure, HealthCheckSuccess>
 }
 
 @Serializable
