@@ -326,8 +326,9 @@ fun Application.configureRouting(
                             }.bind()
                     UniqueTagValidator
                         .validate(uniqueTag)
-                        .mapLeft { DeleteTagError.Validation(it) }
-                        .bind()
+                        .mapLeft { errors ->
+                            DeleteTagError.Validation(errors.map { ValidationFailure(it.field, it.message) })
+                        }.bind()
                     val deletedCount =
                         tagsRepo
                             .deleteTag(uniqueTag)
