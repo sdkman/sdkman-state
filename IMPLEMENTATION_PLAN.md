@@ -119,22 +119,22 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 5: Primary Adapters (REST)
 
 ### 5.1 Request/Response DTOs (spec section 4.1)
-- [x] Create `dto/VersionDto.kt` -- @Serializable DTO for GET responses and audit serialization at persistence boundary; includes toDto()/toDomain() mappers
-- [x] Create `dto/UniqueVersionDto.kt` -- @Serializable DTO for DELETE /versions request deserialization; includes toDomain() mapper
-- [x] Create `dto/UniqueTagDto.kt` -- @Serializable DTO for DELETE /versions/tags request deserialization and audit serialization; includes toDto()/toDomain() mappers
+- [x] Create `dto/VersionDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.VersionDto`; @Serializable DTO with toDto()/toDomain() mappers
+- [x] Create `dto/UniqueVersionDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto`; @Serializable DTO with toDomain() mapper
+- [x] Create `dto/UniqueTagDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto`; @Serializable DTO with toDto()/toDomain() mappers
 - [ ] Create `adapter/primary/rest/dto/VersionRequest.kt` -- `@Serializable` unvalidated request DTO (JSON parsing moves here from VersionRequestValidator)
 - [ ] Create `adapter/primary/rest/dto/UniqueVersionRequest.kt` -- `@Serializable` delete request DTO
 - [ ] Create `adapter/primary/rest/dto/UniqueTagRequest.kt` -- `@Serializable` tag delete request DTO
-- [x] Create `adapter/primary/rest/dto/ErrorResponse.kt` -- moved from Routing.kt to `dto/` package
-- [x] Create `adapter/primary/rest/dto/TagConflictResponse.kt` -- moved from Routing.kt to `dto/` package
-- [x] Create `adapter/primary/rest/dto/HealthCheckResponse.kt` -- moved from Routing.kt to `dto/` package (`message` was already `Option<String>`, no fix needed)
+- [x] Create `adapter/primary/rest/dto/ErrorResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.ErrorResponse`
+- [x] Create `adapter/primary/rest/dto/TagConflictResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse`
+- [x] Create `adapter/primary/rest/dto/HealthCheckResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.HealthCheckResponse`
 - [ ] Create `adapter/primary/rest/dto/ValidationErrorResponse.kt` -- move from validation/ValidationErrors.kt
 
 ### 5.2 REST Route Adapters (spec section 4.1)
-- [x] Create `adapter/primary/rest/RequestExtensions.kt` -- extracted `authenticatedUsername()`, `visibleQueryParam()`, `toDistribution()`, `respondDomainError()` helpers
-- [x] Create `adapter/primary/rest/VersionRoutes.kt` -- thin adapter split into `versionReadRoutes()` (GET endpoints, no auth) and `versionWriteRoutes()` (POST/DELETE, authenticated)
-- [x] Create `adapter/primary/rest/TagRoutes.kt` -- thin adapter for DELETE /versions/tags
-- [x] Create `adapter/primary/rest/HealthRoutes.kt` -- thin adapter for GET /meta/health
+- [x] Create `adapter/primary/rest/RequestExtensions.kt` -- now at `io.sdkman.state.adapter.primary.rest.RequestExtensions`
+- [x] Create `adapter/primary/rest/VersionRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.VersionRoutes`; split into `versionReadRoutes()` and `versionWriteRoutes()`
+- [x] Create `adapter/primary/rest/TagRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.TagRoutes`
+- [x] Create `adapter/primary/rest/HealthRoutes.kt` -- now at `io.sdkman.state.adapter.primary.rest.HealthRoutes`
 - [ ] Move `Compression.kt` (from plugins/HTTP.kt) to `adapter/primary/rest/Compression.kt`
 - [ ] Move `Serialization.kt` (from plugins/) to `adapter/primary/rest/Serialization.kt`
 
@@ -206,14 +206,16 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 ## Phase 8: Cleanup & Removal
 
-- [ ] Remove old `io.sdkman` package tree (all files migrated to `io.sdkman.state`)
-- [ ] Remove `plugins/Routing.kt` (logic distributed to services + route adapters)
-- [ ] Remove `plugins/HTTP.kt` (split into Compression.kt + caching config)
-- [ ] Remove `plugins/Serialization.kt` (moved to adapter)
-- [ ] Remove `plugins/Databases.kt` (moved to PostgresConnectivity.kt)
-- [ ] Remove `repos/` package (replaced by adapter/secondary/persistence/)
-- [ ] Remove `validation/` package (moved to application/validation/)
-- [ ] Remove `domain/Domain.kt` (split into domain/model/ files)
+> **Note:** The old `io.sdkman` package tree has already been removed as part of the package restructuring. All code now lives under `io.sdkman.state`. Remaining items track cleanup of legacy files within the new structure.
+
+- [x] Remove old `io.sdkman` package tree (all files migrated to `io.sdkman.state`)
+- [x] Remove old `plugins/Routing.kt` (logic distributed to services + route adapters; new Routing.kt is a 22-line composition function at `adapter/primary/rest/Routing.kt`)
+- [ ] Remove `plugins/HTTP.kt` (split into Compression.kt + caching config) -- still at `io.sdkman.state.plugins.HTTP`
+- [ ] Remove `plugins/Serialization.kt` (moved to adapter) -- still at `io.sdkman.state.plugins.Serialization`
+- [ ] Remove `plugins/Databases.kt` (moved to PostgresConnectivity.kt) -- still at `io.sdkman.state.plugins.Databases`
+- [x] Remove old `repos/` package (replaced by `adapter/secondary/persistence/`)
+- [x] Remove old `validation/` package (moved to `application/validation/`)
+- [x] Remove old `domain/Domain.kt` (split into `domain/model/` and `domain/error/` files)
 - [ ] Verify all existing API behaviour preserved (all tests green)
 - [ ] Run `./gradlew build` (compile + ktlint + tests)
 
