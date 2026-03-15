@@ -246,3 +246,27 @@ Each entry must follow this structure exactly:
 - _Context:_ DTOs currently live in `io.sdkman.dto` package — will move to `io.sdkman.state.adapter.primary.rest.dto` during Phase 1.1 package restructuring
 
 ---
+
+### [2026-03-15 22:00] — Phase 5.1 + 5.2: Split Routing.kt into Focused Route Files
+
+**Summary:** Extracted response DTOs (ErrorResponse, TagConflictResponse, HealthCheckResponse) from Routing.kt to `io.sdkman.dto` package. Split monolithic `configureRouting` (233 lines) into four focused files: `VersionRoutes.kt` (read/write split for auth boundary), `TagRoutes.kt`, `HealthRoutes.kt`, and `RequestExtensions.kt`. Routing.kt reduced to 22-line composition function, naturally removing the `@Suppress("LongMethod")` annotation.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/dto/ErrorResponse.kt` — new file; @Serializable response DTO extracted from Routing.kt
+- `src/main/kotlin/io/sdkman/dto/TagConflictResponse.kt` — new file; @Serializable response DTO extracted from Routing.kt
+- `src/main/kotlin/io/sdkman/dto/HealthCheckResponse.kt` — new file; @Serializable response DTO with Option<String> message field
+- `src/main/kotlin/io/sdkman/plugins/RequestExtensions.kt` — new file; shared helpers: authenticatedUsername(), visibleQueryParam(), toDistribution(), respondDomainError()
+- `src/main/kotlin/io/sdkman/plugins/VersionRoutes.kt` — new file; Route.versionReadRoutes() for GETs, Route.versionWriteRoutes() for POST/DELETE
+- `src/main/kotlin/io/sdkman/plugins/TagRoutes.kt` — new file; Route.tagRoutes() for DELETE /versions/tags
+- `src/main/kotlin/io/sdkman/plugins/HealthRoutes.kt` — new file; Route.healthRoutes() for GET /meta/health
+- `src/main/kotlin/io/sdkman/plugins/Routing.kt` — simplified to 22-line composition; removed inline DTOs, error mappers, and route handlers
+- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt` — updated import from io.sdkman.plugins.HealthCheckResponse to io.sdkman.dto.HealthCheckResponse
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Version routes need auth-boundary split: `versionReadRoutes()` (GET, unauthenticated) and `versionWriteRoutes()` (POST/DELETE, inside `authenticate("auth-basic")` block) — a single `versionRoutes()` function can't serve both contexts
+- _Gotchas:_ Arrow extension functions like `getOrElse`, `firstOrNone`, `flatMap` need explicit imports in each file — they're not auto-imported when code is moved to new files
+- _Context:_ Remaining Phase 5.2 items (move Compression.kt from HTTP.kt, move Serialization.kt) are purely file relocations and can be done during Phase 8 cleanup
+
+---
