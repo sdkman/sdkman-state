@@ -1,8 +1,11 @@
+@file:UseSerializers(OptionSerializer::class)
+
 package io.sdkman.plugins
 
 import arrow.core.*
 import arrow.core.raise.either
 import arrow.core.raise.option
+import arrow.core.serialization.OptionSerializer
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -26,6 +29,7 @@ import io.sdkman.validation.ValidationErrorResponse
 import io.sdkman.validation.ValidationFailure
 import io.sdkman.validation.VersionRequestValidator
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -45,7 +49,7 @@ data class TagConflictResponse(
 @Serializable
 data class HealthCheckResponse(
     val status: HealthStatus,
-    val message: String? = null,
+    val message: Option<String> = None,
 )
 
 private sealed interface DeleteError {
@@ -185,12 +189,12 @@ fun Application.configureRouting(
                 .map {
                     call.respond(
                         HttpStatusCode.OK,
-                        HealthCheckResponse(HealthStatus.SUCCESS, null),
+                        HealthCheckResponse(HealthStatus.SUCCESS),
                     )
                 }.getOrElse { failure ->
                     call.respond(
                         HttpStatusCode.ServiceUnavailable,
-                        HealthCheckResponse(HealthStatus.FAILURE, failure.message),
+                        HealthCheckResponse(HealthStatus.FAILURE, failure.message.toOption()),
                     )
                 }
         }
@@ -278,7 +282,7 @@ fun Application.configureRouting(
                     val uniqueVersion =
                         Either
                             .catch { call.receive<UniqueVersion>() }
-                            .mapLeft { DeleteError.Validation("Invalid request: ${it.message ?: "Unknown error"}") }
+                            .mapLeft { DeleteError.Validation("Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}") }
                             .bind()
                     val validUniqueVersion =
                         UniqueVersionValidator
@@ -321,7 +325,7 @@ fun Application.configureRouting(
                             .catch { call.receive<UniqueTag>() }
                             .mapLeft {
                                 DeleteTagError.Deserialization(
-                                    "Invalid request: ${it.message ?: "Unknown error"}",
+                                    "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
                                 )
                             }.bind()
                     UniqueTagValidator
