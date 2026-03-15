@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5, 7, and 8 complete; Phase 2.1 config interface done; Phase 6 (detekt rules) blocked on external artifact
+> **Status:** In progress -- Phases 0-5, 7, 8, and 9.1 complete; Phase 6 (detekt rules) blocked on external artifact; Phase 9.2-9.5 pending
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -218,6 +218,37 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Remove old `domain/Domain.kt` (split into `domain/model/` and `domain/error/` files)
 - [x] Verify all existing API behaviour preserved (all 151 tests green with Testcontainers)
 - [x] Run `./gradlew build` (compile + ktlint + detekt + tests) -- passes
+
+---
+
+## Phase 9: Spec Alignment (Post-Migration Corrections)
+
+Deviations from `specs/modernisation.md` discovered after initial migration. These are structural corrections to fully align with the specification.
+
+### 9.1 Table Co-location (spec sections 4.2, 7)
+- [x] Move `Versions` from `PostgresConnectivity.kt` to `PostgresVersionRepository.kt` as `internal object VersionsTable`
+- [x] Move `VersionTags` from `PostgresConnectivity.kt` to `PostgresTagRepository.kt` as `internal object VersionTagsTable`
+- [x] Move `VendorAuditTable` from `PostgresConnectivity.kt` to `PostgresAuditRepository.kt` as `internal object AuditTable`
+- [x] Update all references in production code and test support (`Postgres.kt`)
+- [x] `PostgresConnectivity.kt` now contains only `NA_SENTINEL`, `dbQuery`, and `toKotlinTimeInstant()`
+
+### 9.2 Repository Interface Alignment (spec section 2.3)
+- [ ] Rename `VersionRepository.read()` overloads to `findByCandidate()` and `findUnique()` per spec
+- [ ] Wrap `VersionRepository.findVersionId` return in `Either<DatabaseFailure, Option<Int>>` (currently bare `Option<Int>`)
+- [ ] Wrap `VersionRepository.delete` return in `Either<DatabaseFailure, Int>` (currently bare `Int`)
+- [ ] Move `findVersionIdByTag` from `TagsRepository` to `VersionRepository` (it looks up a version, belongs with version operations)
+- [ ] Add batch `findTagNamesByVersionIds(List<Int>): Either<DatabaseFailure, Map<Int, List<String>>>` to `TagRepository`
+- [ ] Rename `TagsRepository` interface to `TagRepository` per spec
+
+### 9.3 Service Interface Alignment (spec section 2.4)
+- [ ] Rename `VersionService.findAll()` to `findByCandidate()` and `findOne()` to `findUnique()` per spec
+- [ ] Add `replaceTags()` to `TagService` interface; move tag orchestration from `VersionServiceImpl` to `TagServiceImpl`
+
+### 9.4 CandidateLoader Placement (spec section 5)
+- [ ] Move `CandidateLoader.kt` from `application/validation/` to `config/` per spec
+
+### 9.5 ConfigExtensions Nullable Cleanup (spec section 10)
+- [ ] Replace `propertyOrNull(path)?.getString()` in `ConfigExtensions.kt` with Option-based helpers
 
 ---
 
