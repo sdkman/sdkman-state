@@ -26,10 +26,10 @@ import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransacti
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
 
-const val DB_HOST = "localhost"
-const val DB_PORT = 5432
-const val DB_USERNAME = "postgres"
-const val DB_PASSWORD = "postgres"
+val DB_HOST: String get() = PostgresTestContainer.host
+val DB_PORT: Int get() = PostgresTestContainer.port
+val DB_USERNAME: String get() = PostgresTestContainer.username
+val DB_PASSWORD: String get() = PostgresTestContainer.password
 
 private object Versions : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
