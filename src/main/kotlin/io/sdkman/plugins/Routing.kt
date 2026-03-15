@@ -15,6 +15,7 @@ import io.ktor.server.routing.*
 import io.sdkman.domain.AuditOperation
 import io.sdkman.domain.AuditRepository
 import io.sdkman.domain.Distribution
+import io.sdkman.domain.DomainError
 import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
@@ -52,53 +53,32 @@ data class HealthCheckResponse(
     val message: Option<String> = None,
 )
 
-private sealed interface DeleteError {
-    data class Validation(
-        val message: String,
-    ) : DeleteError
-
-    data object NotFound : DeleteError
-
-    data class TagConflict(
-        val tags: List<String>,
-    ) : DeleteError
-
-    data class Database(
-        val message: String,
-    ) : DeleteError
-}
-
-private sealed interface DeleteTagError {
-    data class Deserialization(
-        val message: String,
-    ) : DeleteTagError
-
-    data class Validation(
-        val failures: List<ValidationFailure>,
-    ) : DeleteTagError
-
-    data class NotFound(
-        val tagName: String,
-    ) : DeleteTagError
-
-    data class Database(
-        val message: String,
-    ) : DeleteTagError
-}
-
-private suspend fun ApplicationCall.respondDeleteTagError(error: DeleteTagError) {
+private suspend fun ApplicationCall.respondDomainError(error: DomainError) {
     when (error) {
-        is DeleteTagError.Deserialization ->
+        is DomainError.ValidationFailed ->
             respond(HttpStatusCode.BadRequest, ErrorResponse("Bad Request", error.message))
 
-        is DeleteTagError.Validation ->
+        is DomainError.ValidationFailures ->
             respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation Error", error.failures))
 
-        is DeleteTagError.NotFound ->
+        is DomainError.VersionNotFound ->
+            respond(HttpStatusCode.NotFound)
+
+        is DomainError.TagNotFound ->
             respond(HttpStatusCode.NotFound, ErrorResponse("Not Found", "Tag '${error.tagName}' not found"))
 
-        is DeleteTagError.Database ->
-            respond(HttpStatusCode.InternalServerError, ErrorResponse("Database Error", error.message))
+        is DomainError.TagConflict ->
+            respond(
+                HttpStatusCode.Conflict,
+                TagConflictResponse(
+                    error = "Conflict",
+                    message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
+                    tags = error.tags,
+                ),
+            )
+
+        is DomainError.DatabaseError ->
+            respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.failure.message))
     }
 }
 
@@ -137,29 +117,6 @@ private suspend fun processTags(
             ).onLeft { error ->
                 logger.warn("Tag processing failed: ${error.message}", error)
             }
-    }
-}
-
-private suspend fun ApplicationCall.respondDeleteError(error: DeleteError) {
-    when (error) {
-        is DeleteError.Validation ->
-            respond(HttpStatusCode.BadRequest, ErrorResponse("Validation failed", error.message))
-
-        is DeleteError.NotFound ->
-            respond(HttpStatusCode.NotFound)
-
-        is DeleteError.TagConflict ->
-            respond(
-                HttpStatusCode.Conflict,
-                TagConflictResponse(
-                    error = "Conflict",
-                    message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
-                    tags = error.tags,
-                ),
-            )
-
-        is DeleteError.Database ->
-            respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.message))
     }
 }
 
@@ -278,16 +235,19 @@ fun Application.configureRouting(
             }
             delete("/versions") {
                 val username = call.authenticatedUsername()
-                either<DeleteError, Unit> {
+                either<DomainError, Unit> {
                     val uniqueVersion =
                         Either
                             .catch { call.receive<UniqueVersion>() }
-                            .mapLeft { DeleteError.Validation("Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}") }
-                            .bind()
+                            .mapLeft {
+                                DomainError.ValidationFailed(
+                                    "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
+                                )
+                            }.bind()
                     val validUniqueVersion =
                         UniqueVersionValidator
                             .validate(uniqueVersion)
-                            .mapLeft { DeleteError.Validation(it.message) }
+                            .mapLeft { DomainError.ValidationFailed(it.message) }
                             .bind()
                     val versionToDelete =
                         versionsRepo
@@ -296,49 +256,55 @@ fun Application.configureRouting(
                                 version = validUniqueVersion.version,
                                 platform = validUniqueVersion.platform,
                                 distribution = validUniqueVersion.distribution,
-                            ).toEither { DeleteError.NotFound }
-                            .bind()
+                            ).toEither {
+                                DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version)
+                            }.bind()
                     val versionId =
                         versionsRepo
                             .findVersionId(validUniqueVersion)
-                            .toEither { DeleteError.NotFound }
-                            .bind()
+                            .toEither {
+                                DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version)
+                            }.bind()
                     val tagNames =
                         tagsRepo
                             .findTagNamesByVersionId(versionId)
-                            .mapLeft { DeleteError.Database(it.message) }
+                            .mapLeft { DomainError.DatabaseError(it) }
                             .bind()
-                    if (tagNames.isNotEmpty()) raise(DeleteError.TagConflict(tagNames))
+                    if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
                     logAudit(logger, auditRepo, username, AuditOperation.DELETE, versionToDelete)
                     val deleted = versionsRepo.delete(validUniqueVersion)
-                    if (deleted == 0) raise(DeleteError.NotFound)
+                    if (deleted == 0) {
+                        raise(
+                            DomainError.VersionNotFound(validUniqueVersion.candidate, validUniqueVersion.version),
+                        )
+                    }
                 }.fold(
-                    ifLeft = { error -> call.respondDeleteError(error) },
+                    ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
             }
             delete("/versions/tags") {
                 val username = call.authenticatedUsername()
-                either {
+                either<DomainError, Unit> {
                     val uniqueTag =
                         Either
                             .catch { call.receive<UniqueTag>() }
                             .mapLeft {
-                                DeleteTagError.Deserialization(
+                                DomainError.ValidationFailed(
                                     "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
                                 )
                             }.bind()
                     UniqueTagValidator
                         .validate(uniqueTag)
                         .mapLeft { errors ->
-                            DeleteTagError.Validation(errors.map { ValidationFailure(it.field, it.message) })
+                            DomainError.ValidationFailures(errors.map { ValidationFailure(it.field, it.message) })
                         }.bind()
                     val deletedCount =
                         tagsRepo
                             .deleteTag(uniqueTag)
-                            .mapLeft { DeleteTagError.Database(it.message) }
+                            .mapLeft { DomainError.DatabaseError(it) }
                             .bind()
-                    if (deletedCount == 0) raise(DeleteTagError.NotFound(uniqueTag.tag))
+                    if (deletedCount == 0) raise(DomainError.TagNotFound(uniqueTag.tag))
                     auditRepo
                         .recordAudit(username, AuditOperation.DELETE, uniqueTag)
                         .onLeft { error ->
@@ -346,10 +312,10 @@ fun Application.configureRouting(
                                 "Audit logging failed for DELETE /versions/tags: ${error.message}",
                             )
                         }
-                    call.respond(HttpStatusCode.NoContent)
-                }.onLeft { error ->
-                    call.respondDeleteTagError(error)
-                }
+                }.fold(
+                    ifLeft = { error -> call.respondDomainError(error) },
+                    ifRight = { call.respond(HttpStatusCode.NoContent) },
+                )
             }
         }
     }

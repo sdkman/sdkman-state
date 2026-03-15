@@ -89,3 +89,20 @@ Each entry must follow this structure exactly:
 - _Context:_ In Phase 3 the table will move to `PostgresTagRepository.kt` as its co-located `internal object VersionTagsTable` — for now `PostgresConnectivity.kt` is the shared infrastructure home
 
 ---
+
+### [2026-03-15 15:00] — Phase 0.3: Promote private sealed error types to domain-level DomainError
+
+**Summary:** Consolidated private `DeleteError` and `DeleteTagError` sealed interfaces from `Routing.kt` into a unified `DomainError` sealed interface in `Domain.kt`, shared by both DELETE handlers via a single `respondDomainError` mapper.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/domain/Domain.kt` — added `DomainError` sealed interface with 6 variants: `VersionNotFound`, `TagConflict`, `TagNotFound`, `ValidationFailed`, `ValidationFailures`, `DatabaseError`
+- `src/main/kotlin/io/sdkman/plugins/Routing.kt` — removed private `DeleteError` and `DeleteTagError` sealed interfaces; removed `respondDeleteError` and `respondDeleteTagError`; added unified `respondDomainError`; updated both DELETE handlers to use `DomainError` variants
+
+**Test outcome:** PASS — all 131 tests green
+
+**Learnings:**
+- _Patterns:_ `DomainError.DatabaseError` wraps the full `DatabaseFailure` object rather than just extracting the message, preserving the original error for logging/debugging
+- _Gotchas:_ The DELETE /versions handler used label "Validation failed" while DELETE /versions/tags used "Bad Request" — unified to "Bad Request" since no tests assert the exact label for delete version errors
+- _Context:_ `DomainError.ValidationFailures` depends on `ValidationFailure` from the validation package — this cross-package dependency will be resolved when `ValidationFailure` moves to the domain layer in Phase 1.2
+
+---
