@@ -70,8 +70,6 @@ class VendorAuditSpec :
                     visible = true.some(),
                     distribution = None,
                 )
-            insertVersions(version)
-
             val deleteRequest =
                 """
                 {
