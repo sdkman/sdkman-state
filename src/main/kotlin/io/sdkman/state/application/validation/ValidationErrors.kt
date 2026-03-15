@@ -1,7 +1,5 @@
 package io.sdkman.state.application.validation
 
-import kotlinx.serialization.Serializable
-
 sealed class ValidationError {
     abstract val field: String
     abstract val message: String
@@ -75,15 +73,3 @@ data class InvalidRequestError(
     override val field: String = "request"
     override val message: String = "Invalid request: $details"
 }
-
-@Serializable
-data class ValidationFailure(
-    val field: String,
-    val message: String,
-)
-
-@Serializable
-data class ValidationErrorResponse(
-    val error: String,
-    val failures: List<ValidationFailure>,
-)

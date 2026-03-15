@@ -11,11 +11,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
+import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
+import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.application.validation.UniqueVersionValidator
-import io.sdkman.state.application.validation.ValidationErrorResponse
-import io.sdkman.state.application.validation.ValidationFailure
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Platform

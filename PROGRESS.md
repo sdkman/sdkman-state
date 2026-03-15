@@ -439,3 +439,26 @@ Each entry must follow this structure exactly:
 - _Context:_ `databaseUsername` and `databasePassword` are `Option<String>` per the spec, even though `application.conf` always provides defaults — this models the real-world case where credentials might come from external secret stores and might be absent in some configurations
 
 ---
+
+### [2026-03-15 30:00] — Phase 5.1: Request DTOs, ValidationErrorResponse Move, and DomainError Layering Fix
+
+**Summary:** Created `VersionRequest` unvalidated request DTO and moved `ValidationFailure`/`ValidationErrorResponse` from application validation layer to adapter DTO layer. Fixed hexagonal layering violation where `DomainError.ValidationFailures` (domain) imported `ValidationFailure` (application) — introduced domain-level `FieldError` type with adapter-boundary conversion to `ValidationFailure` DTO.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/dto/VersionRequest.kt` — new file; `@Serializable` unvalidated request DTO with all `Option` fields defaulting to `None`
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/dto/ValidationErrorResponse.kt` — new file; `@Serializable` `ValidationFailure` and `ValidationErrorResponse` moved from application layer
+- `src/main/kotlin/io/sdkman/state/domain/error/DomainError.kt` — added `FieldError(field, message)` domain type; `ValidationFailures` now uses `List<FieldError>` instead of `List<ValidationFailure>`, removing application layer import
+- `src/main/kotlin/io/sdkman/state/application/validation/ValidationErrors.kt` — removed `ValidationFailure` and `ValidationErrorResponse` (moved to DTO layer); removed unused `kotlinx.serialization.Serializable` import
+- `src/main/kotlin/io/sdkman/state/application/validation/VersionRequestValidator.kt` — added `validate(VersionRequest)` method operating on typed DTO; `validateRequest(String)` now uses `Json.decodeFromString<VersionRequest>` instead of manual `JsonObject` parsing; removed all `kotlinx.serialization.json.*` imports
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/VersionRoutes.kt` — updated imports from `application.validation.ValidationFailure/ValidationErrorResponse` to `adapter.primary.rest.dto.*`
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/TagRoutes.kt` — uses domain `FieldError` instead of `ValidationFailure` for `DomainError.ValidationFailures` construction
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/RequestExtensions.kt` — converts `FieldError` to `ValidationFailure` DTO at adapter boundary in `respondDomainError`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ `VersionRequest` DTO uses all `Option<T>` fields with `None` defaults, which works with `explicitNulls = false` in kotlinx.serialization — missing JSON fields become `None`, enabling the validator to report per-field errors for missing required fields
+- _Gotchas:_ `UniqueVersionRequest` and `UniqueTagRequest` DTOs are NOT NEEDED — `UniqueVersionDto` and `UniqueTagDto` already serve as both request and response DTOs with identical fields, making separate request types pure ceremony
+- _Context:_ The `FieldError` domain type mirrors `ValidationFailure` DTO structurally (`field: String, message: String`) but lives in the domain layer without `@Serializable`, respecting RULE-004 (domain entities must not reference infrastructure annotations). Conversion happens at the adapter boundary in `respondDomainError`.
+
+---
