@@ -1,8 +1,7 @@
-package io.sdkman.state.plugins
+package io.sdkman.state.config
 
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.sdkman.state.config.ApiAuthenticationConfig
 
 fun Application.configureBasicAuthentication(config: ApiAuthenticationConfig) =
     install(Authentication) {

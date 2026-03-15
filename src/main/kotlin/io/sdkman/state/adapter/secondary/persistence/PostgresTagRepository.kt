@@ -20,7 +20,7 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import java.time.Instant
 
-class TagsRepositoryImpl : TagsRepository {
+class PostgresTagRepository : TagsRepository {
     private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
 
     private fun dbToDistribution(value: String): Option<Distribution> =

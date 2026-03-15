@@ -21,7 +21,7 @@ class VersionsRepositorySpec :
 
         context("create") {
             should("insert a new version into the database") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "java",
@@ -49,7 +49,7 @@ class VersionsRepositorySpec :
             }
 
             should("insert a version without distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "scala",
@@ -76,7 +76,7 @@ class VersionsRepositorySpec :
             }
 
             should("update an existing version (upsert)") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val originalVersion =
                     Version(
                         candidate = "kotlin",
@@ -112,7 +112,7 @@ class VersionsRepositorySpec :
             }
 
             should("update last_updated_at timestamp when upserting a version") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "groovy",
@@ -159,7 +159,7 @@ class VersionsRepositorySpec :
 
         context("read by candidate with filters") {
             should("retrieve all versions for a candidate") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version1 =
                     Version(
                         candidate = "java",
@@ -200,7 +200,7 @@ class VersionsRepositorySpec :
             }
 
             should("filter versions by platform") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val linuxVersion =
                     Version(
                         candidate = "java",
@@ -239,7 +239,7 @@ class VersionsRepositorySpec :
             }
 
             should("filter versions by distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val temurinVersion =
                     Version(
                         candidate = "java",
@@ -278,7 +278,7 @@ class VersionsRepositorySpec :
             }
 
             should("filter versions by visibility") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val visibleVersion =
                     Version(
                         candidate = "java",
@@ -329,7 +329,7 @@ class VersionsRepositorySpec :
             }
 
             should("return empty list when no versions match") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
                     val versions =
@@ -347,7 +347,7 @@ class VersionsRepositorySpec :
 
         context("read specific version") {
             should("retrieve a specific version by candidate, version, platform, and distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "kotlin",
@@ -375,7 +375,7 @@ class VersionsRepositorySpec :
             }
 
             should("retrieve a version without distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "scala",
@@ -403,7 +403,7 @@ class VersionsRepositorySpec :
             }
 
             should("return None when version does not exist") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
                     val retrieved =
@@ -421,7 +421,7 @@ class VersionsRepositorySpec :
 
         context("delete") {
             should("delete an existing version with distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "java",
@@ -458,7 +458,7 @@ class VersionsRepositorySpec :
             }
 
             should("delete an existing version without distribution") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
                 val version =
                     Version(
                         candidate = "scala",
@@ -495,7 +495,7 @@ class VersionsRepositorySpec :
             }
 
             should("return 0 when deleting non-existent version") {
-                val repo = VersionsRepository()
+                val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
                     val uniqueVersion =

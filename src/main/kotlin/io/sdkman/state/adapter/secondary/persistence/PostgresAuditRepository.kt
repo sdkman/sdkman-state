@@ -17,7 +17,7 @@ import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.json.json
 import java.time.Instant
 
-class AuditRepositoryImpl : AuditRepository {
+class PostgresAuditRepository : AuditRepository {
     private object VendorAuditTable : Table(name = "vendor_audit") {
         val id = long("id").autoIncrement()
         val username = text("username")
