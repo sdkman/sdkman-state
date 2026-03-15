@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration to Testcontainers) in progress
+> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.4 unit tests done
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -194,8 +194,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Remove duplicate table definitions from test support (import `internal object` tables from main source)
 
 ### 7.4 Unit Tests (Services with MockK)
-- [ ] Create `application/service/VersionServiceUnitSpec.kt` -- test service orchestration with mocked repos
-- [ ] Create `application/service/TagServiceUnitSpec.kt` -- test tag orchestration with mocked repos
+- [x] Create `application/service/VersionServiceUnitSpec.kt` -- test service orchestration with mocked repos (13 tests: findAll delegation/filtering, findOne found/not-found, createOrUpdate with/without tags + DB error + audit failure + tag failure, delete happy path + VersionNotFound + ID not found + TagConflict + DB error + race condition)
+- [x] Create `application/service/TagServiceUnitSpec.kt` -- test tag orchestration with mocked repos (5 tests: delete success + TagNotFound + DB error + audit failure + username propagation)
 - [ ] Migrate validator specs to new package paths
 
 ### 7.5 Cleanup
