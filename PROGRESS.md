@@ -343,3 +343,26 @@ Each entry must follow this structure exactly:
 - _Context:_ Tests no longer require a pre-running PostgreSQL instance — Testcontainers starts/manages the container automatically, enabling CI/CD without external database dependencies
 
 ---
+
+### [2026-03-15 26:00] — Phase 7.3 + 7.4: Integration Test Migration and UniqueTagValidatorSpec
+
+**Summary:** Renamed three repository integration specs to `Postgres*IntegrationSpec` convention with `@Tags("integration")` annotation. Created new `PostgresAuditRepositoryIntegrationSpec` (5 tests covering CREATE/DELETE audit, multiple usernames, operation filtering, no-distribution serialization). Created `UniqueTagValidatorSpec` unit test (5 tests: valid with/without distribution, blank candidate/tag, accumulated errors). Deleted old spec files.
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepositoryIntegrationSpec.kt` — renamed from `VersionsRepositorySpec.kt`, added `@Tags("integration")`
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresTagRepositoryIntegrationSpec.kt` — renamed from `TagsRepositorySpec.kt`, added `@Tags("integration")`
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresHealthRepositoryIntegrationSpec.kt` — renamed from `HealthRepositorySpec.kt`, added `@Tags("integration")`
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepositoryIntegrationSpec.kt` — new file; 5 integration tests for `PostgresAuditRepository.recordAudit`
+- `src/test/kotlin/io/sdkman/state/application/validation/UniqueTagValidatorSpec.kt` — new file; 5 unit tests for `UniqueTagValidator.validate`
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/VersionsRepositorySpec.kt` — **deleted** (replaced by renamed file)
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/TagsRepositorySpec.kt` — **deleted** (replaced by renamed file)
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/HealthRepositorySpec.kt` — **deleted** (replaced by renamed file)
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Kotest `@Tags("integration")` annotation is from `io.kotest.core.annotation.Tags` — applied at class level, enables selective test execution via `--include-tags` in CI pipelines
+- _Gotchas:_ `PostgresAuditRepository` serializes `Auditable` via the DTO layer (Version.toDto(), UniqueTag.toDto()) — integration tests verify the full serialization path including DTO mapping, which is why `shouldContain` on the JSON string is sufficient to verify correctness
+- _Context:_ The audit repository was previously only tested indirectly through API acceptance specs — direct integration tests improve coverage of the serialization boundary and error handling
+
+---

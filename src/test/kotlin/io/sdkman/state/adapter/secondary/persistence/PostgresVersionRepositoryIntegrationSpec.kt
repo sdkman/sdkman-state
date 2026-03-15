@@ -2,6 +2,7 @@ package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
@@ -16,7 +17,8 @@ import io.sdkman.state.support.selectLastUpdatedAt
 import io.sdkman.state.support.withCleanDatabase
 import kotlinx.coroutines.delay
 
-class VersionsRepositorySpec :
+@Tags("integration")
+class PostgresVersionRepositoryIntegrationSpec :
     ShouldSpec({
 
         context("create") {
