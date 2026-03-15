@@ -17,9 +17,11 @@ import io.sdkman.domain.DomainError
 import io.sdkman.domain.HealthRepository
 import io.sdkman.domain.Platform
 import io.sdkman.domain.TagService
-import io.sdkman.domain.UniqueTag
-import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.VersionService
+import io.sdkman.dto.UniqueTagDto
+import io.sdkman.dto.UniqueVersionDto
+import io.sdkman.dto.toDomain
+import io.sdkman.dto.toDto
 import io.sdkman.validation.UniqueTagValidator
 import io.sdkman.validation.UniqueVersionValidator
 import io.sdkman.validation.ValidationErrorResponse
@@ -131,7 +133,7 @@ fun Application.configureRouting(
                         .toOption()
                         .flatMap { it.toDistribution() }
                 val versions = versionService.findAll(candidateId, platform, distribution, visible)
-                call.respond(HttpStatusCode.OK, versions)
+                call.respond(HttpStatusCode.OK, versions.map { it.toDto() })
             }.getOrElse {
                 call.respond(HttpStatusCode.BadRequest)
             }
@@ -159,7 +161,7 @@ fun Application.configureRouting(
                         .flatMap { it.toDistribution() }
                 val maybeVersion = versionService.findOne(candidateId, versionId, platform, distribution)
                 maybeVersion
-                    .map { call.respond(HttpStatusCode.OK, it) }
+                    .map { call.respond(HttpStatusCode.OK, it.toDto()) }
                     .getOrElse { call.respond(HttpStatusCode.NotFound) }
             }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
         }
@@ -185,7 +187,8 @@ fun Application.configureRouting(
                 either<DomainError, Unit> {
                     val uniqueVersion =
                         Either
-                            .catch { call.receive<UniqueVersion>() }
+                            .catch { call.receive<UniqueVersionDto>() }
+                            .map { it.toDomain() }
                             .mapLeft {
                                 DomainError.ValidationFailed(
                                     "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
@@ -207,7 +210,8 @@ fun Application.configureRouting(
                 either<DomainError, Unit> {
                     val uniqueTag =
                         Either
-                            .catch { call.receive<UniqueTag>() }
+                            .catch { call.receive<UniqueTagDto>() }
+                            .map { it.toDomain() }
                             .mapLeft {
                                 DomainError.ValidationFailed(
                                     "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",

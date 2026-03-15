@@ -1,8 +1,5 @@
 package io.sdkman.domain
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 enum class Distribution {
     BISHENG,
     CORRETTO,

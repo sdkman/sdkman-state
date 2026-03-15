@@ -55,11 +55,11 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Create `domain/error/DomainError.kt` -- unified sealed interface consolidating `DeleteError`/`DeleteTagError` from Routing.kt -- done as `io.sdkman.domain.DomainError` in `DomainError.kt`; will move to `domain/error/` subdirectory during package restructuring
 
 ### 1.3 Domain Models (spec section 2.1)
-- [~] Create `domain/model/Platform.kt` -- file created as `io.sdkman.domain.Platform` in `Platform.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
-- [~] Create `domain/model/Distribution.kt` -- file created as `io.sdkman.domain.Distribution` in `Distribution.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
-- [~] Create `domain/model/Version.kt` -- file created as `io.sdkman.domain.Version` + `UniqueVersion` in `Version.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
-- [~] Create `domain/model/VersionTag.kt` -- file created as `io.sdkman.domain.VersionTag` + `UniqueTag` in `VersionTag.kt`; **@Serializable still present**; `java.time.Instant` changed to `kotlin.time.Instant`; conversion helper `toKotlinTimeInstant()` added to `PostgresConnectivity.kt`; will move to `domain/model/` subdirectory during package restructuring
-- [~] Create `domain/model/Audit.kt` -- file created as `io.sdkman.domain.Auditable` + `AuditOperation` + `AuditRecord` in `Audit.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/Platform.kt` -- file created as `io.sdkman.domain.Platform` in `Platform.kt`; @Serializable removed (Platform never had @Serializable, now confirmed pure); will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/Distribution.kt` -- file created as `io.sdkman.domain.Distribution` in `Distribution.kt`; @Serializable removed; will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/Version.kt` -- file created as `io.sdkman.domain.Version` + `UniqueVersion` in `Version.kt`; @Serializable removed; serialization handled by VersionDto in io.sdkman.dto; will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/VersionTag.kt` -- file created as `io.sdkman.domain.VersionTag` + `UniqueTag` in `VersionTag.kt`; @Serializable removed from UniqueTag; serialization handled by UniqueTagDto in io.sdkman.dto; `java.time.Instant` changed to `kotlin.time.Instant`; conversion helper `toKotlinTimeInstant()` added to `PostgresConnectivity.kt`; will move to `domain/model/` subdirectory during package restructuring
+- [x] Create `domain/model/Audit.kt` -- file created as `io.sdkman.domain.Auditable` + `AuditOperation` + `AuditRecord` in `Audit.kt`; @Serializable removed from AuditOperation; will move to `domain/model/` subdirectory during package restructuring
 - [x] Create `domain/model/HealthCheckSuccess.kt` -- HealthStatus enum removed; HealthCheckResponse.status changed to String in Routing.kt; file renamed to HealthCheckSuccess.kt; will move to `domain/model/` subdirectory during package restructuring
 - [x] Move `AuditRecord` to test sources as `VendorAuditRecord` (only used in test assertions) -- moved to `VendorAuditRecord` in test support `Postgres.kt`; removed from `Audit.kt`
 
@@ -116,6 +116,9 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 5: Primary Adapters (REST)
 
 ### 5.1 Request/Response DTOs (spec section 4.1)
+- [x] Create `dto/VersionDto.kt` -- @Serializable DTO for GET responses and audit serialization at persistence boundary; includes toDto()/toDomain() mappers
+- [x] Create `dto/UniqueVersionDto.kt` -- @Serializable DTO for DELETE /versions request deserialization; includes toDomain() mapper
+- [x] Create `dto/UniqueTagDto.kt` -- @Serializable DTO for DELETE /versions/tags request deserialization and audit serialization; includes toDto()/toDomain() mappers
 - [ ] Create `adapter/primary/rest/dto/VersionRequest.kt` -- `@Serializable` unvalidated request DTO (JSON parsing moves here from VersionRequestValidator)
 - [ ] Create `adapter/primary/rest/dto/UniqueVersionRequest.kt` -- `@Serializable` delete request DTO
 - [ ] Create `adapter/primary/rest/dto/UniqueTagRequest.kt` -- `@Serializable` tag delete request DTO

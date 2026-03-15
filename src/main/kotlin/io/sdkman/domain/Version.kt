@@ -1,14 +1,8 @@
-@file:UseSerializers(OptionSerializer::class)
-
 package io.sdkman.domain
 
 import arrow.core.None
 import arrow.core.Option
-import arrow.core.serialization.OptionSerializer
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
 
-@Serializable
 data class Version(
     val candidate: String,
     val version: String,
@@ -22,7 +16,6 @@ data class Version(
     val tags: Option<List<String>> = None,
 ) : Auditable
 
-@Serializable
 data class UniqueVersion(
     val candidate: String,
     val version: String,
