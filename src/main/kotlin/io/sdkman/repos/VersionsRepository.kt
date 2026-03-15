@@ -91,7 +91,14 @@ class VersionsRepository : VersionRepository {
 
             rows
                 .map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
-                .sortedWith(compareBy({ it.candidate }, { it.version }, { it.distribution.getOrNull() }, { it.platform }))
+                .sortedWith(
+                    compareBy(
+                        { it.candidate },
+                        { it.version },
+                        { it.distribution.map { d -> d.name }.getOrElse { "" } },
+                        { it.platform },
+                    ),
+                )
         }
 
     override suspend fun read(

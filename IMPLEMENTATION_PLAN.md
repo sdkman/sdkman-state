@@ -140,17 +140,17 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ## Phase 6: Nullable Type Eradication (spec section 10)
 
 ### 6.1 Main Source Fixes
-- [ ] Fix `HealthCheckResponse.message: String? = null` to `Option<String> = None` (`Routing.kt:48`, moves to DTO)
-- [ ] Fix `it.message ?: "Unknown error"` to `Option.fromNullable(it.message).getOrElse { "Unknown error" }` (`Routing.kt:281,323`)
-- [ ] Fix `content.contentType?.withoutParameters()` to `.toOption().map` (`HTTP.kt:27`)
-- [ ] Fix `(item as? JsonPrimitive)?.takeIf` to Option/pattern matching (`VersionRequestValidator.kt:67`)
-- [ ] Fix `.swap().getOrNull()` pattern to Option throughout (`VersionRequestValidator.kt:99-107`)
-- [ ] Fix `?: throw IllegalStateException` to Either/Option (`CandidateLoader.kt:13`)
+- [x] Fix `HealthCheckResponse.message: String? = null` to `Option<String> = None` (`Routing.kt:48`, moves to DTO) -- done in Phase 0.3
+- [x] Fix `it.message ?: "Unknown error"` to `Option.fromNullable(it.message).getOrElse { "Unknown error" }` (`Routing.kt:281,323`) -- done in Phase 0.3, uses `.toOption().getOrElse`
+- [x] Fix `content.contentType?.withoutParameters()` to `.toOption().map` (`HTTP.kt:27`) -- framework-forced exception: Ktor CachingHeaders API requires nullable; `@Suppress("detekt:UnsafeCallOnNullableType")` applied
+- [x] Fix `(item as? JsonPrimitive)?.takeIf` to Option/pattern matching (`VersionRequestValidator.kt:67`) -- refactored in VersionRequestValidator rewrite
+- [x] Fix `.swap().getOrNull()` pattern to Option throughout (`VersionRequestValidator.kt:99-107`) -- refactored in VersionRequestValidator rewrite
+- [x] Fix `?: throw IllegalStateException` to Either/Option (`CandidateLoader.kt:13`) -- already fixed to use Option.fromNullable
 
 ### 6.2 Test Source Fixes
-- [ ] Fix `body["key"]?.jsonPrimitive?.content` patterns in DeleteTagApiSpec, DeleteTaggedVersionApiSpec
-- [ ] Fix `contentType()?.withoutParameters()` in HealthCheckApiSpec SUCCESS test (line 44 -- inconsistent with FAILURE test at lines 69-72 which correctly uses `.toOption().map`)
-- [ ] Fix `getOrNull()!!` pattern (14 instances) in TagsRepositorySpec to use Arrow `shouldBeRight()` matchers
+- [x] Fix `body["key"]?.jsonPrimitive?.content` patterns in DeleteTagApiSpec, DeleteTaggedVersionApiSpec -- replaced with `body.getValue("key").jsonPrimitive.content`
+- [x] Fix `contentType()?.withoutParameters()` in HealthCheckApiSpec SUCCESS test (line 44 -- inconsistent with FAILURE test at lines 69-72 which correctly uses `.toOption().map`) -- done in Phase 0.3
+- [x] Fix `getOrNull()!!` pattern (14 instances) in TagsRepositorySpec to use Arrow `shouldBeRight()` matchers -- already done in Phase 0.3
 
 ### 6.3 Detekt Nullable Enforcement
 - [ ] Add JitPack repository to `settings.gradle.kts`: `maven("https://jitpack.io")`

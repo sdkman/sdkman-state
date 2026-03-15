@@ -148,3 +148,22 @@ Each entry must follow this structure exactly:
 - _Context:_ HealthStatus enum retained temporarily for DTO serialization compatibility; will be removed when HealthCheckResponse DTO moves to adapter layer (Phase 5.1)
 
 ---
+
+### [2026-03-15 18:00] — Phase 6.1 + 6.2: Nullable Type Eradication (Remaining Items)
+
+**Summary:** Fixed remaining nullable type violations in main and test sources: replaced `toNonEmptyListOrNull()?.left()` with Arrow-idiomatic `toNonEmptyListOrNone().fold()` in UniqueTagValidator; replaced `getOrNull()` sort key in VersionsRepository with `map/getOrElse`; replaced all `body["key"]?.jsonPrimitive?.content` patterns with `body.getValue("key").jsonPrimitive.content` in DeleteTagApiSpec and DeleteTaggedVersionApiSpec.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/validation/UniqueTagValidator.kt` — replaced `toNonEmptyListOrNull()?.left() ?: right()` with `toNonEmptyListOrNone().fold()`
+- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt` — replaced `getOrNull()` in sort comparator with `.map { it.name }.getOrElse { "" }`
+- `src/test/kotlin/io/sdkman/DeleteTaggedVersionApiSpec.kt` — replaced 4 `?.jsonPrimitive?.content` patterns with `getValue().jsonPrimitive.content`
+- `src/test/kotlin/io/sdkman/DeleteTagApiSpec.kt` — replaced 10 `?.jsonPrimitive?.content` and `?.jsonArray` patterns with `getValue()` equivalents
+
+**Test outcome:** PASS — all tests green, ktlint clean
+
+**Learnings:**
+- _Patterns:_ `JsonObject.getValue(key)` returns non-nullable `JsonElement` and throws `NoSuchElementException` if absent — appropriate for test assertions where missing keys should fail the test
+- _Gotchas:_ ktlint enforces newlines before `.` in chained calls inside lambdas — use `ktlintFormat` after edits
+- _Context:_ Remaining nullable violations at persistence boundary (`getOrNull()` in Exposed ORM column writes) are acceptable per the architecture — Exposed requires actual `null` for nullable columns
+
+---
