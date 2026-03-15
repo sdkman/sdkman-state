@@ -8,6 +8,7 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.serialization.OptionSerializer
+import io.sdkman.validation.ValidationFailure
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import kotlin.time.Instant
@@ -152,6 +153,33 @@ interface VersionRepository {
     suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int>
 
     suspend fun delete(version: UniqueVersion): Int
+}
+
+sealed interface DomainError {
+    data class VersionNotFound(
+        val candidate: String,
+        val version: String,
+    ) : DomainError
+
+    data class TagConflict(
+        val tags: List<String>,
+    ) : DomainError
+
+    data class TagNotFound(
+        val tagName: String,
+    ) : DomainError
+
+    data class ValidationFailed(
+        val message: String,
+    ) : DomainError
+
+    data class ValidationFailures(
+        val failures: List<ValidationFailure>,
+    ) : DomainError
+
+    data class DatabaseError(
+        val failure: DatabaseFailure,
+    ) : DomainError
 }
 
 interface TagsRepository {

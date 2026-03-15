@@ -33,7 +33,7 @@ Resolve build configuration issues and known defects before any structural work 
 - [x] Fix duplicate `VersionTags` table definition: consolidated to single `internal object VersionTags` in `PostgresConnectivity.kt`, shared by `VersionsRepository`, `TagsRepositoryImpl`, and test `Postgres.kt`
 - [x] Fix `HealthCheckResponse.message` using nullable `String? = null` instead of `Option<String>` -- `src/main/kotlin/io/sdkman/plugins/Routing.kt:48`
 - [x] Fix `HealthCheckApiSpec` SUCCESS test using nullable chain `contentType()?.withoutParameters()` at line 44 (inconsistent with FAILURE test which correctly uses `.toOption().map`) -- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt:44`
-- [ ] Fix private sealed error types `DeleteError` and `DeleteTagError` in `Routing.kt:51-83` -- not reusable outside routing, should be domain-level error types
+- [x] Fix private sealed error types `DeleteError` and `DeleteTagError` in `Routing.kt:51-83` -- promoted to unified `DomainError` sealed interface in `Domain.kt`, used by both DELETE handlers with shared `respondDomainError` mapper
 - [ ] Fix business logic embedded in `TagsRepositoryImpl.replaceTags`: exclusive tag ownership rule (delete-from-other-versions-then-insert) at lines 128-134 is domain logic in the persistence layer -- `src/main/kotlin/io/sdkman/repos/TagsRepositoryImpl.kt:106-152`
 - [ ] Fix business logic in `Routing.kt`: multi-step orchestration (validate, create, audit, process tags) inline in route handlers at lines 253-273 -- should be in application service layer
 - [x] Fix `getOrNull()!!` pattern: ~14 instances in `TagsRepositorySpec` using unsafe unwrap instead of Arrow matchers
