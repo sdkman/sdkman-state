@@ -9,23 +9,30 @@ import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 
 interface VersionRepository {
-    suspend fun read(
+    suspend fun findByCandidate(
         candidate: String,
         platform: Option<Platform>,
         distribution: Option<Distribution>,
         visible: Option<Boolean>,
-    ): List<Version>
+    ): Either<DatabaseFailure, List<Version>>
 
-    suspend fun read(
+    suspend fun findUnique(
         candidate: String,
         version: String,
         platform: Platform,
         distribution: Option<Distribution>,
-    ): Option<Version>
+    ): Either<DatabaseFailure, Option<Version>>
 
-    suspend fun create(cv: Version): Either<DatabaseFailure, Int>
+    suspend fun createOrUpdate(version: Version): Either<DatabaseFailure, Int>
 
-    suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int>
+    suspend fun findVersionId(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Option<Int>>
 
-    suspend fun delete(version: UniqueVersion): Int
+    suspend fun findVersionIdByTag(
+        candidate: String,
+        tag: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, Option<Int>>
+
+    suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
 }

@@ -9,19 +9,19 @@ import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 
 interface VersionService {
-    suspend fun findAll(
+    suspend fun findByCandidate(
         candidate: String,
         platform: Option<Platform>,
         distribution: Option<Distribution>,
         visible: Option<Boolean>,
-    ): List<Version>
+    ): Either<DomainError, List<Version>>
 
-    suspend fun findOne(
+    suspend fun findUnique(
         candidate: String,
         version: String,
         platform: Platform,
         distribution: Option<Distribution>,
-    ): Option<Version>
+    ): Either<DomainError, Option<Version>>
 
     suspend fun createOrUpdate(
         version: Version,

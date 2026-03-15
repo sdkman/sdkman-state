@@ -480,3 +480,34 @@ Each entry must follow this structure exactly:
 - _Patterns:_ Co-locating table definitions with their repository implementations follows the DDD principle of keeping related concerns together — each repository owns its schema definition
 - _Gotchas:_ `VersionTagsTable` is referenced by both `PostgresTagRepository` (primary owner) and `PostgresVersionRepository` (for batch tag fetching) — `internal` visibility allows cross-file access within the same module package
 - _Context:_ `PostgresConnectivity.kt` is now a minimal shared infrastructure file (3 items) rather than a catch-all for persistence concerns; this aligns with the spec's intent that each repository is self-contained
+
+---
+
+### [2026-03-15 32:00] — Phase 9.2 + 9.3 + 9.4 + 9.5: Repository and Service Interface Alignment
+
+**Summary:** Completed all remaining Phase 9 items: renamed repository methods to match spec (`read` → `findByCandidate`/`findUnique`), wrapped return types in `Either<DatabaseFailure, ...>`, moved `findVersionIdByTag` from `TagRepository` to `VersionRepository`, added batch `findTagNamesByVersionIds` to `TagRepository`, renamed `TagsRepository` → `TagRepository`, renamed service methods (`findAll` → `findByCandidate`, `findOne` → `findUnique`), added `replaceTags()` and `findTagNamesByVersionId()` to `TagService` interface, and changed `VersionServiceImpl` to depend on `TagService` instead of `TagRepository`. Phases 9.4 (CandidateLoader) and 9.5 (ConfigExtensions) were already complete.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/domain/repository/VersionRepository.kt` — renamed `read()` → `findByCandidate()`/`findUnique()`, added `findVersionIdByTag`, wrapped `findVersionId`/`delete` in Either
+- `src/main/kotlin/io/sdkman/state/domain/repository/TagRepository.kt` — new file replacing `TagsRepository.kt`; removed `findVersionIdByTag`, added `findTagNamesByVersionIds`
+- `src/main/kotlin/io/sdkman/state/domain/repository/TagsRepository.kt` — **deleted** (replaced by `TagRepository.kt`)
+- `src/main/kotlin/io/sdkman/state/domain/service/VersionService.kt` — renamed `findAll` → `findByCandidate`, `findOne` → `findUnique`, wrapped returns in `Either<DomainError, ...>`
+- `src/main/kotlin/io/sdkman/state/domain/service/TagService.kt` — added `replaceTags()` and `findTagNamesByVersionId()` methods
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepository.kt` — updated method signatures, added `findVersionIdByTag` implementation
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresTagRepository.kt` — removed `findVersionIdByTag`, added `findTagNamesByVersionIds`, updated interface to `TagRepository`
+- `src/main/kotlin/io/sdkman/state/application/service/VersionServiceImpl.kt` — changed dep from `TagRepository` to `TagService`; uses `tagService.replaceTags()` and `tagService.findTagNamesByVersionId()`
+- `src/main/kotlin/io/sdkman/state/application/service/TagServiceImpl.kt` — added `replaceTags()` and `findTagNamesByVersionId()` implementations
+- `src/main/kotlin/io/sdkman/state/Application.kt` — updated DI wiring: `tagService` created first, passed to both `VersionServiceImpl` and routing
+- `src/test/kotlin/io/sdkman/state/support/Application.kt` — updated test DI wiring
+- `src/test/kotlin/io/sdkman/state/acceptance/HealthCheckAcceptanceSpec.kt` — updated DI wiring (both SUCCESS and FAILURE tests)
+- `src/test/kotlin/io/sdkman/state/application/service/VersionServiceUnitSpec.kt` — mocks `TagService` instead of `TagRepository`
+- `src/test/kotlin/io/sdkman/state/application/service/TagServiceUnitSpec.kt` — added tests for `replaceTags` and `findTagNamesByVersionId`
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepositoryIntegrationSpec.kt` — added `findVersionIdByTag` tests
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresTagRepositoryIntegrationSpec.kt` — removed `findVersionIdByTag` tests, updated NA distribution test to use `PostgresVersionRepository`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ `VersionServiceImpl` depending on `TagService` instead of `TagRepository` enforces proper hexagonal layering — the version service coordinates with the tag service (same layer) rather than reaching into the tag repository (lower layer) directly. This aligns with spec section 2.4 which says `constructor(VersionRepository, TagService, AuditRepository)`.
+- _Gotchas:_ `DomainError` is a sealed interface without a `message` property — when logging errors from `TagService.replaceTags()` (which returns `Either<DomainError, Unit>`), use `$error` (toString) rather than `${error.message}` which only works on `DatabaseFailure` (a `Throwable` subclass).
+- _Context:_ `findTagNamesByVersionId` was added to `TagService` (not in the spec's TagService interface) to allow `VersionServiceImpl` to check for tag conflicts during delete without needing a direct `TagRepository` dependency. This is a pragmatic extension that keeps the dependency graph clean while preserving the existing delete-with-tag-check logic.

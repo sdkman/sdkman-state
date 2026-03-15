@@ -38,8 +38,10 @@ fun Route.versionReadRoutes(versionService: VersionService) {
                 call.request.queryParameters["distribution"]
                     .toOption()
                     .flatMap { it.toDistribution() }
-            val versions = versionService.findAll(candidateId, platform, distribution, visible)
-            call.respond(HttpStatusCode.OK, versions.map { it.toDto() })
+            versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
+                ifLeft = { error -> call.respondDomainError(error) },
+                ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
+            )
         }.getOrElse {
             call.respond(HttpStatusCode.BadRequest)
         }
@@ -65,10 +67,14 @@ fun Route.versionReadRoutes(versionService: VersionService) {
                 call.request.queryParameters["distribution"]
                     .toOption()
                     .flatMap { it.toDistribution() }
-            val maybeVersion = versionService.findOne(candidateId, versionId, platform, distribution)
-            maybeVersion
-                .map { call.respond(HttpStatusCode.OK, it.toDto()) }
-                .getOrElse { call.respond(HttpStatusCode.NotFound) }
+            versionService.findUnique(candidateId, versionId, platform, distribution).fold(
+                ifLeft = { error -> call.respondDomainError(error) },
+                ifRight = { maybeVersion ->
+                    maybeVersion
+                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                },
+            )
         }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
     }
 }

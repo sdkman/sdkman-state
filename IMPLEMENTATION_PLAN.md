@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5, 7, 8, and 9.1 complete; Phase 6 (detekt rules) blocked on external artifact; Phase 9.2-9.5 pending
+> **Status:** Complete -- Phases 0-5, 7, 8, 9 complete; Phase 6 (detekt rules) blocked on external artifact
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -161,7 +161,6 @@ Everything else depends on this. Migrate domain models first per spec section 11
 
 ### 6.3 Detekt Nullable Enforcement
 - [x] Detekt now passing — `configureRouting` `LongMethod` violation suppressed with `@Suppress("LongMethod")` (see Phase 0.3); suppression naturally removed after Phase 5.2 route split; no other violations outstanding
-- [ ] **BLOCKED**: `com.github.marc0der:detekt-rules:1.0.0` artifact does not exist on JitPack yet — the `marc0der/detekt-rules` GitHub repo needs to be created and published first
 - [ ] Add JitPack repository to `build.gradle.kts`: `maven("https://jitpack.io")`
 - [ ] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")`
 - [ ] Run `./gradlew detekt` to verify no nullable violations remain
@@ -233,22 +232,22 @@ Deviations from `specs/modernisation.md` discovered after initial migration. The
 - [x] `PostgresConnectivity.kt` now contains only `NA_SENTINEL`, `dbQuery`, and `toKotlinTimeInstant()`
 
 ### 9.2 Repository Interface Alignment (spec section 2.3)
-- [ ] Rename `VersionRepository.read()` overloads to `findByCandidate()` and `findUnique()` per spec
-- [ ] Wrap `VersionRepository.findVersionId` return in `Either<DatabaseFailure, Option<Int>>` (currently bare `Option<Int>`)
-- [ ] Wrap `VersionRepository.delete` return in `Either<DatabaseFailure, Int>` (currently bare `Int`)
-- [ ] Move `findVersionIdByTag` from `TagsRepository` to `VersionRepository` (it looks up a version, belongs with version operations)
-- [ ] Add batch `findTagNamesByVersionIds(List<Int>): Either<DatabaseFailure, Map<Int, List<String>>>` to `TagRepository`
-- [ ] Rename `TagsRepository` interface to `TagRepository` per spec
+- [x] Rename `VersionRepository.read()` overloads to `findByCandidate()` and `findUnique()` per spec
+- [x] Wrap `VersionRepository.findVersionId` return in `Either<DatabaseFailure, Option<Int>>` (previously bare `Option<Int>`)
+- [x] Wrap `VersionRepository.delete` return in `Either<DatabaseFailure, Int>` (previously bare `Int`)
+- [x] Move `findVersionIdByTag` from `TagsRepository` to `VersionRepository` -- implementation moved from `PostgresTagRepository` to `PostgresVersionRepository`; tests moved from `PostgresTagRepositoryIntegrationSpec` to `PostgresVersionRepositoryIntegrationSpec`
+- [x] Add batch `findTagNamesByVersionIds(List<Int>): Either<DatabaseFailure, Map<Int, List<String>>>` to `TagRepository`
+- [x] Rename `TagsRepository` interface to `TagRepository` per spec
 
 ### 9.3 Service Interface Alignment (spec section 2.4)
-- [ ] Rename `VersionService.findAll()` to `findByCandidate()` and `findOne()` to `findUnique()` per spec
-- [ ] Add `replaceTags()` to `TagService` interface; move tag orchestration from `VersionServiceImpl` to `TagServiceImpl`
+- [x] Rename `VersionService.findAll()` to `findByCandidate()` and `findOne()` to `findUnique()` per spec
+- [x] Add `replaceTags()` to `TagService` interface; move tag orchestration from `VersionServiceImpl` to `TagServiceImpl` -- also added `findTagNamesByVersionId()` to `TagService` so `VersionServiceImpl` depends on `TagService` instead of `TagRepository` for tag operations; `VersionServiceImpl` constructor changed from `(VersionRepository, TagRepository, AuditRepository)` to `(VersionRepository, TagService, AuditRepository)`
 
 ### 9.4 CandidateLoader Placement (spec section 5)
-- [ ] Move `CandidateLoader.kt` from `application/validation/` to `config/` per spec
+- [x] Move `CandidateLoader.kt` from `application/validation/` to `config/` per spec -- already done (`CandidateLoader` was already at `config/CandidateLoader.kt`)
 
 ### 9.5 ConfigExtensions Nullable Cleanup (spec section 10)
-- [ ] Replace `propertyOrNull(path)?.getString()` in `ConfigExtensions.kt` with Option-based helpers
+- [x] Replace `propertyOrNull(path)?.getString()` in `ConfigExtensions.kt` with Option-based helpers -- already done (`ConfigExtensions.kt` already uses `propertyOrNull(path).toOption().map { it.getString() }`)
 
 ---
 

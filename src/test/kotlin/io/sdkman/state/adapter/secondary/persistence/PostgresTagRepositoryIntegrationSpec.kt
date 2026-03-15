@@ -196,48 +196,6 @@ class PostgresTagRepositoryIntegrationSpec :
             }
         }
 
-        context("findVersionIdByTag") {
-            should("resolve a tag to the correct version ID") {
-                withCleanDatabase {
-                    // given: a tagged version
-                    val versionId =
-                        insertVersionWithId(
-                            Version(
-                                candidate = "java",
-                                version = "27.0.2",
-                                platform = Platform.LINUX_X64,
-                                url = "https://java-27.0.2",
-                                visible = true.some(),
-                                distribution = Distribution.TEMURIN.some(),
-                            ),
-                        )
-                    repo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
-
-                    // when: resolving the tag
-                    val resolved =
-                        repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64).getOrElse {
-                            error("expected Right")
-                        }
-
-                    // then: correct version ID returned
-                    resolved shouldBe versionId.some()
-                }
-            }
-
-            should("return None for a non-existent tag") {
-                withCleanDatabase {
-                    // when: resolving a tag that does not exist
-                    val resolved =
-                        repo.findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64).getOrElse {
-                            error("expected Right")
-                        }
-
-                    // then: None returned
-                    resolved shouldBe None
-                }
-            }
-        }
-
         context("deleteTag") {
             should("remove a tag by its unique scope") {
                 withCleanDatabase {
@@ -386,8 +344,9 @@ class PostgresTagRepositoryIntegrationSpec :
                     // then: tags are stored and retrievable
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest", "8")
 
+                    val versionRepo = PostgresVersionRepository()
                     val resolved =
-                        repo
+                        versionRepo
                             .findVersionIdByTag(
                                 "gradle",
                                 "latest",

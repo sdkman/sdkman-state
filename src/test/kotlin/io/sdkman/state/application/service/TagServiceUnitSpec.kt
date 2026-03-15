@@ -2,6 +2,7 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.None
+import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -12,18 +13,95 @@ import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
+import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.repository.AuditRepository
-import io.sdkman.state.domain.repository.TagsRepository
+import io.sdkman.state.domain.repository.TagRepository
 
 class TagServiceUnitSpec :
     ShouldSpec({
-        val tagsRepo = mockk<TagsRepository>()
+        val tagsRepo = mockk<TagRepository>()
         val auditRepo = mockk<AuditRepository>()
         val service = TagServiceImpl(tagsRepo, auditRepo)
 
         beforeEach { clearAllMocks() }
+
+        context("replaceTags") {
+
+            should("delegate to tag repository") {
+                // given: repository replaces tags successfully
+                coEvery {
+                    tagsRepo.replaceTags(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts", "latest"))
+                } returns Either.Right(Unit)
+
+                // when: replacing tags
+                val result =
+                    service.replaceTags(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts", "latest"))
+
+                // then: succeeds
+                result.isRight() shouldBe true
+                coVerify {
+                    tagsRepo.replaceTags(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts", "latest"))
+                }
+            }
+
+            should("return DatabaseError when repository fails") {
+                // given: repository fails
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "tag error",
+                        RuntimeException("constraint violation"),
+                    )
+                coEvery {
+                    tagsRepo.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
+                } returns Either.Left(dbFailure)
+
+                // when: replacing tags
+                val result = service.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
+
+                // then: returns DatabaseError
+                result.isLeft() shouldBe true
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+            }
+        }
+
+        context("findTagNamesByVersionId") {
+
+            should("delegate to tag repository") {
+                // given: repository returns tag names
+                coEvery { tagsRepo.findTagNamesByVersionId(42) } returns Either.Right(listOf("lts", "latest"))
+
+                // when: finding tag names
+                val result = service.findTagNamesByVersionId(42)
+
+                // then: returns tag names
+                result shouldBe Either.Right(listOf("lts", "latest"))
+            }
+
+            should("return DatabaseError when repository fails") {
+                // given: repository fails
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "connection lost",
+                        RuntimeException("timeout"),
+                    )
+                coEvery { tagsRepo.findTagNamesByVersionId(42) } returns Either.Left(dbFailure)
+
+                // when: finding tag names
+                val result = service.findTagNamesByVersionId(42)
+
+                // then: returns DatabaseError
+                result.isLeft() shouldBe true
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+            }
+        }
 
         context("deleteTag") {
 
