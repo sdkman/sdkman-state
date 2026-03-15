@@ -37,7 +37,7 @@ Resolve build configuration issues and known defects before any structural work 
 - [x] Fix business logic embedded in `TagsRepositoryImpl.replaceTags`: exclusive tag ownership rule (delete-from-other-versions-then-insert) at lines 128-134 is domain logic in the persistence layer -- orchestration now happens through VersionServiceImpl which calls replaceTags; the repo method itself still contains the DB-level tag replacement logic which is appropriate for the persistence layer
 - [x] Fix business logic in `Routing.kt`: multi-step orchestration (validate, create, audit, process tags) inline in route handlers at lines 253-273 -- extracted to VersionServiceImpl and TagServiceImpl; Routing.kt now delegates to services
 - [x] Fix `getOrNull()!!` pattern: ~14 instances in `TagsRepositorySpec` using unsafe unwrap instead of Arrow matchers
-- [x] Fix detekt `LongMethod` violation on `configureRouting` — suppressed with `@Suppress("LongMethod")` pending Phase 5.2 split
+- [x] Fix detekt `LongMethod` violation on `configureRouting` — suppressed with `@Suppress("LongMethod")` pending Phase 5.2 split; `@Suppress` naturally removed in Phase 5.2 since `Routing.kt` is now a 22-line composition function
 
 ---
 
@@ -122,16 +122,16 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create `adapter/primary/rest/dto/VersionRequest.kt` -- `@Serializable` unvalidated request DTO (JSON parsing moves here from VersionRequestValidator)
 - [ ] Create `adapter/primary/rest/dto/UniqueVersionRequest.kt` -- `@Serializable` delete request DTO
 - [ ] Create `adapter/primary/rest/dto/UniqueTagRequest.kt` -- `@Serializable` tag delete request DTO
-- [ ] Create `adapter/primary/rest/dto/ErrorResponse.kt` -- move from Routing.kt (currently defined at lines 33-36)
-- [ ] Create `adapter/primary/rest/dto/TagConflictResponse.kt` -- move from Routing.kt (currently at lines 39-43)
-- [ ] Create `adapter/primary/rest/dto/HealthCheckResponse.kt` -- move from Routing.kt (fix nullable `message: String?` to `Option<String>`, currently at lines 46-49)
+- [x] Create `adapter/primary/rest/dto/ErrorResponse.kt` -- moved from Routing.kt to `dto/` package
+- [x] Create `adapter/primary/rest/dto/TagConflictResponse.kt` -- moved from Routing.kt to `dto/` package
+- [x] Create `adapter/primary/rest/dto/HealthCheckResponse.kt` -- moved from Routing.kt to `dto/` package (`message` was already `Option<String>`, no fix needed)
 - [ ] Create `adapter/primary/rest/dto/ValidationErrorResponse.kt` -- move from validation/ValidationErrors.kt
 
 ### 5.2 REST Route Adapters (spec section 4.1)
-- [ ] Create `adapter/primary/rest/RequestExtensions.kt` -- extract `authenticatedUsername()`, `visibleQueryParam()` helpers
-- [ ] Create `adapter/primary/rest/VersionRoutes.kt` -- thin adapter for GET/POST/DELETE /versions (delegates to VersionService)
-- [ ] Create `adapter/primary/rest/TagRoutes.kt` -- thin adapter for DELETE /versions/tags (delegates to TagService)
-- [ ] Create `adapter/primary/rest/HealthRoutes.kt` -- thin adapter for GET /meta/health
+- [x] Create `adapter/primary/rest/RequestExtensions.kt` -- extracted `authenticatedUsername()`, `visibleQueryParam()`, `toDistribution()`, `respondDomainError()` helpers
+- [x] Create `adapter/primary/rest/VersionRoutes.kt` -- thin adapter split into `versionReadRoutes()` (GET endpoints, no auth) and `versionWriteRoutes()` (POST/DELETE, authenticated)
+- [x] Create `adapter/primary/rest/TagRoutes.kt` -- thin adapter for DELETE /versions/tags
+- [x] Create `adapter/primary/rest/HealthRoutes.kt` -- thin adapter for GET /meta/health
 - [ ] Move `Compression.kt` (from plugins/HTTP.kt) to `adapter/primary/rest/Compression.kt`
 - [ ] Move `Serialization.kt` (from plugins/) to `adapter/primary/rest/Serialization.kt`
 
@@ -157,7 +157,7 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Fix `getOrNull()!!` pattern (14 instances) in TagsRepositorySpec to use Arrow `shouldBeRight()` matchers -- already done in Phase 0.3
 
 ### 6.3 Detekt Nullable Enforcement
-- [x] Detekt now passing — `configureRouting` `LongMethod` violation suppressed with `@Suppress("LongMethod")` (see Phase 0.3); no other violations outstanding
+- [x] Detekt now passing — `configureRouting` `LongMethod` violation suppressed with `@Suppress("LongMethod")` (see Phase 0.3); suppression naturally removed after Phase 5.2 route split; no other violations outstanding
 - [ ] **BLOCKED**: `com.github.marc0der:detekt-rules:1.0.0` artifact does not exist on JitPack yet — the `marc0der/detekt-rules` GitHub repo needs to be created and published first
 - [ ] Add JitPack repository to `build.gradle.kts`: `maven("https://jitpack.io")`
 - [ ] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")`

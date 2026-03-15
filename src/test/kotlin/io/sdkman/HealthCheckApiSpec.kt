@@ -12,7 +12,7 @@ import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.sdkman.config.configureAppConfig
-import io.sdkman.plugins.HealthCheckResponse
+import io.sdkman.dto.HealthCheckResponse
 import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
 import io.sdkman.repos.AuditRepositoryImpl
