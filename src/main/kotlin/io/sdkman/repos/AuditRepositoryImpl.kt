@@ -7,7 +7,6 @@ import io.sdkman.domain.Auditable
 import io.sdkman.domain.DatabaseFailure
 import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.Version
-import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -15,7 +14,6 @@ import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.json.json
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import java.time.Instant
 
 class AuditRepositoryImpl : AuditRepository {
@@ -28,8 +26,6 @@ class AuditRepositoryImpl : AuditRepository {
 
         override val primaryKey = PrimaryKey(id)
     }
-
-    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
 
     private fun Auditable.toJsonElement(): JsonElement =
         when (this) {

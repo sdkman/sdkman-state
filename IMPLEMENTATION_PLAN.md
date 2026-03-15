@@ -12,7 +12,7 @@
 Resolve build configuration issues and known defects before any structural work begins.
 
 ### 0.1 Ktor Version Mismatch
-- [ ] Align Ktor plugin version with runtime: change `io.ktor.plugin` from `3.4.0` to `3.3.3` in `build.gradle.kts` (or upgrade `ktor_version` in `gradle.properties` to `3.4.0`) -- currently plugin is 3.4.0 but all runtime deps use `ktor_version=3.3.3`
+- [x] Align Ktor plugin version with runtime: change `io.ktor.plugin` from `3.4.0` to `3.3.3` in `build.gradle.kts` (or upgrade `ktor_version` in `gradle.properties` to `3.4.0`) -- currently plugin is 3.4.0 but all runtime deps use `ktor_version=3.3.3`
 
 ### 0.2 Missing Test Dependencies
 - [ ] Add Testcontainers BOM: `testImplementation(platform("org.testcontainers:testcontainers-bom:1.20.4"))`
@@ -23,10 +23,10 @@ Resolve build configuration issues and known defects before any structural work 
 - [ ] Add `kotlinx-datetime` dependency (already present: `0.7.1-0.6.x-compat`) -- verify compatibility with `kotlinx.datetime.Instant` for domain models
 
 ### 0.3 Existing Code Defects
-- [ ] Fix `VendorAuditSpec` dead code: `insertVersions` call at line 73 outside `withCleanDatabase` block at line 85 (data inserted then immediately wiped by `withCleanDatabase`) -- `src/test/kotlin/io/sdkman/VendorAuditSpec.kt:73`
-- [ ] Fix `IdempotentPostVersionApiSpec` misleading test name: test says "succeed with 201" (line 28) but asserts `HttpStatusCode.NoContent` (204) at line 50 -- `src/test/kotlin/io/sdkman/IdempotentPostVersionApiSpec.kt:28`
+- [x] Fix `VendorAuditSpec` dead code: `insertVersions` call at line 73 outside `withCleanDatabase` block at line 85 (data inserted then immediately wiped by `withCleanDatabase`) -- `src/test/kotlin/io/sdkman/VendorAuditSpec.kt:73`
+- [x] Fix `IdempotentPostVersionApiSpec` misleading test name: test says "succeed with 201" (line 28) but asserts `HttpStatusCode.NoContent` (204) at line 50 -- `src/test/kotlin/io/sdkman/IdempotentPostVersionApiSpec.kt:28`
 - [ ] Fix `UniqueTagValidator` return type inconsistency: returns `Either<List<ValidationFailure>, UniqueTag>` while `UniqueVersionValidator` returns `Either<NonEmptyList<ValidationError>, UniqueVersion>` -- normalise to consistent error type
-- [ ] Fix `VersionsRepository.create()` and `delete()` using blocking `transaction{}` instead of suspend `newSuspendedTransaction` -- all other repository methods are properly suspend -- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt:125-135` (create) and `188-201` (delete)
+- [x] Fix `VersionsRepository.create()` and `delete()` using blocking `transaction{}` instead of suspend `newSuspendedTransaction` -- all other repository methods are properly suspend -- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt:125-135` (create) and `188-201` (delete)
 - [ ] Fix duplicated `dbQuery` helper: identical private function defined in all 4 repository files (`VersionsRepository.kt:42`, `TagsRepositoryImpl.kt:45`, `AuditRepositoryImpl.kt:32`, `HealthRepositoryImpl.kt:11`) -- extract to shared utility
 - [ ] Fix duplicated JDBC URL construction: `"jdbc:postgresql://${config.host}:${config.port}/sdkman?sslMode=prefer&loglevel=2"` appears in both `Databases.kt:9` and `Migration.kt:11` -- extract to shared config
 - [ ] Fix duplicated `NA_SENTINEL` constant: defined in both `TagsRepositoryImpl.kt:28` and test support `Postgres.kt:43` -- extract to single location

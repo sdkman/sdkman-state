@@ -7,7 +7,9 @@ data class DatabaseConfig(
     val port: Int,
     val username: String,
     val password: String,
-)
+) {
+    val jdbcUrl: String = "jdbc:postgresql://$host:$port/sdkman?sslMode=prefer&loglevel=2"
+}
 
 data class ApiAuthenticationConfig(
     val username: String,
