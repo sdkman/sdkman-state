@@ -22,3 +22,5 @@ internal object VersionTags : IntIdTable("version_tags") {
 }
 
 suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
+
+fun java.time.Instant.toKotlinTimeInstant(): kotlin.time.Instant = kotlin.time.Instant.fromEpochSeconds(epochSecond, nano.toLong())

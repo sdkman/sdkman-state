@@ -12,7 +12,6 @@ import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.sdkman.config.configureAppConfig
-import io.sdkman.domain.HealthStatus
 import io.sdkman.plugins.HealthCheckResponse
 import io.sdkman.plugins.configureDatabase
 import io.sdkman.plugins.configureRouting
@@ -57,7 +56,7 @@ class HealthCheckApiSpec :
                             .getOrElse { error("no content type") } shouldBe ContentType.Application.Json
 
                         val response = Json.decodeFromString<HealthCheckResponse>(bodyAsText())
-                        response.status shouldBe HealthStatus.SUCCESS
+                        response.status shouldBe "SUCCESS"
                         response.message shouldBe None
                     }
                 }
@@ -93,7 +92,7 @@ class HealthCheckApiSpec :
                         .getOrElse { error("no content type") } shouldBe ContentType.Application.Json
 
                     val response = Json.decodeFromString<HealthCheckResponse>(bodyAsText())
-                    response.status shouldBe HealthStatus.FAILURE
+                    response.status shouldBe "FAILURE"
                     response.message
                         .map { it shouldContain "Database connection failed" }
                         .getOrElse { error("no message for failure") }

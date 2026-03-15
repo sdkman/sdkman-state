@@ -6,7 +6,6 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.config.DatabaseConfig
 import io.sdkman.domain.AuditOperation
-import io.sdkman.domain.AuditRecord
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
@@ -52,6 +51,14 @@ private object VendorAuditTable : Table(name = "vendor_audit") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+data class VendorAuditRecord(
+    val id: Long = 0,
+    val username: String,
+    val timestamp: kotlin.time.Instant,
+    val operation: AuditOperation,
+    val versionData: String,
+)
 
 fun insertVersions(vararg cvs: Version) =
     transaction {
@@ -193,10 +200,10 @@ private fun initialisePostgres() =
                 .migrate()
         }
 
-fun selectAuditRecords(): List<AuditRecord> =
+fun selectAuditRecords(): List<VendorAuditRecord> =
     dbQuery {
         VendorAuditTable.selectAll().map { row ->
-            AuditRecord(
+            VendorAuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =
@@ -210,10 +217,10 @@ fun selectAuditRecords(): List<AuditRecord> =
         }
     }
 
-fun selectAuditRecordsByUsername(username: String): List<AuditRecord> =
+fun selectAuditRecordsByUsername(username: String): List<VendorAuditRecord> =
     dbQuery {
         VendorAuditTable.selectAll().where { VendorAuditTable.username eq username }.map { row ->
-            AuditRecord(
+            VendorAuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =
@@ -227,10 +234,10 @@ fun selectAuditRecordsByUsername(username: String): List<AuditRecord> =
         }
     }
 
-fun selectAuditRecordsByOperation(operation: AuditOperation): List<AuditRecord> =
+fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRecord> =
     dbQuery {
         VendorAuditTable.selectAll().where { VendorAuditTable.operation eq operation.name }.map { row ->
-            AuditRecord(
+            VendorAuditRecord(
                 id = row[VendorAuditTable.id],
                 username = row[VendorAuditTable.username],
                 timestamp =

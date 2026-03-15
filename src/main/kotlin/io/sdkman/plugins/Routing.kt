@@ -15,7 +15,6 @@ import io.ktor.server.routing.*
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.DomainError
 import io.sdkman.domain.HealthRepository
-import io.sdkman.domain.HealthStatus
 import io.sdkman.domain.Platform
 import io.sdkman.domain.TagService
 import io.sdkman.domain.UniqueTag
@@ -44,7 +43,7 @@ data class TagConflictResponse(
 
 @Serializable
 data class HealthCheckResponse(
-    val status: HealthStatus,
+    val status: String,
     val message: Option<String> = None,
 )
 
@@ -83,6 +82,7 @@ private fun ApplicationCall.authenticatedUsername(): String =
         .map { it.name }
         .getOrElse { "unknown" }
 
+@Suppress("LongMethod") // Will be split in Phase 5.2 (VersionRoutes, TagRoutes, HealthRoutes)
 fun Application.configureRouting(
     versionService: VersionService,
     tagService: TagService,
@@ -105,12 +105,12 @@ fun Application.configureRouting(
                 .map {
                     call.respond(
                         HttpStatusCode.OK,
-                        HealthCheckResponse(HealthStatus.SUCCESS),
+                        HealthCheckResponse("SUCCESS"),
                     )
                 }.getOrElse { failure ->
                     call.respond(
                         HttpStatusCode.ServiceUnavailable,
-                        HealthCheckResponse(HealthStatus.FAILURE, failure.message.toOption()),
+                        HealthCheckResponse("FAILURE", failure.message.toOption()),
                     )
                 }
         }
