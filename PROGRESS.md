@@ -167,3 +167,33 @@ Each entry must follow this structure exactly:
 - _Context:_ Remaining nullable violations at persistence boundary (`getOrNull()` in Exposed ORM column writes) are acceptable per the architecture — Exposed requires actual `null` for nullable columns
 
 ---
+
+### [2026-03-15 19:00] — Phase 1.2 + 1.3 + 1.4 + 1.5: Split Domain.kt into focused files
+
+**Summary:** Split the monolithic `Domain.kt` (254 lines, 19+ types) into 14 focused files in the `io.sdkman.domain` package. All types remain in the same package so zero import changes were needed across the codebase. Domain.kt was deleted.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/domain/Domain.kt` — **deleted** (replaced by 14 focused files below)
+- `src/main/kotlin/io/sdkman/domain/Platform.kt` — Platform enum
+- `src/main/kotlin/io/sdkman/domain/Distribution.kt` — Distribution enum
+- `src/main/kotlin/io/sdkman/domain/Version.kt` — Version, UniqueVersion
+- `src/main/kotlin/io/sdkman/domain/VersionTag.kt` — VersionTag, UniqueTag
+- `src/main/kotlin/io/sdkman/domain/Audit.kt` — Auditable, AuditOperation, AuditRecord
+- `src/main/kotlin/io/sdkman/domain/HealthCheck.kt` — HealthCheckSuccess, HealthStatus
+- `src/main/kotlin/io/sdkman/domain/DatabaseFailure.kt` — DatabaseFailure sealed class
+- `src/main/kotlin/io/sdkman/domain/DomainError.kt` — DomainError sealed interface
+- `src/main/kotlin/io/sdkman/domain/VersionRepository.kt` — VersionRepository interface
+- `src/main/kotlin/io/sdkman/domain/TagsRepository.kt` — TagsRepository interface
+- `src/main/kotlin/io/sdkman/domain/AuditRepository.kt` — AuditRepository interface
+- `src/main/kotlin/io/sdkman/domain/HealthRepository.kt` — HealthRepository interface
+- `src/main/kotlin/io/sdkman/domain/VersionService.kt` — VersionService interface
+- `src/main/kotlin/io/sdkman/domain/TagService.kt` — TagService interface
+
+**Test outcome:** PASS — all tests green, ktlint clean
+
+**Learnings:**
+- _Patterns:_ Kotlin allows splitting a package across multiple files with no import changes — types in the same package are automatically visible to each other. This makes incremental refactoring safe.
+- _Gotchas:_ ktlint enforces that single-class files are named after the class — `DatabaseError.kt` was rejected, had to rename to `DatabaseFailure.kt`
+- _Context:_ `@file:UseSerializers(OptionSerializer::class)` must be added to each file that has `@Serializable` data classes with `Option` fields (Version.kt, VersionTag.kt). Files without Option fields don't need it.
+
+---
