@@ -147,7 +147,7 @@ interface VersionRepository {
         distribution: Option<Distribution>,
     ): Option<Version>
 
-    suspend fun create(cv: Version): Either<String, Int>
+    suspend fun create(cv: Version): Either<DatabaseFailure, Int>
 
     suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int>
 

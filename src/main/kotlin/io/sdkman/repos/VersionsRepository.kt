@@ -4,9 +4,9 @@ import arrow.core.Either
 import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
-import arrow.core.right
 import arrow.core.some
 import arrow.core.toOption
+import io.sdkman.domain.DatabaseFailure
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
@@ -118,19 +118,27 @@ class VersionsRepository : VersionRepository {
                 .map { (id, v) -> v.withTags(fetchTagNames(id)) }
         }
 
-    override suspend fun create(cv: Version): Either<String, Int> =
-        dbQuery {
-            val exists =
-                Versions
-                    .selectAll()
-                    .where { matchesVersion(cv) }
-                    .empty()
-                    .not()
+    override suspend fun create(cv: Version): Either<DatabaseFailure, Int> =
+        Either
+            .catch {
+                dbQuery {
+                    val exists =
+                        Versions
+                            .selectAll()
+                            .where { matchesVersion(cv) }
+                            .empty()
+                            .not()
 
-            if (exists) updateVersion(cv) else insertVersion(cv)
-        }
+                    if (exists) updateVersion(cv) else insertVersion(cv)
+                }
+            }.mapLeft { error ->
+                DatabaseFailure(
+                    message = "Failed to create version: ${error.message}",
+                    cause = error,
+                )
+            }
 
-    private fun updateVersion(cv: Version): Either<String, Int> {
+    private fun updateVersion(cv: Version): Int {
         Versions.update({ matchesVersion(cv) }) {
             it[url] = cv.url
             it[visible] = cv.visible.getOrElse { true }
@@ -139,18 +147,16 @@ class VersionsRepository : VersionRepository {
             it[sha512sum] = cv.sha512sum.getOrNull()
             it[lastUpdatedAt] = Instant.now()
         }
-        val versionId =
-            Versions
-                .select(Versions.id)
-                .where { matchesVersion(cv) }
-                .single()[Versions.id]
-                .value
-        return versionId.right()
+        return Versions
+            .select(Versions.id)
+            .where { matchesVersion(cv) }
+            .single()[Versions.id]
+            .value
     }
 
-    private fun insertVersion(cv: Version): Either<String, Int> {
-        val id =
-            Versions.insertAndGetId {
+    private fun insertVersion(cv: Version): Int =
+        Versions
+            .insertAndGetId {
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[distribution] = cv.distribution.map { d -> d.name }.getOrNull()
@@ -160,9 +166,7 @@ class VersionsRepository : VersionRepository {
                 it[md5sum] = cv.md5sum.getOrNull()
                 it[sha256sum] = cv.sha256sum.getOrNull()
                 it[sha512sum] = cv.sha512sum.getOrNull()
-            }
-        return id.value.right()
-    }
+            }.value
 
     override suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int> =
         dbQuery {
