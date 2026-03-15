@@ -70,3 +70,22 @@ Each entry must follow this structure exactly:
 - _Context:_ VersionRepository interface created in Domain.kt alongside other port interfaces for consistency. Will move to its own file during package restructuring in later phases.
 
 ---
+
+### [2026-03-15 14:00] — Phase 0.3: Consolidate duplicate VersionTags table definition
+
+**Summary:** Consolidated three separate `VersionTags` table definitions (2-column in `VersionsRepository`, 7-column in `TagsRepositoryImpl`, 7-column in test `Postgres.kt`) into a single `internal object VersionTags` in `PostgresConnectivity.kt`.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/repos/PostgresConnectivity.kt` — added single authoritative `VersionTags` table definition as `internal object`
+- `src/main/kotlin/io/sdkman/repos/VersionsRepository.kt` — removed private 2-column `VersionTags`, now uses shared definition
+- `src/main/kotlin/io/sdkman/repos/TagsRepositoryImpl.kt` — removed private 7-column `VersionTags`, now uses shared definition
+- `src/test/kotlin/io/sdkman/support/Postgres.kt` — removed private 7-column `VersionTags`, imports from main source
+
+**Test outcome:** PASS — all 131 tests green
+
+**Learnings:**
+- _Patterns:_ `internal` visibility in Kotlin allows same-module access (both main and test source sets), making it ideal for table objects that need sharing without public exposure
+- _Gotchas:_ The 2-column definition in `VersionsRepository` was a subset of the full schema — using the full 7-column `IntIdTable` definition works identically since Exposed only queries the columns you explicitly select
+- _Context:_ In Phase 3 the table will move to `PostgresTagRepository.kt` as its co-located `internal object VersionTagsTable` — for now `PostgresConnectivity.kt` is the shared infrastructure home
+
+---
