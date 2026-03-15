@@ -10,7 +10,7 @@ class HealthRepositorySpec :
 
         should("successfully check database connection when database is available") {
             withCleanDatabase {
-                val healthRepo = HealthRepositoryImpl()
+                val healthRepo = PostgresHealthRepository()
 
                 runBlocking {
                     val result = healthRepo.checkDatabaseConnection()

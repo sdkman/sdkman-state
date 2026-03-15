@@ -19,7 +19,7 @@ import io.sdkman.state.support.withCleanDatabase
 class TagsRepositorySpec :
     ShouldSpec({
 
-        val repo = TagsRepositoryImpl()
+        val repo = PostgresTagRepository()
 
         context("replaceTags") {
             should("create tags for a version") {

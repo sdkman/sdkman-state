@@ -84,8 +84,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create `config/ConfigExtensions.kt` -- Arrow-based config helpers
 - [x] Extract JDBC URL construction to shared config -- done in `ApplicationConfig.kt` (`DatabaseConfig.jdbcUrl` property)
 - [x] Move `CandidateLoader.kt` to `application/validation/` -- moved to `io.sdkman.state.application.validation.CandidateLoader` (kept with validation infrastructure since it loads valid candidates for validation)
-- [ ] Move `Authentication.kt` from `plugins/` to `config/` -- still at `io.sdkman.state.plugins.Authentication`
-- [ ] Move `Migration.kt` from `plugins/` to `config/` -- still at `io.sdkman.state.plugins.Migration`
+- [x] Move `Authentication.kt` from `plugins/` to `config/` -- now at `io.sdkman.state.config.Authentication`
+- [x] Move `Migration.kt` from `plugins/` to `config/` -- now at `io.sdkman.state.config.Migration`
 
 ---
 
@@ -94,10 +94,10 @@ Everything else depends on this. Migrate domain models first per spec section 11
 ### 3.1 Repository Implementations (spec sections 4.2, 6, 7)
 > **Note:** Repository implementations have been moved to `io.sdkman.state.adapter.secondary.persistence` package. Items below track remaining structural improvements beyond the package move.
 - [x] Create `adapter/secondary/persistence/PostgresConnectivity.kt` -- shared `dbQuery` helper, now at `io.sdkman.state.adapter.secondary.persistence.PostgresConnectivity`
-- [ ] Rename `VersionsRepository.kt` to `PostgresVersionRepository.kt` -- currently at `adapter/secondary/persistence/VersionsRepository.kt`; ensure **all methods suspend** (verify `create()` and `delete()` use `newSuspendedTransaction`)
-- [ ] Rename `TagsRepositoryImpl.kt` to `PostgresTagRepository.kt` -- currently at `adapter/secondary/persistence/TagsRepositoryImpl.kt`; consolidate `VersionTagsTable` to single definition; add `findTagNamesByVersionIds` batch method; extract `NA_SENTINEL` to single location
-- [ ] Rename `AuditRepositoryImpl.kt` to `PostgresAuditRepository.kt` -- currently at `adapter/secondary/persistence/AuditRepositoryImpl.kt`
-- [ ] Rename `HealthRepositoryImpl.kt` to `PostgresHealthRepository.kt` -- currently at `adapter/secondary/persistence/HealthRepositoryImpl.kt`
+- [x] Rename `VersionsRepository.kt` to `PostgresVersionRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository`; all methods suspend via shared `dbQuery` helper
+- [x] Rename `TagsRepositoryImpl.kt` to `PostgresTagRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository`; `VersionTags` table consolidated in `PostgresConnectivity.kt`; `NA_SENTINEL` shared; `findTagNamesByVersionId` present
+- [x] Rename `AuditRepositoryImpl.kt` to `PostgresAuditRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository`
+- [x] Rename `HealthRepositoryImpl.kt` to `PostgresHealthRepository.kt` -- now at `io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository`
 - [ ] Normalise `VersionTag` timestamps: convert `java.time.Instant` to/from `kotlinx.datetime.Instant` at persistence boundary only (spec section 9)
 
 ---

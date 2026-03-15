@@ -296,3 +296,31 @@ Each entry must follow this structure exactly:
 - _Context:_ Old directories are fully removed — no stale files remain. The restructure completes Phase 1.1 scaffolding and resolves all "will move during package restructuring" notes from Phases 1.2-1.5
 
 ---
+
+### [2026-03-15 24:00] — Phase 2.1 + 3.1: Repository Renames and Config Moves
+
+**Summary:** Renamed all four repository implementations to `Postgres*` naming convention (`PostgresVersionRepository`, `PostgresTagRepository`, `PostgresAuditRepository`, `PostgresHealthRepository`) and moved `Authentication.kt` and `Migration.kt` from `plugins/` to `config/` package.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepository.kt` — renamed from `VersionsRepository.kt`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresTagRepository.kt` — renamed from `TagsRepositoryImpl.kt`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepository.kt` — renamed from `AuditRepositoryImpl.kt`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresHealthRepository.kt` — renamed from `HealthRepositoryImpl.kt`
+- `src/main/kotlin/io/sdkman/state/config/Authentication.kt` — moved from `plugins/Authentication.kt`, package changed to `io.sdkman.state.config`
+- `src/main/kotlin/io/sdkman/state/config/Migration.kt` — moved from `plugins/Migration.kt`, package changed to `io.sdkman.state.config`
+- `src/main/kotlin/io/sdkman/state/Application.kt` — updated imports and instantiation to new class names
+- `src/test/kotlin/io/sdkman/state/support/Application.kt` — updated imports and instantiation
+- `src/test/kotlin/io/sdkman/state/HealthCheckApiSpec.kt` — updated imports and instantiation
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/VersionsRepositorySpec.kt` — updated class instantiation
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/TagsRepositorySpec.kt` — updated class instantiation
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/HealthRepositorySpec.kt` — updated class instantiation
+- Old files deleted: `VersionsRepository.kt`, `TagsRepositoryImpl.kt`, `AuditRepositoryImpl.kt`, `HealthRepositoryImpl.kt`, `plugins/Authentication.kt`, `plugins/Migration.kt`
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ Repository implementations in same package as their test specs don't need import changes when renamed — test files use the class name directly since they share the `io.sdkman.state.adapter.secondary.persistence` package
+- _Gotchas:_ `Application.kt` used a wildcard import `io.sdkman.state.plugins.*` which covered both `configureBasicAuthentication` and `configureDatabaseMigration` — after moving those functions to `config/`, the wildcard `io.sdkman.state.config.*` now covers them along with `configureAppConfig`
+- _Context:_ Phase 3.1 still has one remaining item: normalise `VersionTag` timestamps (already using `kotlin.time.Instant` in domain, `toKotlinTimeInstant()` at persistence boundary — may already be complete, needs verification)
+
+---

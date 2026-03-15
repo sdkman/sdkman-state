@@ -6,7 +6,7 @@ import io.sdkman.state.domain.model.HealthCheckSuccess
 import io.sdkman.state.domain.repository.HealthRepository
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 
-class HealthRepositoryImpl : HealthRepository {
+class PostgresHealthRepository : HealthRepository {
     override suspend fun checkDatabaseConnection(): Either<DatabaseFailure, HealthCheckSuccess> =
         Either
             .catch {

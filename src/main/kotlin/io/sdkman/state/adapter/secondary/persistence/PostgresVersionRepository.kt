@@ -18,7 +18,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.*
 import java.time.Instant
 
-class VersionsRepository : VersionRepository {
+class PostgresVersionRepository : VersionRepository {
     private object Versions : IntIdTable(name = "versions") {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
