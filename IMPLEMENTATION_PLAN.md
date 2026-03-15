@@ -152,6 +152,12 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Fix `contentType()?.withoutParameters()` in HealthCheckApiSpec SUCCESS test (line 44 -- inconsistent with FAILURE test at lines 69-72 which correctly uses `.toOption().map`)
 - [ ] Fix `getOrNull()!!` pattern (14 instances) in TagsRepositorySpec to use Arrow `shouldBeRight()` matchers
 
+### 6.3 Detekt Nullable Enforcement
+- [ ] Add JitPack repository to `settings.gradle.kts`: `maven("https://jitpack.io")`
+- [ ] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")`
+- [ ] Run `./gradlew detekt` to verify no nullable violations remain
+- [ ] Add `@AllowNullableTypes` annotation only where external interop requires it (document each case)
+
 ---
 
 ## Phase 7: Test Migration (spec section 8)
