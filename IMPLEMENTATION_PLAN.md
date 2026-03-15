@@ -49,28 +49,28 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [ ] Create test directory tree under `src/test/kotlin/io/sdkman/state/`
 
 ### 1.2 Domain Error Types (spec section 2.2)
-- [x] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants (currently a simple data class in Domain.kt) -- done in `Domain.kt`; will move to separate file during package restructuring
+- [x] Create `domain/error/DatabaseError.kt` -- `DatabaseFailure` sealed class with `ConnectionFailure` and `QueryExecutionFailure` variants -- done as `io.sdkman.domain.DatabaseFailure` in `DatabaseFailure.kt`; will move to `domain/error/` subdirectory during package restructuring
 - [ ] Create `domain/error/ValidationError.kt` -- move validation error hierarchy from `validation/ValidationErrors.kt`
-- [ ] Create `domain/error/DomainError.kt` -- unified sealed class consolidating `DeleteError`/`DeleteTagError` from Routing.kt (currently private sealed interfaces at lines 51-83)
+- [x] Create `domain/error/DomainError.kt` -- unified sealed interface consolidating `DeleteError`/`DeleteTagError` from Routing.kt -- done as `io.sdkman.domain.DomainError` in `DomainError.kt`; will move to `domain/error/` subdirectory during package restructuring
 
 ### 1.3 Domain Models (spec section 2.1)
-- [ ] Create `domain/model/Platform.kt` -- extract Platform enum from Domain.kt, **remove @Serializable**
-- [ ] Create `domain/model/Distribution.kt` -- extract Distribution enum from Domain.kt, **remove @Serializable**
-- [ ] Create `domain/model/Version.kt` -- extract Version + UniqueVersion from Domain.kt, **remove @Serializable**
-- [ ] Create `domain/model/VersionTag.kt` -- extract VersionTag + UniqueTag, **remove @Serializable**, change `java.time.Instant` to `kotlinx.datetime.Instant` (spec section 9)
-- [ ] Create `domain/model/Audit.kt` -- extract Auditable sealed interface + AuditOperation enum, **remove @Serializable**
-- [~] Create `domain/model/HealthCheckSuccess.kt` -- new `data object HealthCheckSuccess` (replaces HealthStatus enum) -- `HealthCheckSuccess` data object created in `Domain.kt`; `HealthStatus` enum kept temporarily for DTO layer compatibility
+- [~] Create `domain/model/Platform.kt` -- file created as `io.sdkman.domain.Platform` in `Platform.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
+- [~] Create `domain/model/Distribution.kt` -- file created as `io.sdkman.domain.Distribution` in `Distribution.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
+- [~] Create `domain/model/Version.kt` -- file created as `io.sdkman.domain.Version` + `UniqueVersion` in `Version.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
+- [~] Create `domain/model/VersionTag.kt` -- file created as `io.sdkman.domain.VersionTag` + `UniqueTag` in `VersionTag.kt`; **@Serializable still present**; `java.time.Instant` not yet changed to `kotlinx.datetime.Instant`; will move to `domain/model/` subdirectory during package restructuring
+- [~] Create `domain/model/Audit.kt` -- file created as `io.sdkman.domain.Auditable` + `AuditOperation` + `AuditRecord` in `Audit.kt`; **@Serializable still present**; will move to `domain/model/` subdirectory during package restructuring
+- [~] Create `domain/model/HealthCheckSuccess.kt` -- file created as `io.sdkman.domain.HealthCheckSuccess` + `HealthStatus` in `HealthCheck.kt`; `HealthStatus` enum kept temporarily for DTO layer compatibility; will move to `domain/model/` subdirectory during package restructuring
 - [ ] Move `AuditRecord` to test sources as `VendorAuditRecord` (only used in test assertions)
 
 ### 1.4 Repository Port Interfaces (spec section 2.3)
-- [x] Create `domain/repository/VersionRepository.kt` -- **new interface** (created in Domain.kt alongside other port interfaces; VersionsRepository now implements it; Routing depends on interface)
-- [ ] Create `domain/repository/TagRepository.kt` -- simplified from current `TagsRepository` (complex orchestration moves to service layer)
-- [ ] Create `domain/repository/AuditRepository.kt` -- refine existing interface from Domain.kt
-- [x] Create `domain/repository/HealthRepository.kt` -- change return type to `Either<DatabaseFailure, HealthCheckSuccess>` -- return type updated in existing `HealthRepository` interface in `Domain.kt`
+- [~] Create `domain/repository/VersionRepository.kt` -- file created as `io.sdkman.domain.VersionRepository` in `VersionRepository.kt`; `VersionsRepository` implements it; Routing depends on interface; will move to `domain/repository/` subdirectory during package restructuring
+- [~] Create `domain/repository/TagRepository.kt` -- file created as `io.sdkman.domain.TagsRepository` in `TagsRepository.kt`; will rename to `TagRepository` and move to `domain/repository/` subdirectory during package restructuring
+- [~] Create `domain/repository/AuditRepository.kt` -- file created as `io.sdkman.domain.AuditRepository` in `AuditRepository.kt`; will move to `domain/repository/` subdirectory during package restructuring
+- [~] Create `domain/repository/HealthRepository.kt` -- file created as `io.sdkman.domain.HealthRepository` in `HealthRepository.kt`; return type already `Either<DatabaseFailure, HealthCheckSuccess>`; will move to `domain/repository/` subdirectory during package restructuring
 
 ### 1.5 Domain Service Interfaces (spec section 2.4)
-- [x] Create `domain/service/VersionService.kt` -- created in `Domain.kt` alongside other port interfaces; covers findAll, findOne, createOrUpdate, delete
-- [x] Create `domain/service/TagService.kt` -- created in `Domain.kt`; covers deleteTag
+- [~] Create `domain/service/VersionService.kt` -- file created as `io.sdkman.domain.VersionService` in `VersionService.kt`; covers findAll, findOne, createOrUpdate, delete; will move to `domain/service/` subdirectory during package restructuring
+- [~] Create `domain/service/TagService.kt` -- file created as `io.sdkman.domain.TagService` in `TagService.kt`; covers deleteTag; will move to `domain/service/` subdirectory during package restructuring
 
 ---
 
@@ -153,7 +153,8 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Fix `getOrNull()!!` pattern (14 instances) in TagsRepositorySpec to use Arrow `shouldBeRight()` matchers -- already done in Phase 0.3
 
 ### 6.3 Detekt Nullable Enforcement
-- [ ] Add JitPack repository to `settings.gradle.kts`: `maven("https://jitpack.io")`
+- [ ] **BLOCKED**: `com.github.marc0der:detekt-rules:1.0.0` artifact does not exist on JitPack yet — the `marc0der/detekt-rules` GitHub repo needs to be created and published first
+- [ ] Add JitPack repository to `build.gradle.kts`: `maven("https://jitpack.io")`
 - [ ] Add detekt plugin dependency to `build.gradle.kts`: `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")`
 - [ ] Run `./gradlew detekt` to verify no nullable violations remain
 - [ ] Add `@AllowNullableTypes` annotation only where external interop requires it (document each case)
