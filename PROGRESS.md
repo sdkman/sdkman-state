@@ -366,3 +366,31 @@ Each entry must follow this structure exactly:
 - _Context:_ The audit repository was previously only tested indirectly through API acceptance specs — direct integration tests improve coverage of the serialization boundary and error handling
 
 ---
+
+### [2026-03-15 27:00] — Phase 7.2: Acceptance Test Migration to acceptance/ Subdirectory
+
+**Summary:** Migrated all 12 acceptance (E2E API) test specs from root `io.sdkman.state` package to `io.sdkman.state.acceptance` subdirectory. Applied `@Tags("acceptance")` annotation and renamed classes to `*AcceptanceSpec` convention. Deleted old spec files.
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/acceptance/GetVersionsAcceptanceSpec.kt` — new file (migrated from `GetVersionsApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/GetVersionAcceptanceSpec.kt` — new file (migrated from `GetVersionApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/GetVersionTagsAcceptanceSpec.kt` — new file (migrated from `GetVersionTagsApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionAcceptanceSpec.kt` — new file (migrated from `PostVersionApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionTagsAcceptanceSpec.kt` — new file (migrated from `PostVersionTagsApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionVisibilityAcceptanceSpec.kt` — new file (migrated from `PostVersionVisibilitySpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/IdempotentPostVersionAcceptanceSpec.kt` — new file (migrated from `IdempotentPostVersionApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteVersionAcceptanceSpec.kt` — new file (migrated from `DeleteVersionApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteTagAcceptanceSpec.kt` — new file (migrated from `DeleteTagApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteTaggedVersionAcceptanceSpec.kt` — new file (migrated from `DeleteTaggedVersionApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/HealthCheckAcceptanceSpec.kt` — new file (migrated from `HealthCheckApiSpec.kt`)
+- `src/test/kotlin/io/sdkman/state/acceptance/VendorAuditAcceptanceSpec.kt` — new file (migrated from `VendorAuditSpec.kt`)
+- 12 old spec files in `src/test/kotlin/io/sdkman/state/` — **deleted**
+
+**Test outcome:** PASS — all tests green, full build passes (compile + ktlint + detekt + test)
+
+**Learnings:**
+- _Patterns:_ Kept acceptance specs as 12 separate focused files rather than consolidating into 3 mega-files — each spec tests a cohesive feature area (GET versions, POST versions, DELETE tags, etc.) and consolidation would create files with 70+ tests that are harder to navigate
+- _Gotchas:_ `@Tags("acceptance")` uses `io.kotest.core.annotation.Tags` (not `io.kotest.core.Tag`) — the annotation form enables class-level tagging for selective CI execution via `--include-tags`
+- _Context:_ All 3 test layers now follow consistent tagging: `@Tags("acceptance")` for E2E API tests, `@Tags("integration")` for repository tests, no tag for unit tests (they're fast enough to always run)
+
+---

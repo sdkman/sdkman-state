@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
@@ -22,7 +23,8 @@ import kotlinx.serialization.json.jsonPrimitive
 // testuser:password123 base64 encoded
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-class DeleteTagApiSpec :
+@Tags("acceptance")
+class DeleteTagAcceptanceSpec :
     ShouldSpec({
 
         // Happy path tests

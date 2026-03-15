@@ -1,5 +1,6 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -13,7 +14,8 @@ import io.sdkman.state.support.withTestApplication
 
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-class PostVersionTagsApiSpec :
+@Tags("acceptance")
+class PostVersionTagsAcceptanceSpec :
     ShouldSpec({
 
         should("POST version with tags stores and returns them in GET") {

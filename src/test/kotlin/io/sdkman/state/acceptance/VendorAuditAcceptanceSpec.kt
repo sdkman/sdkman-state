@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -18,7 +19,8 @@ import kotlin.time.Duration.Companion.seconds
 
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-class VendorAuditSpec :
+@Tags("acceptance")
+class VendorAuditAcceptanceSpec :
     ShouldSpec({
 
         should("create audit record when POST creates a new version") {

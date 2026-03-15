@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
@@ -19,7 +20,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-class GetVersionTagsApiSpec :
+@Tags("acceptance")
+class GetVersionTagsAcceptanceSpec :
     ShouldSpec({
 
         should("GET version list with tags on each version") {

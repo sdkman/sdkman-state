@@ -1,6 +1,7 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
@@ -16,7 +17,8 @@ import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 
-class GetVersionsApiSpec :
+@Tags("acceptance")
+class GetVersionsAcceptanceSpec :
     ShouldSpec({
 
         should("GET all versions for a candidate") {

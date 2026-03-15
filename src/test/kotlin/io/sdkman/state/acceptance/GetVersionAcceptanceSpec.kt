@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
@@ -17,7 +18,8 @@ import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 
-class GetVersionApiSpec :
+@Tags("acceptance")
+class GetVersionAcceptanceSpec :
     ShouldSpec({
 
         should("GET a UNIVERSAL version for a candidate") {
