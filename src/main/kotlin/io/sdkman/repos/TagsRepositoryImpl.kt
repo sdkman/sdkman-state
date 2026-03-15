@@ -17,7 +17,6 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import java.time.Instant
 
@@ -35,8 +34,8 @@ class TagsRepositoryImpl : TagsRepository {
             distribution = dbToDistribution(this[VersionTags.distribution]),
             platform = Platform.valueOf(this[VersionTags.platform]),
             versionId = this[VersionTags.versionId],
-            createdAt = this[VersionTags.createdAt],
-            lastUpdatedAt = this[VersionTags.lastUpdatedAt],
+            createdAt = this[VersionTags.createdAt].toKotlinTimeInstant(),
+            lastUpdatedAt = this[VersionTags.lastUpdatedAt].toKotlinTimeInstant(),
         )
 
     override suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>> =

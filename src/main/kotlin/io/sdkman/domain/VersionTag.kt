@@ -15,8 +15,12 @@ data class VersionTag(
     val distribution: Option<Distribution>,
     val platform: Platform,
     val versionId: Int,
-    val createdAt: java.time.Instant = java.time.Instant.now(),
-    val lastUpdatedAt: java.time.Instant = java.time.Instant.now(),
+    val createdAt: kotlin.time.Instant =
+        kotlin.time.Clock.System
+            .now(),
+    val lastUpdatedAt: kotlin.time.Instant =
+        kotlin.time.Clock.System
+            .now(),
 )
 
 @Serializable
