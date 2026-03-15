@@ -265,7 +265,7 @@ fun Application.configureRouting(
                     ifRight = { validVersion ->
                         versionsRepo.create(validVersion).fold(
                             ifLeft = { error ->
-                                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error))
+                                call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.message))
                             },
                             ifRight = { versionId ->
                                 logAudit(logger, auditRepo, username, AuditOperation.CREATE, validVersion)
