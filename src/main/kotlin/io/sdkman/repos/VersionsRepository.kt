@@ -11,13 +11,14 @@ import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
+import io.sdkman.domain.VersionRepository
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.*
 import java.time.Instant
 
-class VersionsRepository {
+class VersionsRepository : VersionRepository {
     private object Versions : IntIdTable(name = "versions") {
         val candidate = varchar("candidate", length = 20)
         val version = varchar("version", length = 25)
@@ -74,7 +75,7 @@ class VersionsRepository {
             (cv.distribution.fold({ Versions.distribution eq null }, { Versions.distribution eq it.name })) and
             (Versions.platform eq cv.platform.name)
 
-    suspend fun read(
+    override suspend fun read(
         candidate: String,
         platform: Option<Platform>,
         distribution: Option<Distribution>,
@@ -98,7 +99,7 @@ class VersionsRepository {
                 .sortedWith(compareBy({ it.candidate }, { it.version }, { it.distribution.getOrNull() }, { it.platform }))
         }
 
-    suspend fun read(
+    override suspend fun read(
         candidate: String,
         version: String,
         platform: Platform,
@@ -117,7 +118,7 @@ class VersionsRepository {
                 .map { (id, v) -> v.withTags(fetchTagNames(id)) }
         }
 
-    suspend fun create(cv: Version): Either<String, Int> =
+    override suspend fun create(cv: Version): Either<String, Int> =
         dbQuery {
             val exists =
                 Versions
@@ -163,7 +164,7 @@ class VersionsRepository {
         return id.value.right()
     }
 
-    suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int> =
+    override suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int> =
         dbQuery {
             Versions
                 .select(Versions.id)
@@ -180,7 +181,7 @@ class VersionsRepository {
                 .firstOrNone()
         }
 
-    suspend fun delete(version: UniqueVersion): Int =
+    override suspend fun delete(version: UniqueVersion): Int =
         dbQuery {
             Versions.deleteWhere {
                 val baseCondition =

@@ -22,7 +22,7 @@ import io.sdkman.domain.TagsRepository
 import io.sdkman.domain.UniqueTag
 import io.sdkman.domain.UniqueVersion
 import io.sdkman.domain.Version
-import io.sdkman.repos.VersionsRepository
+import io.sdkman.domain.VersionRepository
 import io.sdkman.validation.UniqueTagValidator
 import io.sdkman.validation.UniqueVersionValidator
 import io.sdkman.validation.ValidationErrorResponse
@@ -165,7 +165,7 @@ private suspend fun ApplicationCall.respondDeleteError(error: DeleteError) {
 
 @Suppress("LongMethod")
 fun Application.configureRouting(
-    versionsRepo: VersionsRepository,
+    versionsRepo: VersionRepository,
     healthRepo: HealthRepository,
     auditRepo: AuditRepository,
     tagsRepo: TagsRepository,

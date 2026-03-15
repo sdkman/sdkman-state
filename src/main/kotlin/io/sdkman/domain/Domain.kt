@@ -132,6 +132,28 @@ data class UniqueTag(
     val platform: Platform,
 ) : Auditable
 
+interface VersionRepository {
+    suspend fun read(
+        candidate: String,
+        platform: Option<Platform>,
+        distribution: Option<Distribution>,
+        visible: Option<Boolean>,
+    ): List<Version>
+
+    suspend fun read(
+        candidate: String,
+        version: String,
+        platform: Platform,
+        distribution: Option<Distribution>,
+    ): Option<Version>
+
+    suspend fun create(cv: Version): Either<String, Int>
+
+    suspend fun findVersionId(uniqueVersion: UniqueVersion): Option<Int>
+
+    suspend fun delete(version: UniqueVersion): Int
+}
+
 interface TagsRepository {
     suspend fun findTagsByVersionId(versionId: Int): Either<DatabaseFailure, List<VersionTag>>
 
