@@ -1,14 +1,20 @@
 package io.sdkman.state.application.validation
 
-import arrow.core.*
+import arrow.core.Either
+import arrow.core.NonEmptyList
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.left
+import arrow.core.nel
 import arrow.core.raise.either
+import arrow.core.right
+import arrow.core.some
+import arrow.core.toNonEmptyListOrNone
+import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 
 object VersionRequestValidator {
     private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
@@ -18,82 +24,31 @@ object VersionRequestValidator {
     private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
     private val TAG_NAME_PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")
 
+    private val json = Json { explicitNulls = false }
+
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
-            val jsonObject =
+            val request =
                 Either
-                    .catch { Json.parseToJsonElement(jsonString) as JsonObject }
+                    .catch { json.decodeFromString<VersionRequest>(jsonString) }
                     .mapLeft {
                         DeserializationError("request", "Invalid JSON: ${it.message}")
                             .nel()
                     }.bind()
 
-            validateVersionFromJson(jsonObject).bind()
+            validate(request).bind()
         }
 
-    private fun validateVersionFromJson(jsonObject: JsonObject): Either<NonEmptyList<ValidationError>, Version> {
-        // Helper to extract string values, treating JSON null as None
-        fun JsonObject.getStringOrNone(key: String): Option<String> =
-            this.getOrNone(key).flatMap { element ->
-                when (element) {
-                    is JsonPrimitive if element.isString -> element.content.toOption()
-                    is JsonPrimitive -> None // null or other primitive type
-                    else -> None
-                }
-            }
-
-        // Helper to extract boolean values, treating JSON null as None
-        fun JsonObject.getBooleanOrNone(key: String): Option<Boolean> =
-            this.getOrNone(key).flatMap { element ->
-                when (element) {
-                    is JsonPrimitive -> {
-                        if (element.content == "null") {
-                            None
-                        } else {
-                            element.content.toBooleanStrictOrNull().toOption()
-                        }
-                    }
-
-                    else -> None
-                }
-            }
-
-        // Helper to extract tags list: None = absent, Some(emptyList) = clear, Some(list) = replace
-        fun JsonObject.getTagsOrNone(key: String): Option<List<String>> =
-            this.getOrNone(key).map { element ->
-                when (element) {
-                    is JsonArray ->
-                        element
-                            .filterIsInstance<JsonPrimitive>()
-                            .filter { it.isString }
-                            .map { it.content }
-
-                    else -> emptyList()
-                }
-            }
-
-        // Extract all fields to Option immediately at JSON boundary (RULE-001)
-        val candidateOpt: Option<String> = jsonObject.getStringOrNone("candidate")
-        val versionOpt: Option<String> = jsonObject.getStringOrNone("version")
-        val platformOpt: Option<String> = jsonObject.getStringOrNone("platform")
-        val urlOpt: Option<String> = jsonObject.getStringOrNone("url")
-        val visibleOpt: Option<Boolean> = jsonObject.getBooleanOrNone("visible")
-        val distributionOpt: Option<String> = jsonObject.getStringOrNone("distribution")
-        val md5sumOpt: Option<String> = jsonObject.getStringOrNone("md5sum")
-        val sha256sumOpt: Option<String> = jsonObject.getStringOrNone("sha256sum")
-        val sha512sumOpt: Option<String> = jsonObject.getStringOrNone("sha512sum")
-        val tagsOpt: Option<List<String>> = jsonObject.getTagsOrNone("tags")
-
-        // Validate all fields
-        val candidateResult = validateCandidate(candidateOpt)
-        val versionResult = validateVersion(versionOpt)
-        val platformResult = validatePlatform(platformOpt)
-        val urlResult = validateUrl(urlOpt)
-        val distributionResult = validateDistribution(distributionOpt)
-        val md5sumResult = validateHash("md5sum", md5sumOpt, 32, HEX_PATTERN_32)
-        val sha256sumResult = validateHash("sha256sum", sha256sumOpt, 64, HEX_PATTERN_64)
-        val sha512sumResult = validateHash("sha512sum", sha512sumOpt, 128, HEX_PATTERN_128)
-        val tagsResult = validateTags(tagsOpt)
+    fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> {
+        val candidateResult = validateCandidate(request.candidate)
+        val versionResult = validateVersion(request.version)
+        val platformResult = validatePlatform(request.platform)
+        val urlResult = validateUrl(request.url)
+        val distributionResult = validateDistribution(request.distribution)
+        val md5sumResult = validateHash("md5sum", request.md5sum, 32, HEX_PATTERN_32)
+        val sha256sumResult = validateHash("sha256sum", request.sha256sum, 64, HEX_PATTERN_64)
+        val sha512sumResult = validateHash("sha512sum", request.sha512sum, 128, HEX_PATTERN_128)
+        val tagsResult = validateTags(request.tags)
 
         val errors =
             listOf<Either<NonEmptyList<ValidationError>, *>>(
@@ -116,7 +71,7 @@ object VersionRequestValidator {
                         version = versionResult.bind(),
                         platform = platformResult.bind(),
                         url = urlResult.bind(),
-                        visible = visibleOpt,
+                        visible = request.visible,
                         distribution = distributionResult.bind(),
                         md5sum = md5sumResult.bind(),
                         sha256sum = sha256sumResult.bind(),
@@ -188,7 +143,7 @@ object VersionRequestValidator {
 
     private fun validateDistribution(distribution: Option<String>): Either<NonEmptyList<ValidationError>, Option<Distribution>> =
         distribution.fold(
-            { None.right() }, // Missing distribution is valid
+            { None.right() },
             { value ->
                 when {
                     value.isBlank() ->
@@ -215,7 +170,7 @@ object VersionRequestValidator {
         pattern: Regex,
     ): Either<NonEmptyList<ValidationError>, Option<String>> =
         hashOpt.fold(
-            { None.right() }, // Missing hash is valid
+            { None.right() },
             { hash ->
                 when {
                     hash.isBlank() ->

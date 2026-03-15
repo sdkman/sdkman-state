@@ -11,8 +11,8 @@ import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.application.validation.UniqueTagValidator
-import io.sdkman.state.application.validation.ValidationFailure
 import io.sdkman.state.domain.error.DomainError
+import io.sdkman.state.domain.error.FieldError
 import io.sdkman.state.domain.service.TagService
 
 fun Route.tagRoutes(tagService: TagService) {
@@ -31,7 +31,7 @@ fun Route.tagRoutes(tagService: TagService) {
             UniqueTagValidator
                 .validate(uniqueTag)
                 .mapLeft { errors ->
-                    DomainError.ValidationFailures(errors.map { ValidationFailure(it.field, it.message) })
+                    DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
             tagService.deleteTag(uniqueTag, username).bind()
         }.fold(

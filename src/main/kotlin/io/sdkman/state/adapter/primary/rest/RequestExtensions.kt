@@ -13,7 +13,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
-import io.sdkman.state.application.validation.ValidationErrorResponse
+import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
+import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 
@@ -39,7 +40,13 @@ suspend fun ApplicationCall.respondDomainError(error: DomainError) {
             respond(HttpStatusCode.BadRequest, ErrorResponse("Bad Request", error.message))
 
         is DomainError.ValidationFailures ->
-            respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation Error", error.failures))
+            respond(
+                HttpStatusCode.BadRequest,
+                ValidationErrorResponse(
+                    "Validation Error",
+                    error.failures.map { ValidationFailure(it.field, it.message) },
+                ),
+            )
 
         is DomainError.VersionNotFound ->
             respond(HttpStatusCode.NotFound)

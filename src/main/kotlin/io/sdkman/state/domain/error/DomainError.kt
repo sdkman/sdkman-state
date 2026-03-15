@@ -1,6 +1,9 @@
 package io.sdkman.state.domain.error
 
-import io.sdkman.state.application.validation.ValidationFailure
+data class FieldError(
+    val field: String,
+    val message: String,
+)
 
 sealed interface DomainError {
     data class VersionNotFound(
@@ -21,7 +24,7 @@ sealed interface DomainError {
     ) : DomainError
 
     data class ValidationFailures(
-        val failures: List<ValidationFailure>,
+        val failures: List<FieldError>,
     ) : DomainError
 
     data class DatabaseError(

@@ -122,13 +122,13 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Create `dto/VersionDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.VersionDto`; @Serializable DTO with toDto()/toDomain() mappers
 - [x] Create `dto/UniqueVersionDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto`; @Serializable DTO with toDomain() mapper
 - [x] Create `dto/UniqueTagDto.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto`; @Serializable DTO with toDto()/toDomain() mappers
-- [ ] Create `adapter/primary/rest/dto/VersionRequest.kt` -- `@Serializable` unvalidated request DTO (JSON parsing moves here from VersionRequestValidator)
-- [ ] Create `adapter/primary/rest/dto/UniqueVersionRequest.kt` -- `@Serializable` delete request DTO
-- [ ] Create `adapter/primary/rest/dto/UniqueTagRequest.kt` -- `@Serializable` tag delete request DTO
+- [x] Create `adapter/primary/rest/dto/VersionRequest.kt` -- `@Serializable` unvalidated request DTO with all `Option` fields; `VersionRequestValidator.validate(VersionRequest)` method added; `validateRequest(String)` now deserializes to `VersionRequest` internally via kotlinx.serialization instead of manual JSON parsing
+- [x] ~~Create `adapter/primary/rest/dto/UniqueVersionRequest.kt`~~ -- NOT NEEDED: `UniqueVersionDto` already serves as the `@Serializable` request DTO for DELETE operations
+- [x] ~~Create `adapter/primary/rest/dto/UniqueTagRequest.kt`~~ -- NOT NEEDED: `UniqueTagDto` already serves as the `@Serializable` request DTO for tag DELETE operations
 - [x] Create `adapter/primary/rest/dto/ErrorResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.ErrorResponse`
 - [x] Create `adapter/primary/rest/dto/TagConflictResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse`
 - [x] Create `adapter/primary/rest/dto/HealthCheckResponse.kt` -- now at `io.sdkman.state.adapter.primary.rest.dto.HealthCheckResponse`
-- [ ] Create `adapter/primary/rest/dto/ValidationErrorResponse.kt` -- move from validation/ValidationErrors.kt
+- [x] Create `adapter/primary/rest/dto/ValidationErrorResponse.kt` -- moved `ValidationFailure` and `ValidationErrorResponse` from `application/validation/ValidationErrors.kt` to `adapter/primary/rest/dto/ValidationErrorResponse.kt`; `DomainError.ValidationFailures` now uses domain-level `FieldError` instead of `ValidationFailure`, fixing the hexagonal layering violation where domain imported application types
 
 ### 5.2 REST Route Adapters (spec section 4.1)
 - [x] Create `adapter/primary/rest/RequestExtensions.kt` -- now at `io.sdkman.state.adapter.primary.rest.RequestExtensions`
