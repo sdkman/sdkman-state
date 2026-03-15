@@ -12,26 +12,11 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.VersionRepository
-import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.javatime.*
 import java.time.Instant
 
 class PostgresVersionRepository : VersionRepository {
-    private object Versions : IntIdTable(name = "versions") {
-        val candidate = varchar("candidate", length = 20)
-        val version = varchar("version", length = 25)
-        val distribution = varchar("distribution", length = 20).nullable()
-        val platform = varchar("platform", length = 15)
-        val url = varchar("url", length = 500)
-        val visible = bool("visible")
-        val md5sum = varchar("md5_sum", length = 32).nullable()
-        val sha256sum = varchar("sha_256_sum", length = 64).nullable()
-        val sha512sum = varchar("sha_512_sum", length = 128).nullable()
-        val lastUpdatedAt = timestamp("last_updated_at")
-    }
-
     private fun ResultRow.toVersion(): Version =
         Version(
             candidate = this[Versions.candidate],

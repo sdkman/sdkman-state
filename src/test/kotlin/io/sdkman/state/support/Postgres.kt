@@ -7,7 +7,9 @@ import arrow.core.toOption
 import io.sdkman.state.adapter.primary.rest.dto.VersionDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
+import io.sdkman.state.adapter.secondary.persistence.VendorAuditTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTags
+import io.sdkman.state.adapter.secondary.persistence.Versions
 import io.sdkman.state.config.DatabaseConfig
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
@@ -16,12 +18,8 @@ import io.sdkman.state.domain.model.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
 import org.flywaydb.core.Flyway
-import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.javatime.timestamp
-import org.jetbrains.exposed.sql.json.json
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
@@ -30,29 +28,6 @@ val DB_HOST: String get() = PostgresTestContainer.host
 val DB_PORT: Int get() = PostgresTestContainer.port
 val DB_USERNAME: String get() = PostgresTestContainer.username
 val DB_PASSWORD: String get() = PostgresTestContainer.password
-
-private object Versions : IntIdTable(name = "versions") {
-    val candidate = varchar("candidate", length = 20)
-    val version = varchar("version", length = 25)
-    val distribution = varchar("distribution", length = 20).nullable()
-    val platform = varchar("platform", length = 15)
-    val url = varchar("url", length = 500)
-    val visible = bool("visible")
-    val md5sum = varchar("md5_sum", length = 32).nullable()
-    val sha256sum = varchar("sha_256_sum", length = 64).nullable()
-    val sha512sum = varchar("sha_512_sum", length = 128).nullable()
-    val lastUpdatedAt = timestamp("last_updated_at")
-}
-
-private object VendorAuditTable : Table(name = "vendor_audit") {
-    val id = long("id").autoIncrement()
-    val username = text("username")
-    val timestamp = timestamp("timestamp")
-    val operation = text("operation")
-    val versionData = json<JsonElement>("version_data", Json.Default)
-
-    override val primaryKey = PrimaryKey(id)
-}
 
 data class VendorAuditRecord(
     val id: Long = 0,

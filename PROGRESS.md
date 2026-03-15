@@ -394,3 +394,22 @@ Each entry must follow this structure exactly:
 - _Context:_ All 3 test layers now follow consistent tagging: `@Tags("acceptance")` for E2E API tests, `@Tags("integration")` for repository tests, no tag for unit tests (they're fast enough to always run)
 
 ---
+
+### [2026-03-15 28:00] — Phase 7.3: Remove duplicate table definitions from test support
+
+**Summary:** Promoted `Versions` and `VendorAuditTable` from `private object` inside their respective repository classes to `internal object` in `PostgresConnectivity.kt`. Test support `Postgres.kt` now imports these shared definitions instead of maintaining duplicate copies, following the established `VersionTags` pattern.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresConnectivity.kt` — added `internal object Versions` and `internal object VendorAuditTable` alongside existing `internal object VersionTags`
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVersionRepository.kt` — removed `private object Versions` (now imports shared definition)
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepository.kt` — removed `private object VendorAuditTable` (now imports shared definition)
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — removed duplicate `private object Versions` and `private object VendorAuditTable`; now imports from main source
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test)
+
+**Learnings:**
+- _Patterns:_ All three table objects (`Versions`, `VersionTags`, `VendorAuditTable`) now follow the same `internal object` pattern in `PostgresConnectivity.kt`, providing a single source of truth for Exposed table definitions accessible by both production repositories and test support code
+- _Gotchas:_ Removing the `private object` from inside the repository class means the table object is no longer scoped to the class — but since all repositories are in the same package, unqualified access works identically
+- _Context:_ This completes Phase 7.3 of the implementation plan; the only remaining test infrastructure items are Phase 7.1 helpers (EitherMatchers, OptionMatchers, KotestConfig, TestDependencyInjection)
+
+---
