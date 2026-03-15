@@ -4,11 +4,13 @@ import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.sdkman.config.DatabaseConfig
 import io.sdkman.domain.AuditOperation
 import io.sdkman.domain.AuditRecord
 import io.sdkman.domain.Distribution
 import io.sdkman.domain.Platform
 import io.sdkman.domain.Version
+import io.sdkman.repos.NA_SENTINEL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -39,8 +41,6 @@ private object Versions : IntIdTable(name = "versions") {
     val sha512sum = varchar("sha_512_sum", length = 128).nullable()
     val lastUpdatedAt = timestamp("last_updated_at")
 }
-
-private const val NA_SENTINEL = "NA"
 
 private object VersionTags : IntIdTable(name = "version_tags") {
     val candidate = text("candidate")
@@ -182,10 +182,12 @@ fun selectLastUpdatedAt(
             }.firstOrNone()
     }
 
+private val testDbConfig = DatabaseConfig(DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD)
+
 private fun initialisePostgres() =
     Database
         .connect(
-            url = "jdbc:postgresql://$DB_HOST:$DB_PORT/sdkman?sslMode=prefer&loglevel=2",
+            url = testDbConfig.jdbcUrl,
             user = DB_USERNAME,
             password = DB_PASSWORD,
             driver = "org.postgresql.Driver",
@@ -193,7 +195,7 @@ private fun initialisePostgres() =
             Flyway
                 .configure()
                 .dataSource(
-                    "jdbc:postgresql://$DB_HOST:$DB_PORT/sdkman?sslMode=prefer&loglevel=2",
+                    testDbConfig.jdbcUrl,
                     DB_USERNAME,
                     DB_PASSWORD,
                 ).load()

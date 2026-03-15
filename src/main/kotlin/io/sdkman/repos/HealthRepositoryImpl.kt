@@ -3,13 +3,9 @@ package io.sdkman.repos
 import arrow.core.Either
 import io.sdkman.domain.DatabaseFailure
 import io.sdkman.domain.HealthRepository
-import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 class HealthRepositoryImpl : HealthRepository {
-    private suspend fun <T> dbQuery(block: suspend () -> T): T = newSuspendedTransaction(Dispatchers.IO) { block() }
-
     override suspend fun checkDatabaseConnection(): Either<DatabaseFailure, Unit> =
         Either
             .catch {
