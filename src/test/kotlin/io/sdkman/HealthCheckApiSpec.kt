@@ -20,6 +20,8 @@ import io.sdkman.repos.AuditRepositoryImpl
 import io.sdkman.repos.HealthRepositoryImpl
 import io.sdkman.repos.TagsRepositoryImpl
 import io.sdkman.repos.VersionsRepository
+import io.sdkman.service.TagServiceImpl
+import io.sdkman.service.VersionServiceImpl
 import io.sdkman.support.withCleanDatabase
 import kotlinx.serialization.json.Json
 
@@ -35,7 +37,16 @@ class HealthCheckApiSpec :
                     application {
                         val dbConfig = configureAppConfig(environment).databaseConfig
                         configureDatabase(dbConfig)
-                        configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
+
+                        val versionsRepo = VersionsRepository()
+                        val tagsRepo = TagsRepositoryImpl()
+                        val auditRepo = AuditRepositoryImpl()
+
+                        configureRouting(
+                            versionService = VersionServiceImpl(versionsRepo, tagsRepo, auditRepo),
+                            tagService = TagServiceImpl(tagsRepo, auditRepo),
+                            healthRepo = HealthRepositoryImpl(),
+                        )
                     }
 
                     client.get("/meta/health").apply {
@@ -62,7 +73,16 @@ class HealthCheckApiSpec :
                     val dbConfig = configureAppConfig(environment).databaseConfig
                     val badDbConfig = dbConfig.copy(port = 9999)
                     configureDatabase(badDbConfig)
-                    configureRouting(VersionsRepository(), HealthRepositoryImpl(), AuditRepositoryImpl(), TagsRepositoryImpl())
+
+                    val versionsRepo = VersionsRepository()
+                    val tagsRepo = TagsRepositoryImpl()
+                    val auditRepo = AuditRepositoryImpl()
+
+                    configureRouting(
+                        versionService = VersionServiceImpl(versionsRepo, tagsRepo, auditRepo),
+                        tagService = TagServiceImpl(tagsRepo, auditRepo),
+                        healthRepo = HealthRepositoryImpl(),
+                    )
                 }
 
                 client.get("/meta/health").apply {

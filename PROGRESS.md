@@ -106,3 +106,25 @@ Each entry must follow this structure exactly:
 - _Context:_ `DomainError.ValidationFailures` depends on `ValidationFailure` from the validation package — this cross-package dependency will be resolved when `ValidationFailure` moves to the domain layer in Phase 1.2
 
 ---
+
+### [2026-03-15 16:00] — Phase 1.5 + 4.1: Service Layer Extraction
+
+**Summary:** Created `VersionService` and `TagService` domain interfaces with `VersionServiceImpl` and `TagServiceImpl` implementations. Extracted business logic from `Routing.kt` into services — routing now handles only HTTP concerns (deserialization, validation, response mapping) while services handle orchestration (create/delete, audit, tag processing).
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/domain/Domain.kt` — added `VersionService` interface (findAll, findOne, createOrUpdate, delete) and `TagService` interface (deleteTag)
+- `src/main/kotlin/io/sdkman/service/VersionServiceImpl.kt` — new file; implements VersionService with repo delegation for reads and orchestration logic for writes (create → audit → tags, delete → check tags → audit → delete)
+- `src/main/kotlin/io/sdkman/service/TagServiceImpl.kt` — new file; implements TagService with tag deletion + audit recording
+- `src/main/kotlin/io/sdkman/plugins/Routing.kt` — simplified to thin adapter; removed `logAudit`, `processTags` private functions; changed `configureRouting` signature from 4 repos to (VersionService, TagService, HealthRepository)
+- `src/main/kotlin/io/sdkman/Application.kt` — updated DI wiring to construct services from repos
+- `src/test/kotlin/io/sdkman/support/Application.kt` — updated test wiring to match new signature
+- `src/test/kotlin/io/sdkman/HealthCheckApiSpec.kt` — updated inline app wiring to match new signature
+
+**Test outcome:** PASS — all 131 tests green
+
+**Learnings:**
+- _Patterns:_ Service methods return `Either<DomainError, Unit>` which the routing layer can `.bind()` inside its own `either` block, allowing clean composition of adapter-level errors (deserialization) with service-level errors (not found, conflict)
+- _Gotchas:_ HealthCheckApiSpec has its own inline app configuration (doesn't use `withTestApplication`) — must be updated separately when `configureRouting` signature changes
+- _Context:_ `TagsRepositoryImpl.replaceTags` still contains the DB-level tag mutual exclusivity logic (delete-from-other-versions-then-insert) — this is appropriate for the persistence layer as it's transactional DB work, not business orchestration
+
+---
