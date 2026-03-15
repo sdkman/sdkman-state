@@ -511,3 +511,21 @@ Each entry must follow this structure exactly:
 - _Patterns:_ `VersionServiceImpl` depending on `TagService` instead of `TagRepository` enforces proper hexagonal layering — the version service coordinates with the tag service (same layer) rather than reaching into the tag repository (lower layer) directly. This aligns with spec section 2.4 which says `constructor(VersionRepository, TagService, AuditRepository)`.
 - _Gotchas:_ `DomainError` is a sealed interface without a `message` property — when logging errors from `TagService.replaceTags()` (which returns `Either<DomainError, Unit>`), use `$error` (toString) rather than `${error.message}` which only works on `DatabaseFailure` (a `Throwable` subclass).
 - _Context:_ `findTagNamesByVersionId` was added to `TagService` (not in the spec's TagService interface) to allow `VersionServiceImpl` to check for tag conflicts during delete without needing a direct `TagRepository` dependency. This is a pragmatic extension that keeps the dependency graph clean while preserving the existing delete-with-tag-check logic.
+
+---
+
+### [2026-03-15 33:00] — Phase 6.3: Detekt Nullable Enforcement via Custom Rule
+
+**Summary:** Unblocked and completed Phase 6.3 by adding the `com.github.marc0der:detekt-rules:1.0.0` custom detekt rules from JitPack. The `NoNullableTypes` rule enforces that no explicit nullable types (`?`) appear in Kotlin source, directing developers to use Arrow's `Option` instead. Zero violations were found in main sources. Fixed 4 pre-existing detekt violations in test support (`Postgres.kt`): 2 `NoNameShadowing` (implicit `it` in nested lambdas) and 2 `InjectDispatcher` (hardcoded `Dispatchers.IO` in test utility).
+
+**Files changed:**
+- `build.gradle.kts` — added JitPack repository (`maven("https://jitpack.io")`), `detektPlugins("com.github.marc0der:detekt-rules:1.0.0")` for the rule, `compileOnly("com.github.marc0der:detekt-rules:1.0.0")` for the `@AllowNullableTypes` annotation
+- `detekt.yml` — added `SdkmanRuleSet: NoNullableTypes: active: true` configuration
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — fixed 2 `NoNameShadowing` violations (renamed implicit `it` to `dist` in `distribution.map {}` lambdas at lines 48, 65, 85, 131); fixed 2 `InjectDispatcher` violations (suppressed on test utility `dbQuery` function)
+
+**Test outcome:** PASS — all tests green, full build passes (compile + detekt + ktlint + test); `detektTest` also passes
+
+**Learnings:**
+- _Patterns:_ The `NoNullableTypes` rule checks PSI-level `KtNullableType` nodes and can be suppressed per-element with `@AllowNullableTypes` (from `io.sdkman.detekt` package) on functions, parameters, or properties. The annotation requires `compileOnly` dependency since it has `AnnotationRetention.BINARY`.
+- _Gotchas:_ `detektPlugins` configuration is separate from the standard `detekt` configuration — `./gradlew dependencies --configuration detektPlugins` shows custom rules, not `--configuration detekt`. The `build` task only runs `detekt` (main sources), not `detektTest` — test sources need explicit `./gradlew detektTest`.
+- _Context:_ The JitPack artifact `com.github.marc0der:detekt-rules:1.0.0` was confirmed available (POM resolves), unblocking the previously stuck Phase 6.3. No `@AllowNullableTypes` annotations were needed because all nullable types had already been eradicated in Phases 6.1 and 6.2. This completes all phases of the modernisation plan.

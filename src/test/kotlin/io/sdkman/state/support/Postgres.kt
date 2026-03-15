@@ -45,7 +45,7 @@ fun insertVersions(vararg cvs: Version) =
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[platform] = cv.platform.name
-                it[distribution] = cv.distribution.map { it.name }.getOrNull()
+                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrNull()
                 it[url] = cv.url
                 it[visible] = cv.visible.getOrElse { true }
                 it[md5sum] = cv.md5sum.getOrNull()
@@ -62,7 +62,7 @@ fun insertVersionWithId(cv: Version): Int =
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[platform] = cv.platform.name
-                it[distribution] = cv.distribution.map { it.name }.getOrNull()
+                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrNull()
                 it[url] = cv.url
                 it[visible] = cv.visible.getOrElse { true }
                 it[md5sum] = cv.md5sum.getOrNull()
@@ -82,7 +82,7 @@ fun insertTag(
     VersionTagsTable.insert {
         it[this.candidate] = candidate
         it[this.tag] = tag
-        it[this.distribution] = distribution.map { it.name }.getOrElse { NA_SENTINEL }
+        it[this.distribution] = distribution.map { dist -> dist.name }.getOrElse { NA_SENTINEL }
         it[this.platform] = platform.name
         it[this.versionId] = versionId
         it[this.createdAt] = Instant.now()
@@ -105,6 +105,7 @@ fun selectAllTags(): List<Pair<Int, String>> =
             .map { it[VersionTagsTable.versionId] to it[VersionTagsTable.tag] }
     }
 
+@Suppress("InjectDispatcher")
 private fun <T> dbQuery(block: suspend () -> T): T =
     runBlocking(Dispatchers.IO) {
         newSuspendedTransaction(Dispatchers.IO) { block() }
@@ -128,7 +129,7 @@ fun selectVersion(
                 Version(
                     candidate = it[VersionsTable.candidate],
                     version = it[VersionsTable.version],
-                    distribution = it[VersionsTable.distribution].toOption().map { Distribution.valueOf(it) },
+                    distribution = it[VersionsTable.distribution].toOption().map { dist -> Distribution.valueOf(dist) },
                     platform = Platform.valueOf(it[VersionsTable.platform]),
                     url = it[VersionsTable.url],
                     visible = it[VersionsTable.visible].toOption(),
