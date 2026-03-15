@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -20,7 +21,8 @@ import io.sdkman.state.support.withTestApplication
 // testuser:password123 base64 encoded
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-class PostVersionApiSpec :
+@Tags("acceptance")
+class PostVersionAcceptanceSpec :
     ShouldSpec({
 
         should("POST a new version for a candidate, platform and distribution") {

@@ -1,8 +1,9 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -26,7 +27,8 @@ import io.sdkman.state.support.testApplicationConfig
 import io.sdkman.state.support.withCleanDatabase
 import kotlinx.serialization.json.Json
 
-class HealthCheckApiSpec :
+@Tags("acceptance")
+class HealthCheckAcceptanceSpec :
     ShouldSpec({
 
         should("return SUCCESS status when database is available") {

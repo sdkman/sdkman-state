@@ -2,7 +2,7 @@
 
 > **Goal:** Refactor sdkman-state to hexagonal architecture per `specs/modernisation.md`
 > **Branch:** `corrective_actions`
-> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.3 integration + 7.4 unit tests done
+> **Status:** In progress -- Phases 0-5 and 8 complete; Phase 7 (test migration) in progress -- 7.1 infra + 7.2 acceptance + 7.3 integration + 7.4 unit tests done
 > **Strategy:** Incremental migration (new structure alongside existing, then remove old)
 
 ---
@@ -180,10 +180,10 @@ Everything else depends on this. Migrate domain models first per spec section 11
 - [x] Create `support/VendorAuditRecord.kt` -- test-only type already exists in `Postgres.kt` (moved from domain AuditRecord in Phase 1.3)
 
 ### 7.2 Acceptance Tests (E2E via full app + Testcontainers)
-- [ ] Migrate/consolidate API specs into `acceptance/VersionAcceptanceSpec.kt`
-- [ ] Migrate/consolidate tag API specs into `acceptance/TagAcceptanceSpec.kt`
-- [ ] Migrate health check spec into `acceptance/HealthAcceptanceSpec.kt`
-- [ ] Add `@Tag("acceptance")` to all acceptance specs
+- [x] Migrate API specs to `acceptance/` subdirectory with `@Tags("acceptance")` annotation -- kept as separate focused spec files (12 files) rather than consolidating into 3 mega-files, for readability and maintainability
+- [x] Rename specs to `*AcceptanceSpec` naming convention: `GetVersionsAcceptanceSpec`, `GetVersionAcceptanceSpec`, `GetVersionTagsAcceptanceSpec`, `PostVersionAcceptanceSpec`, `PostVersionTagsAcceptanceSpec`, `PostVersionVisibilityAcceptanceSpec`, `IdempotentPostVersionAcceptanceSpec`, `DeleteVersionAcceptanceSpec`, `DeleteTagAcceptanceSpec`, `DeleteTaggedVersionAcceptanceSpec`, `HealthCheckAcceptanceSpec`, `VendorAuditAcceptanceSpec`
+- [x] Add `@Tags("acceptance")` to all acceptance specs via `io.kotest.core.annotation.Tags`
+- [x] Delete old spec files from root `io.sdkman.state` package
 
 ### 7.3 Integration Tests (Repository + Testcontainers)
 - [x] Migrate `VersionsRepositorySpec` to `adapter/secondary/persistence/PostgresVersionRepositoryIntegrationSpec.kt` -- renamed with `@Tags("integration")` annotation

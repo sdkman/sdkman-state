@@ -1,7 +1,8 @@
-package io.sdkman.state
+package io.sdkman.state.acceptance
 
 import arrow.core.None
 import arrow.core.some
+import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.header
@@ -22,7 +23,8 @@ import io.sdkman.state.support.withTestApplication
 // testuser:password123 base64 encoded
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
-class IdempotentPostVersionApiSpec :
+@Tags("acceptance")
+class IdempotentPostVersionAcceptanceSpec :
     ShouldSpec({
 
         should("POST be idempotent - same version posted twice should succeed with 204") {
