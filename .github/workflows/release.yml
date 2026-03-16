@@ -8,24 +8,14 @@ jobs:
   build:
     name: "Release"
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:latest
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: sdkman
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
       - name: Install doctl
         uses: digitalocean/action-doctl@v2
         with:
@@ -44,4 +34,3 @@ jobs:
           version=$(git rev-parse --short=8 HEAD)
           docker push registry.digitalocean.com/sdkman/sdkman-state:$version
           docker push registry.digitalocean.com/sdkman/sdkman-state:latest
-
