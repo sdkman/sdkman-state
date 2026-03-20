@@ -1,32 +1,33 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Operational guardrails for the sdkman-state service. Keep this concise and operational — architecture and domain details belong in the code.
 
 ## Project Overview
 
-SDKMAN State API is a Kotlin-based Ktor application that manages SDKMAN candidate and version state through a JSON API. It serves as both a backend for native Rust components and an admin API for the datastore, supporting GET, POST, PATCH, and DELETE operations on candidates and versions.
+SDKMAN State API is a Kotlin-based Ktor application that manages SDKMAN candidate and version state through a JSON API.
 
 ## MCP Integration
 
-This project uses the Gradle MCP server for enhanced Gradle operations. Always use the gradle-mcp when available for any Gradle-related tasks including:
-- Building and testing
-- Dependency management
-- Task execution
-- Project analysis
+This project uses the Gradle MCP server for enhanced Gradle operations. Always use the gradle-mcp when available for building, testing, dependency management, and task execution.
 
-## Build and Development Commands
+## Build & Run
 
-### Build and Test
-- **Build**: `./gradlew build` - Compiles the project and runs all checks
-- **Test**: `./gradlew test` - Runs all Kotest specifications  
-- **Run locally**: `./gradlew run` - Starts the server on port 8080
-- **Clean**: `./gradlew clean` - Removes build artifacts
+- **Run service:** `./gradlew run` (starts Ktor on port 8080)
+- **Run with Docker:** See README.md for PostgreSQL setup
 
-### Docker Operations
-- **Build Docker image**: `./gradlew buildImage` - Creates Docker image with git SHA tag
-- **Run with Docker**: The image is tagged as `registry.digitalocean.com/sdkman/sdkman-state:${GIT_SHA}`
+## Validation
 
-### Database Setup
+Run after every implementation to get immediate feedback:
+
+- **Full chain:** `./gradlew check` (compile → detekt → ktlintCheck → test)
+- **Tests only:** `./gradlew test`
+- **Lint only:** `./gradlew ktlintCheck`
+- **Lint auto-fix:** `./gradlew ktlintFormat`
+- **Static analysis:** `./gradlew detekt` (config in `detekt.yml`)
+- **Build Docker image:** `./gradlew buildImage`
+
+## Database Setup
+
 The application requires PostgreSQL. For development:
 ```bash
 docker run --restart=always \
@@ -38,48 +39,17 @@ docker run --restart=always \
     -d postgres
 ```
 
-## Architecture and Key Components
+## Commit
 
-### Core Domain Model (`src/main/kotlin/io/sdkman/domain/Domain.kt`)
-- **Version**: Main entity representing a software version with candidate, version, vendor, platform, URL, visibility, and checksums
-- **UniqueVersion**: Identifier for deletion operations
-- **Platform**: Enum supporting Linux (x32/x64/ARM variants), macOS (x64/ARM64), Windows x64, and Universal platforms
+Use the `/commit` skill for all commits. This ensures conventional commit format.
 
-### Application Structure
-- **Application.kt**: Main entry point configuring Ktor modules (database, HTTP, authentication, routing)
-- **plugins/**: Ktor configuration modules
-  - `Routing.kt`: API endpoints with authentication for POST/DELETE operations
-  - `Databases.kt`: PostgreSQL connection and Flyway migrations
-  - `Authentication.kt`: Basic authentication for write operations
-- **repos/VersionsRepository.kt**: Data access layer using Jetbrains Exposed ORM
+## Rules
 
-### API Design
-- **GET /versions/{candidate}**: List versions with optional platform/vendor/visibility filtering
-- **GET /versions/{candidate}/{version}**: Get specific version by candidate/version/platform/vendor
-- **POST /versions**: Create new version (requires authentication)
-- **DELETE /versions**: Remove version by unique identifier (requires authentication)
+Project rules are defined in `.claude/rules/` — study these before making changes.
 
-### Database Schema
-Uses Flyway migrations in `src/main/resources/db/migration/`:
-- Versions table with candidate, version, vendor, platform, URL, visibility, and hash columns
-- Audit table for tracking changes
+## Key Conventions
 
-### Testing Strategy
-- **Kotest** framework with `ShouldSpec` style
-- Test support utilities in `src/test/kotlin/io/sdkman/support/`
-- Integration tests using test application and clean database setup
-- Focus on API behavior testing rather than unit tests
-
-### Key Technologies
-- **Ktor**: Web framework with Netty engine
-- **Kotlin Serialization**: JSON handling with Arrow Option types
-- **Jetbrains Exposed**: SQL ORM
-- **Arrow**: Functional programming utilities (Option, Either)
-- **PostgreSQL**: Primary database
-- **Flyway**: Database migrations
-- **Kotest**: Testing framework
-
-## Configuration
-- **application.conf**: Ktor server and database configuration with environment variable overrides
-- **openapi/documentation.yaml**: API specification
-- Environment variables supported: `PORT`, `DATABASE_HOST/PORT/USERNAME/PASSWORD`, `BASIC_AUTH_USERNAME/PASSWORD`
+- Kotlin with Ktor, Exposed ORM, Arrow for functional types
+- Kotest for assertions, JUnit Platform as test runner
+- Flyway for database migrations
+- kotlinx-serialization for JSON
