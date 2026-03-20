@@ -35,3 +35,6 @@ out/
 ### VS Code ###
 .vscode/
 /.mcp.json
+IMPLEMENTATION_PLAN.md
+PROGRESS.md
+.ralph/
