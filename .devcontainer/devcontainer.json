@@ -1,0 +1,25 @@
+{
+  "name": "SDKMAN State - Claude Code Sandbox",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "TZ": "${localEnv:TZ:Europe/London}",
+      "CLAUDE_CODE_VERSION": "latest"
+    }
+  },
+  "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
+  "remoteUser": "developer",
+  "mounts": [
+    "source=sdkman-state-gradle-cache,target=/home/developer/.gradle,type=volume"
+  ],
+  "containerEnv": {
+    "GRADLE_USER_HOME": "/home/developer/.gradle"
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
