@@ -20,4 +20,3 @@ object PostgresTestContainer {
     val password: String get() = container.password
     val jdbcUrl: String get() = container.jdbcUrl
 }
-
