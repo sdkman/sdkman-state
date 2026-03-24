@@ -1,4 +1,4 @@
-import java.io.ByteArrayOutputStream
+
 
 val ktor_version: String by project
 val logback_version: String by project
@@ -66,13 +66,9 @@ dependencies {
 }
 
 fun String.runCommand(): String =
-    with(ByteArrayOutputStream()) baos@{
-        project.exec {
-            commandLine = split(" ")
-            standardOutput = this@baos
-        }
-        toString().trim()
-    }
+    providers.exec {
+        commandLine(split(" "))
+    }.standardOutput.asText.get().trim()
 
 ktor {
     docker {
