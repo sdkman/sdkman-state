@@ -1,9 +1,9 @@
 package io.sdkman.state.support
 
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 
 object PostgresTestContainer {
-    private val container: PostgreSQLContainer<*> =
+    private val container: PostgreSQLContainer =
         PostgreSQLContainer("postgres:16")
             .withDatabaseName("sdkman")
             .withUsername("postgres")
@@ -15,7 +15,7 @@ object PostgresTestContainer {
     }
 
     val host: String get() = container.host
-    val port: Int get() = container.firstMappedPort
+    val port: Int get() = container.getMappedPort(5432)
     val username: String get() = container.username
     val password: String get() = container.password
     val jdbcUrl: String get() = container.jdbcUrl
