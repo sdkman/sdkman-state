@@ -66,9 +66,13 @@ dependencies {
 }
 
 fun String.runCommand(): String =
-    providers.exec {
-        commandLine(split(" "))
-    }.standardOutput.asText.get().trim()
+    providers
+        .exec {
+            commandLine(split(" "))
+        }.standardOutput
+        .asText
+        .get()
+        .trim()
 
 ktor {
     docker {
