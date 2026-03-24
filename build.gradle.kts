@@ -9,7 +9,7 @@ val arrow_version: String by project
 val kotest_version: String by project
 
 plugins {
-    kotlin("jvm") version "2.3.10"
+    kotlin("jvm") version "2.3.20"
     id("io.ktor.plugin") version "3.3.3"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.3.10"
     id("org.jlleitschuh.gradle.ktlint") version "14.0.1"
