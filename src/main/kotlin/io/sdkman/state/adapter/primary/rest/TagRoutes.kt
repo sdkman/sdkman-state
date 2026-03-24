@@ -17,7 +17,7 @@ import io.sdkman.state.domain.service.TagService
 
 fun Route.tagRoutes(tagService: TagService) {
     delete("/versions/tags") {
-        val username = call.authenticatedUsername()
+        val auditContext = call.auditContext()
         either<DomainError, Unit> {
             val uniqueTag =
                 Either
@@ -33,7 +33,8 @@ fun Route.tagRoutes(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            tagService.deleteTag(uniqueTag, username).bind()
+            if (!call.authorizeCandidate(uniqueTag.candidate)) return@delete
+            tagService.deleteTag(uniqueTag, auditContext).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },

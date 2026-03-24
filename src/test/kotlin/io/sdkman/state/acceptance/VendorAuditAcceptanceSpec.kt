@@ -14,10 +14,10 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
+import io.sdkman.state.support.adminToken
 import io.sdkman.state.support.extractTags
+import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
-
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class VendorAuditAcceptanceSpec :
@@ -44,7 +44,7 @@ class VendorAuditAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -53,7 +53,8 @@ class VendorAuditAcceptanceSpec :
                 val auditRecords = selectAuditRecords()
                 auditRecords shouldHaveSize 1
                 val auditRecord = auditRecords.first()
-                auditRecord.username shouldBe "testuser"
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000000")
+                auditRecord.email shouldBe "admin@sdkman.io"
                 auditRecord.operation shouldBe AuditOperation.CREATE
 
                 val deserializedVersion = deserializeVersionData(auditRecord.versionData)
@@ -91,7 +92,7 @@ class VendorAuditAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(deleteRequest)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -100,7 +101,8 @@ class VendorAuditAcceptanceSpec :
                 val auditRecords = selectAuditRecordsByOperation(AuditOperation.DELETE)
                 auditRecords shouldHaveSize 1
                 val auditRecord = auditRecords.first()
-                auditRecord.username shouldBe "testuser"
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000000")
+                auditRecord.email shouldBe "admin@sdkman.io"
                 auditRecord.operation shouldBe AuditOperation.DELETE
 
                 val deserializedVersion = deserializeVersionData(auditRecord.versionData)
@@ -125,14 +127,14 @@ class VendorAuditAcceptanceSpec :
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
-                        header(Authorization, BASIC_AUTH_HEADER)
+                        header(Authorization, "Bearer ${adminToken()}")
                     }
                 }
 
-                // then: audit record has correct username
-                val auditRecords = selectAuditRecordsByUsername("testuser")
+                // then: audit record has correct email
+                val auditRecords = selectAuditRecordsByEmail("admin@sdkman.io")
                 auditRecords shouldHaveSize 1
-                auditRecords.first().username shouldBe "testuser"
+                auditRecords.first().email shouldBe "admin@sdkman.io"
             }
         }
 
@@ -157,7 +159,7 @@ class VendorAuditAcceptanceSpec :
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
-                        header(Authorization, BASIC_AUTH_HEADER)
+                        header(Authorization, "Bearer ${adminToken()}")
                     }
                 }
 
@@ -198,7 +200,7 @@ class VendorAuditAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(version.toJsonString())
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -240,7 +242,7 @@ class VendorAuditAcceptanceSpec :
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
-                        header(Authorization, BASIC_AUTH_HEADER)
+                        header(Authorization, "Bearer ${adminToken()}")
                     }
                 }
 
@@ -275,7 +277,7 @@ class VendorAuditAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }.status shouldBe HttpStatusCode.NoContent
                 }
 
@@ -314,7 +316,7 @@ class VendorAuditAcceptanceSpec :
                     client.delete("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody("""{"candidate":"java","version":"17.0.0","platform":"LINUX_X64","distribution":"TEMURIN"}""")
-                        header(Authorization, BASIC_AUTH_HEADER)
+                        header(Authorization, "Bearer ${adminToken()}")
                     }
                 }
 

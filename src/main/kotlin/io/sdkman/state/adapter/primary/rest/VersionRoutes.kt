@@ -81,7 +81,7 @@ fun Route.versionReadRoutes(versionService: VersionService) {
 
 fun Route.versionWriteRoutes(versionService: VersionService) {
     post("/versions") {
-        val username = call.authenticatedUsername()
+        val auditContext = call.auditContext()
         val requestBody = call.receiveText()
         VersionRequestValidator.validateRequest(requestBody).fold(
             ifLeft = { errors ->
@@ -89,7 +89,8 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                 call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
             },
             ifRight = { validVersion ->
-                versionService.createOrUpdate(validVersion, username).fold(
+                if (!call.authorizeCandidate(validVersion.candidate)) return@post
+                versionService.createOrUpdate(validVersion, auditContext).fold(
                     ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
@@ -97,7 +98,7 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
         )
     }
     delete("/versions") {
-        val username = call.authenticatedUsername()
+        val auditContext = call.auditContext()
         either<DomainError, Unit> {
             val uniqueVersion =
                 Either
@@ -113,7 +114,8 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
-            versionService.delete(validUniqueVersion, username).bind()
+            if (!call.authorizeCandidate(validUniqueVersion.candidate)) return@delete
+            versionService.delete(validUniqueVersion, auditContext).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },

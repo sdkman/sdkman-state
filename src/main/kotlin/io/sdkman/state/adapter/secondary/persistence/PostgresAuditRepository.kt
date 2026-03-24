@@ -2,6 +2,7 @@ package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.Either
 import io.sdkman.state.domain.error.DatabaseFailure
+import io.sdkman.state.domain.model.AuditContext
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Auditable
 import io.sdkman.state.domain.model.UniqueTag
@@ -18,7 +19,8 @@ import java.time.Instant
 
 internal object AuditTable : Table(name = "vendor_audit") {
     val id = long("id").autoIncrement()
-    val username = text("username")
+    val vendorId = uuid("vendor_id")
+    val email = text("email")
     val timestamp = timestamp("timestamp")
     val operation = text("operation")
     val versionData = json<JsonElement>("version_data", Json.Default)
@@ -34,7 +36,7 @@ class PostgresAuditRepository : AuditRepository {
         }
 
     override suspend fun recordAudit(
-        username: String,
+        context: AuditContext,
         operation: AuditOperation,
         data: Auditable,
     ): Either<DatabaseFailure, Unit> =
@@ -42,7 +44,8 @@ class PostgresAuditRepository : AuditRepository {
             .catch {
                 dbQuery {
                     AuditTable.insert {
-                        it[this.username] = username
+                        it[this.vendorId] = context.vendorId
+                        it[this.email] = context.email
                         it[this.timestamp] = Instant.now()
                         it[this.operation] = operation.name
                         it[this.versionData] = data.toJsonElement()

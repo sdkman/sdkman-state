@@ -14,9 +14,7 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
+import io.sdkman.state.support.adminToken
 
 @Tags("acceptance")
 class DeleteVersionAcceptanceSpec :
@@ -53,7 +51,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -90,7 +88,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -107,7 +105,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(invalidRequestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
@@ -150,7 +148,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(invalidRequestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
@@ -172,7 +170,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(invalidRequestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
@@ -208,7 +206,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -231,7 +229,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NotFound
                 }
@@ -247,7 +245,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(malformedJson)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
@@ -285,7 +283,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -308,7 +306,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NotFound
                 }
@@ -332,7 +330,7 @@ class DeleteVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     response.bodyAsText() shouldContain "Invalid request"

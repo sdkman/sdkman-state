@@ -14,7 +14,9 @@ import io.mockk.coVerify
 import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.error.DomainError
+import io.sdkman.state.domain.model.AuditContext
 import io.sdkman.state.domain.model.AuditOperation
+import io.sdkman.state.domain.model.NIL_UUID
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
@@ -142,19 +144,19 @@ class VersionServiceUnitSpec :
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.CREATE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
                 coEvery {
                     tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts", "latest"))
                 } returns Either.Right(Unit)
 
                 // when: creating a version
-                val result = service.createOrUpdate(version, "admin")
+                val result = service.createOrUpdate(version, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: succeeds and calls all three operations
                 result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
-                coVerify { auditRepo.recordAudit("admin", AuditOperation.CREATE, version) }
+                coVerify { auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version) }
                 coVerify {
                     tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts", "latest"))
                 }
@@ -171,16 +173,16 @@ class VersionServiceUnitSpec :
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.CREATE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
 
                 // when: creating a version without tags
-                val result = service.createOrUpdate(version, "admin")
+                val result = service.createOrUpdate(version, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: succeeds and does not call replaceTags
                 result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
-                coVerify { auditRepo.recordAudit("admin", AuditOperation.CREATE, version) }
+                coVerify { auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version) }
                 coVerify(exactly = 0) { tagService.replaceTags(any(), any(), any(), any(), any()) }
             }
 
@@ -201,7 +203,7 @@ class VersionServiceUnitSpec :
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Left(dbFailure)
 
                 // when: creating a version that triggers a DB error
-                val result = service.createOrUpdate(version, "admin")
+                val result = service.createOrUpdate(version, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns a DatabaseError wrapping the failure
                 result.shouldBeLeft()
@@ -223,7 +225,7 @@ class VersionServiceUnitSpec :
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.CREATE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version)
                 } returns
                     Either.Left(
                         DatabaseFailure.QueryExecutionFailure(
@@ -233,7 +235,7 @@ class VersionServiceUnitSpec :
                     )
 
                 // when: creating a version with failing audit
-                val result = service.createOrUpdate(version, "admin")
+                val result = service.createOrUpdate(version, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: still succeeds (audit failure is logged but non-fatal)
                 result.shouldBeRight()
@@ -251,7 +253,7 @@ class VersionServiceUnitSpec :
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.CREATE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
                 coEvery {
                     tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
@@ -266,7 +268,7 @@ class VersionServiceUnitSpec :
                     )
 
                 // when: creating a version with failing tag processing
-                val result = service.createOrUpdate(version, "admin")
+                val result = service.createOrUpdate(version, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: still succeeds (tag failure is logged but non-fatal)
                 result.shouldBeRight()
@@ -297,12 +299,12 @@ class VersionServiceUnitSpec :
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.DELETE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.DELETE, version)
                 } returns Either.Right(Unit)
                 coEvery { versionsRepo.delete(uniqueVersion) } returns Either.Right(1)
 
                 // when: deleting the version
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: succeeds
                 result.shouldBeRight()
@@ -310,7 +312,7 @@ class VersionServiceUnitSpec :
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
                     versionsRepo.findVersionId(uniqueVersion)
                     tagService.findTagNamesByVersionId(42)
-                    auditRepo.recordAudit("admin", AuditOperation.DELETE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.DELETE, version)
                     versionsRepo.delete(uniqueVersion)
                 }
             }
@@ -329,7 +331,7 @@ class VersionServiceUnitSpec :
                 } returns Either.Right(None)
 
                 // when: trying to delete a non-existent version
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns VersionNotFound
                 result.shouldBeLeft()
@@ -363,7 +365,7 @@ class VersionServiceUnitSpec :
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(None)
 
                 // when: trying to delete with missing version ID
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns VersionNotFound
                 result.shouldBeLeft()
@@ -398,7 +400,7 @@ class VersionServiceUnitSpec :
                 } returns Either.Right(listOf("lts", "latest"))
 
                 // when: trying to delete a version with active tags
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns TagConflict with the tag names
                 result.shouldBeLeft()
@@ -407,7 +409,7 @@ class VersionServiceUnitSpec :
                     error.tags shouldBe listOf("lts", "latest")
                 }
                 coVerify(exactly = 0) { versionsRepo.delete(any()) }
-                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any<AuditContext>(), any<AuditOperation>(), any()) }
             }
 
             should("return DatabaseError when tag lookup fails") {
@@ -440,7 +442,7 @@ class VersionServiceUnitSpec :
                 } returns Either.Left(DomainError.DatabaseError(dbFailure))
 
                 // when: deleting a version when tag lookup fails
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns DatabaseError
                 result.shouldBeLeft()
@@ -473,12 +475,12 @@ class VersionServiceUnitSpec :
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.DELETE, version)
+                    auditRepo.recordAudit(AuditContext(NIL_UUID, "admin@sdkman.io"), AuditOperation.DELETE, version)
                 } returns Either.Right(Unit)
                 coEvery { versionsRepo.delete(uniqueVersion) } returns Either.Right(0)
 
                 // when: deleting a version that disappears between check and delete
-                val result = service.delete(uniqueVersion, "admin")
+                val result = service.delete(uniqueVersion, AuditContext(NIL_UUID, "admin@sdkman.io"))
 
                 // then: returns VersionNotFound
                 result.shouldBeLeft()

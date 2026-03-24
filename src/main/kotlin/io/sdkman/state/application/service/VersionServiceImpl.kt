@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.Option
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
+import io.sdkman.state.domain.model.AuditContext
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Auditable
 import io.sdkman.state.domain.model.Distribution
@@ -45,19 +46,19 @@ class VersionServiceImpl(
 
     override suspend fun createOrUpdate(
         version: Version,
-        username: String,
+        context: AuditContext,
     ): Either<DomainError, Unit> =
         versionsRepo
             .createOrUpdate(version)
             .mapLeft { DomainError.DatabaseError(it) }
             .map { versionId ->
-                logAudit(username, AuditOperation.CREATE, version)
+                logAudit(context, AuditOperation.CREATE, version)
                 processTags(versionId, version)
             }
 
     override suspend fun delete(
         uniqueVersion: UniqueVersion,
-        username: String,
+        context: AuditContext,
     ): Either<DomainError, Unit> =
         either {
             val versionToDelete =
@@ -85,7 +86,7 @@ class VersionServiceImpl(
                     .findTagNamesByVersionId(versionId)
                     .bind()
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-            logAudit(username, AuditOperation.DELETE, versionToDelete)
+            logAudit(context, AuditOperation.DELETE, versionToDelete)
             val deleted =
                 versionsRepo
                     .delete(uniqueVersion)
@@ -97,11 +98,11 @@ class VersionServiceImpl(
         }
 
     private suspend fun logAudit(
-        username: String,
+        context: AuditContext,
         operation: AuditOperation,
         data: Auditable,
     ) {
-        auditRepo.recordAudit(username, operation, data).onLeft { error ->
+        auditRepo.recordAudit(context, operation, data).onLeft { error ->
             logger.warn("Audit logging failed: ${error.message}", error)
         }
     }

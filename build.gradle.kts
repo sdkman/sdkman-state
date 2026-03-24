@@ -51,6 +51,9 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.postgresql:postgresql:$postgres_version")
     implementation("org.flywaydb:flyway-core:$flyway_version")
+    implementation("at.favre.lib:bcrypt:0.10.2")
+    implementation("io.ktor:ktor-server-auth-jwt:$ktor_version")
+    implementation("com.auth0:java-jwt:4.5.0")
 
     testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
     testImplementation("io.kotest:kotest-assertions-core:$kotest_version")

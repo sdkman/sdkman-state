@@ -11,13 +11,11 @@ import io.ktor.http.HttpHeaders.Authorization
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.support.adminToken
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class PostVersionVisibilityAcceptanceSpec :
@@ -41,7 +39,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -72,7 +70,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -102,7 +100,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -135,7 +133,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody1)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -146,7 +144,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody2)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
@@ -177,7 +175,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody1)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -188,7 +186,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody2)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
@@ -219,7 +217,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody1)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -230,7 +228,7 @@ class PostVersionVisibilityAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody2)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }

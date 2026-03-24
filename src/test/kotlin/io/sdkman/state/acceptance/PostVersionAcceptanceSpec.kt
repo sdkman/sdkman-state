@@ -13,13 +13,11 @@ import io.ktor.http.HttpHeaders.Authorization
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.support.adminToken
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class PostVersionAcceptanceSpec :
@@ -44,7 +42,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -75,7 +73,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -106,7 +104,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -138,7 +136,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     response.bodyAsText() shouldContain "Validation failed"
@@ -164,7 +162,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -191,7 +189,7 @@ class PostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            header(Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()

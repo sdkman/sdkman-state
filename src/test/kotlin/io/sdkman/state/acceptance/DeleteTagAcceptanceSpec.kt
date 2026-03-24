@@ -15,14 +15,12 @@ import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
+import io.sdkman.state.support.adminToken
 import io.sdkman.state.support.shouldBeSome
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class DeleteTagAcceptanceSpec :
@@ -65,7 +63,7 @@ class DeleteTagAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     // then: 204 No Content
@@ -113,7 +111,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -157,7 +155,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -202,7 +200,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }.status shouldBe HttpStatusCode.NoContent
 
                     // step 2: delete "27" tag
@@ -217,7 +215,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }.status shouldBe HttpStatusCode.NoContent
 
                     // step 3: delete the now-untagged version
@@ -232,7 +230,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }.status shouldBe HttpStatusCode.NoContent
                 }
 
@@ -274,7 +272,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
@@ -300,7 +298,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = Platform.LINUX_X64,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.NotFound
@@ -320,7 +318,7 @@ class DeleteTagAcceptanceSpec :
                             setBody(
                                 """{"candidate":"","tag":"latest","platform":"LINUX_X64"}""",
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -339,7 +337,7 @@ class DeleteTagAcceptanceSpec :
                             setBody(
                                 """{"candidate":"java","tag":"","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -358,7 +356,7 @@ class DeleteTagAcceptanceSpec :
                             setBody(
                                 """{"candidate":"java","tag":"latest","distribution":"INVALID_DISTRO","platform":"LINUX_X64"}""",
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -375,7 +373,7 @@ class DeleteTagAcceptanceSpec :
                             setBody(
                                 """{"candidate":"java","tag":"latest","platform":"INVALID_PLATFORM"}""",
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -392,7 +390,7 @@ class DeleteTagAcceptanceSpec :
                             setBody(
                                 """{"candidate":"","tag":"","platform":"LINUX_X64"}""",
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -437,7 +435,7 @@ class DeleteTagAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"candidate":"java","tag":}""")
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }
 
                     response.status shouldBe HttpStatusCode.BadRequest
@@ -480,7 +478,7 @@ class DeleteTagAcceptanceSpec :
                                     platform = platform,
                                 ).toJsonString(),
                             )
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            header(HttpHeaders.Authorization, "Bearer ${adminToken()}")
                         }.status shouldBe HttpStatusCode.NoContent
                 }
 
@@ -488,7 +486,8 @@ class DeleteTagAcceptanceSpec :
                 val auditRecords = selectAuditRecords()
                 auditRecords.size shouldBe 1
                 val record = auditRecords.first()
-                record.username shouldBe "testuser"
+                record.vendorId shouldBe java.util.UUID.fromString("00000000-0000-0000-0000-000000000000")
+                record.email shouldBe "admin@sdkman.io"
                 record.operation shouldBe io.sdkman.state.domain.model.AuditOperation.DELETE
 
                 val auditData = Json.parseToJsonElement(record.versionData).jsonObject

@@ -7,6 +7,7 @@ import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
 import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
+import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.toDomain
@@ -15,6 +16,7 @@ import io.sdkman.state.config.jdbcUrl
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.model.Version
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -24,6 +26,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.Instant
+import java.util.UUID
 
 val DB_HOST: String get() = PostgresTestContainer.host
 val DB_PORT: Int get() = PostgresTestContainer.port
@@ -32,7 +35,8 @@ val DB_PASSWORD: String get() = PostgresTestContainer.password
 
 data class VendorAuditRecord(
     val id: Long = 0,
-    val username: String,
+    val vendorId: UUID,
+    val email: String,
     val timestamp: kotlin.time.Instant,
     val operation: AuditOperation,
     val versionData: String,
@@ -185,7 +189,8 @@ fun selectAuditRecords(): List<VendorAuditRecord> =
         AuditTable.selectAll().map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,
@@ -197,12 +202,31 @@ fun selectAuditRecords(): List<VendorAuditRecord> =
         }
     }
 
-fun selectAuditRecordsByUsername(username: String): List<VendorAuditRecord> =
+fun selectAuditRecordsByEmail(email: String): List<VendorAuditRecord> =
     dbQuery {
-        AuditTable.selectAll().where { AuditTable.username eq username }.map { row ->
+        AuditTable.selectAll().where { AuditTable.email eq email }.map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
+                timestamp =
+                    kotlin.time.Instant.fromEpochSeconds(
+                        row[AuditTable.timestamp].epochSecond,
+                        row[AuditTable.timestamp].nano.toLong(),
+                    ),
+                operation = AuditOperation.valueOf(row[AuditTable.operation]),
+                versionData = row[AuditTable.versionData].toString(),
+            )
+        }
+    }
+
+fun selectAuditRecordsByVendorId(vendorId: UUID): List<VendorAuditRecord> =
+    dbQuery {
+        AuditTable.selectAll().where { AuditTable.vendorId eq vendorId }.map { row ->
+            VendorAuditRecord(
+                id = row[AuditTable.id],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,
@@ -219,7 +243,8 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRe
         AuditTable.selectAll().where { AuditTable.operation eq operation.name }.map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,
@@ -233,12 +258,67 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRe
 
 fun deserializeVersionData(versionData: String): Version = Json.decodeFromString(AuditVersionData.serializer(), versionData).toDomain()
 
+@Suppress("NoNullableTypes")
+fun insertVendor(
+    id: UUID = UUID.randomUUID(),
+    email: String,
+    password: String,
+    candidates: List<String>,
+    deletedAt: Instant? = null,
+): UUID =
+    transaction {
+        VendorsTable.insert {
+            it[VendorsTable.id] = id
+            it[VendorsTable.email] = email
+            it[VendorsTable.password] = password
+            it[VendorsTable.candidates] = candidates
+            it[VendorsTable.createdAt] = Instant.now()
+            it[VendorsTable.updatedAt] = Instant.now()
+            it[VendorsTable.deletedAt] = deletedAt
+        }
+        id
+    }
+
+fun selectVendors(): List<Vendor> =
+    dbQuery {
+        VendorsTable.selectAll().map { row ->
+            Vendor(
+                id = row[VendorsTable.id],
+                email = row[VendorsTable.email],
+                password = row[VendorsTable.password],
+                candidates = row[VendorsTable.candidates],
+                createdAt = row[VendorsTable.createdAt],
+                updatedAt = row[VendorsTable.updatedAt],
+                deletedAt = row[VendorsTable.deletedAt].toOption(),
+            )
+        }
+    }
+
+fun selectVendorByEmail(email: String): Option<Vendor> =
+    dbQuery {
+        VendorsTable
+            .selectAll()
+            .where { VendorsTable.email eq email }
+            .map { row ->
+                Vendor(
+                    id = row[VendorsTable.id],
+                    email = row[VendorsTable.email],
+                    password = row[VendorsTable.password],
+                    candidates = row[VendorsTable.candidates],
+                    createdAt = row[VendorsTable.createdAt],
+                    updatedAt = row[VendorsTable.updatedAt],
+                    deletedAt = row[VendorsTable.deletedAt].toOption(),
+                )
+            }.firstOrNone()
+    }
+
 fun withCleanDatabase(fn: suspend () -> Unit) {
     initialisePostgres()
     transaction {
         VersionTagsTable.deleteAll()
         AuditTable.deleteAll()
         VersionsTable.deleteAll()
+        VendorsTable.deleteAll()
     }
     runBlocking { fn() }
 }
