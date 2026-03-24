@@ -125,3 +125,5 @@
 - `JwtPrincipal` moved to its own file to satisfy detekt's `MatchingDeclarationName` rule
 - `adminVendorRoutes` split into 3 route functions to satisfy detekt's `LongMethod` rule
 - `VendorResponse.deletedAt` uses `Option<String>` (Arrow serialization) to avoid nullable types per project rules
+- Custom detekt plugin (`com.github.marc0der:detekt-rules`) requires Java 21+; conditionally loaded and config validation disabled for Java 17 compatibility
+- Removed stale `compileOnly` dependency on detekt-rules (only `detektPlugins` configuration is needed)
