@@ -58,7 +58,7 @@ dependencies {
     testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.4"))
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
-    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")
 
     detektPlugins("com.github.marc0der:detekt-rules:1.0.0")
