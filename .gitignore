@@ -40,3 +40,7 @@ PROGRESS.md
 .ralph/
 PROMPT_plan.md
 PROMPT_build.md
+
+### Claude Code ###
+.claude/settings.local.json
+
