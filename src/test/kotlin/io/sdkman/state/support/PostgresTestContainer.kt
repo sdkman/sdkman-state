@@ -1,6 +1,6 @@
 package io.sdkman.state.support
 
-import org.testcontainers.containers.PostgreSQLContainer
+import org.testcontainers.postgresql.PostgreSQLContainer
 
 object PostgresTestContainer {
     private val container: PostgreSQLContainer<*> =
@@ -20,3 +20,4 @@ object PostgresTestContainer {
     val password: String get() = container.password
     val jdbcUrl: String get() = container.jdbcUrl
 }
+
