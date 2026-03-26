@@ -12,6 +12,8 @@ import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.config.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 fun main(args: Array<String>) =
     io.ktor.server.netty.EngineMain
@@ -33,6 +35,12 @@ fun Application.module() {
     val vendorRepo = PostgresVendorRepository()
     val tagService = TagServiceImpl(tagsRepo, auditRepo)
     val rateLimiter = RateLimiter()
+    launch {
+        while (true) {
+            delay(60_000)
+            rateLimiter.cleanup()
+        }
+    }
     val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
     configureRouting(
