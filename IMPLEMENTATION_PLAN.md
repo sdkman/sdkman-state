@@ -26,10 +26,9 @@
   - Launched a background coroutine in `Application.module()` that calls `rateLimiter.cleanup()` every 60 seconds
   - Uses Ktor's `Application` coroutine scope so the job is cancelled on shutdown
 
-- [ ] **Fix 4 — `authenticatedVendorId()` Safe Parsing**
-  - In `RequestExtensions.kt:22-26`, wrap `UUID.fromString(...)` (line 25) in `runCatching` inside the `Option` chain
-  - Return nil UUID (`UUID(0L, 0L)`) for missing, null, or malformed `vendor_id` claims
-  - Currently throws uncaught `IllegalArgumentException` on malformed claims → 500 error
+- [x] **Fix 4 — `authenticatedVendorId()` Safe Parsing** ✅
+  - Wrapped `UUID.fromString(...)` in `runCatching` inside `flatMap` in `RequestExtensions.kt`
+  - Returns nil UUID (`UUID(0L, 0L)`) for missing, null, or malformed `vendor_id` claims
 
 - [ ] **Fix 5 — Atomic Upsert in `PostgresVendorRepository`**
   - Replace SELECT-then-INSERT/UPDATE pattern in `PostgresVendorRepository.kt:110-147` with `INSERT ... ON CONFLICT (email) DO UPDATE`
