@@ -55,13 +55,14 @@ CREATE TABLE vendors (
 
 - **Algorithm:** HMAC-SHA256 — the verifier **must** be configured to accept only HS256 and reject all other algorithms including `none`
 - **Secret:** Configured via `jwt.secret` / env var `JWT_SECRET`
-- **Expiry:** Configurable via `jwt.expiry` (minutes), default 3 minutes — short-lived for CI/GitHub Actions clients
+- **Expiry:** Configurable via `jwt.expiry` (minutes), default 10 minutes — short-lived for CI/GitHub Actions clients
 - **No refresh tokens** — clients re-authenticate when token expires
 - **Payload claims:**
   - `iss` — `"sdkman-state"` (verified on every request)
   - `aud` — `"sdkman-state"` (verified on every request)
   - `sub` — email (admin or vendor)
   - `role` — `"admin"` or `"vendor"`
+  - `vendor_id` — vendor's UUID (vendor tokens only, used for audit trail)
   - `candidates` — list of authorized candidate names (vendor only)
   - `iat` — issued at
   - `exp` — expiration
@@ -90,6 +91,8 @@ admin {
 }
 ```
 
+The admin password is stored as plaintext in config (trusted to GitHub secret storage). On application startup, it is **BCrypt-hashed once** (cost factor 12) and held in memory. Login verification uses `BCrypt.verifyer()` — the same constant-time comparison as vendor auth, preventing timing attacks that could leak password length.
+
 The admin must acquire a JWT (with `role: "admin"`) before accessing any protected endpoint. The `sub` claim is always an email for both admin and vendors, eliminating collision risk. Replaces the existing `api.username` / `api.password` config.
 
 ### JWT Secret
@@ -97,7 +100,7 @@ The admin must acquire a JWT (with `role: "admin"`) before accessing any protect
 ```hocon
 jwt {
     secret = ${JWT_SECRET}   // required — app fails fast on startup if missing
-    expiry = 3
+    expiry = 10
     expiry = ${?JWT_EXPIRY_MINUTES}
 }
 ```
@@ -109,6 +112,11 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 ### `GET /admin/vendors` — List All Vendors
 
 **Authentication:** JWT with `role: "admin"`
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `include_deleted` | `boolean` | `false` | When `true`, includes soft-deleted vendors in the response |
 
 **Responses:**
 | Status | Description |
@@ -131,7 +139,7 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 ```
 
 **Notes:**
-- Returns all vendors including soft-deleted ones (`deleted_at` will be non-null for deleted vendors)
+- By default, only active vendors are returned. Use `?include_deleted=true` to include soft-deleted vendors (`deleted_at` will be non-null for deleted vendors)
 - Passwords are never included in the response (use `POST /admin/vendors` to see generated passwords)
 - Always returns `401` on failure — no information leakage
 
@@ -157,7 +165,8 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 **Responses:**
 | Status | Description |
 |--------|-------------|
-| `200 OK` | Vendor created or updated, returns full vendor object with generated password |
+| `201 Created` | New vendor created, returns full vendor object with generated password |
+| `200 OK` | Existing vendor updated (or resurrected), returns full vendor object with regenerated password |
 | `400 Bad Request` | Validation failure (invalid email, empty candidates, email matches admin) |
 | `401 Unauthorized` | Missing or invalid token, insufficient role |
 
@@ -187,7 +196,7 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 
 **Authentication:** JWT with `role: "admin"`
 
-**Behaviour:** Sets `deleted_at` to the current timestamp. The vendor can no longer authenticate but remains in the database. Existing JWTs for this vendor remain valid until they expire (max 3 minutes — accepted risk).
+**Behaviour:** Sets `deleted_at` to the current timestamp. The vendor can no longer authenticate but remains in the database. Existing JWTs for this vendor remain valid until they expire (max 10 minutes — accepted risk).
 
 **Responses:**
 | Status | Description |
@@ -228,6 +237,7 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 |--------|-------------|
 | `200 OK` | Returns JWT token |
 | `401 Unauthorized` | Invalid credentials |
+| `429 Too Many Requests` | Rate limit exceeded (5 attempts/minute per IP) |
 
 **Success Response:**
 ```json
@@ -244,6 +254,7 @@ The `JWT_SECRET` environment variable is **required** — the application will f
 - **Constant-time behaviour:** Always perform a BCrypt comparison, even when the email is not found. Compare against a dummy hash (same cost factor 12 as real hashes) to prevent timing attacks that reveal whether an email exists.
 - **Soft-deleted vendors:** Login attempts for soft-deleted vendors return `401` — the dummy hash comparison is still performed to prevent timing-based enumeration.
 - **No response body logging:** Ensure no middleware or application logging captures login response bodies (they contain JWTs).
+- **Rate limiting:** Simple per-IP rate limit of 5 attempts per minute on the login endpoint. Return `429 Too Many Requests` when exceeded. An in-memory counter (e.g., `ConcurrentHashMap` with expiring entries) is sufficient — no need for Redis or complex backoff strategies.
 
 ### Authenticated Endpoints (JWT Required)
 
@@ -275,6 +286,7 @@ All authentication/authorization errors use the existing `ErrorResponse` shape:
 | `401 Unauthorized` | `"Unauthorized"` | Missing token, expired token, invalid token, bad login credentials |
 | `403 Forbidden` | `"Forbidden"` | Valid token but candidate not in authorized list |
 | `404 Not Found` | `"Not Found"` | Resource not found (e.g., vendor deletion of non-existent/already-deleted vendor) |
+| `429 Too Many Requests` | `"Too Many Requests"` | Login rate limit exceeded (5 attempts/minute per IP) |
 
 ## Vendor Audit Table Changes
 
@@ -333,7 +345,7 @@ Outside-in Kotest ShouldSpec acceptance tests.
 
 ### Happy Path Tests
 1. List vendors via `GET /admin/vendors` — 200 with empty list
-2. Create a new vendor via `POST /admin/vendors` — 200 with generated password
+2. Create a new vendor via `POST /admin/vendors` — 201 with generated password
 3. Login with valid vendor credentials via `POST /admin/login` — 200 with token containing `role: "vendor"` and `candidates`
 4. Login with admin credentials via `POST /admin/login` — 200 with token containing `role: "admin"`
 5. Use vendor JWT token to `POST /versions` for an authorized candidate — 204
@@ -344,8 +356,9 @@ Outside-in Kotest ShouldSpec acceptance tests.
 10. List vendors after create — 200 with vendor details (no password), correct candidates
 11. Login after password reset — 200 with new token containing updated candidates
 12. Soft delete vendor via `DELETE /admin/vendors/{id}` — 200 with `deleted_at` set
-13. List vendors after soft delete — 200, deleted vendor present with `deleted_at` non-null
-14. Resurrect soft-deleted vendor via `POST /admin/vendors` with same email — 200, `deleted_at` cleared, new password
+13. List vendors after soft delete with `?include_deleted=true` — 200, deleted vendor present with `deleted_at` non-null
+14. List vendors after soft delete without filter — 200, deleted vendor excluded
+15. Resurrect soft-deleted vendor via `POST /admin/vendors` with same email — 200, `deleted_at` cleared, new password
 
 ### Unhappy Path Tests
 1. `POST /admin/login` with wrong password — 401
@@ -366,6 +379,7 @@ Outside-in Kotest ShouldSpec acceptance tests.
 16. `DELETE /admin/vendors/{id}` with vendor token — 401 (no info leakage)
 17. `DELETE /admin/vendors/{id}` with non-existent id — 404
 18. `DELETE /admin/vendors/{id}` with already-deleted vendor — 404
+19. `POST /admin/login` exceeding rate limit (6th attempt within 1 minute) — 429
 
 ## Open Questions
 
