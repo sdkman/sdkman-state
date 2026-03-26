@@ -7,12 +7,10 @@ import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.http.HttpHeaders.Authorization
+import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.extractTags
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
-
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class PostVersionTagsAcceptanceSpec :
@@ -37,7 +35,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     postResponse.status shouldBe HttpStatusCode.NoContent
 
@@ -83,14 +81,14 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(initialPost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(updatePost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
@@ -136,14 +134,14 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(initialPost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(clearTagsPost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
@@ -189,14 +187,14 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(initialPost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(replacePost)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
@@ -242,14 +240,14 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(versionA)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(versionB)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getA =
@@ -302,14 +300,14 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(versionA)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(versionB)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getA =
@@ -350,7 +348,7 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
@@ -383,7 +381,7 @@ class PostVersionTagsAcceptanceSpec :
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
@@ -415,7 +413,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -445,7 +443,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -476,7 +474,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -506,7 +504,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -536,7 +534,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()
@@ -568,7 +566,7 @@ class PostVersionTagsAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response.status shouldBe HttpStatusCode.BadRequest
                     val responseBody = response.bodyAsText()

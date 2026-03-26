@@ -7,6 +7,7 @@ import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
 import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
+import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.toDomain
@@ -243,6 +244,7 @@ fun withCleanDatabase(fn: suspend () -> Unit) {
         VersionTagsTable.deleteAll()
         AuditTable.deleteAll()
         VersionsTable.deleteAll()
+        VendorsTable.deleteAll()
     }
     runBlocking { fn() }
 }

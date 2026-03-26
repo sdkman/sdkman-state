@@ -14,14 +14,12 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
+import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.shouldBeSome
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class DeleteTaggedVersionAcceptanceSpec :
@@ -63,7 +61,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
 
                     // then: 409 Conflict with tag list
@@ -116,7 +114,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
 
                     // then: 409 Conflict
@@ -160,7 +158,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
 
                     // then: 204 No Content
@@ -206,7 +204,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
 
                     // then: 204 No Content

@@ -138,3 +138,42 @@ Each entry must follow this structure exactly:
 - _Context:_ Admin password is BCrypt-hashed once at `AuthServiceImpl` construction time and held in memory — avoids repeated hashing on every login attempt
 
 ---
+
+### [2026-03-26 01:45] — Phase 6, 7, 9, 10: Complete JWT auth stack and test migration
+
+**Summary:** Implemented full JWT authentication primary adapters (Authentication.kt, AdminRoutes.kt, AdminDto.kt, RequestExtensions.kt), updated Routing.kt and both Application.kt files, removed Basic Auth entirely, created JwtTestSupport, updated Postgres.kt test support, and migrated all 8 acceptance test files from Basic Auth to JWT Bearer tokens.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/config/Authentication.kt` — replaced basic auth with JWT auth (HS256, issuer/audience validation)
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/dto/AdminDto.kt` — new DTOs: LoginRequest/Response, CreateVendorRequest, VendorResponse, VendorWithPasswordResponse
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/RequestExtensions.kt` — added JWT helpers (authenticatedVendorId, authenticatedEmail, authenticatedRole, authenticatedCandidates), removed authenticatedUsername
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/AdminRoutes.kt` — new admin routes: login, list/create/delete vendors with role-based authorization
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/VersionRoutes.kt` — replaced Basic Auth with JWT claim extraction, added candidate authorization (403 for unauthorized)
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/TagRoutes.kt` — same JWT migration and candidate authorization
+- `src/main/kotlin/io/sdkman/state/adapter/primary/rest/Routing.kt` — switched to authenticate("auth-jwt"), added admin routes, new parameters
+- `src/main/kotlin/io/sdkman/state/Application.kt` — wired JWT auth, PostgresVendorRepository, RateLimiter, AuthServiceImpl
+- `src/main/kotlin/io/sdkman/state/config/AppConfig.kt` — removed authUsername/authPassword
+- `src/main/resources/application.conf` — removed api.username/password
+- `src/test/kotlin/io/sdkman/state/support/JwtTestSupport.kt` — new test utility for generating admin/vendor/expired/invalid tokens
+- `src/test/kotlin/io/sdkman/state/support/Application.kt` — switched to JWT auth, aligned config with JwtTestSupport constants
+- `src/test/kotlin/io/sdkman/state/support/Postgres.kt` — added VendorsTable cleanup to withCleanDatabase
+- `src/test/kotlin/io/sdkman/state/acceptance/HealthCheckAcceptanceSpec.kt` — updated inline app setup for JWT auth
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteVersionAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteTagAcceptanceSpec.kt` — Basic Auth → JWT Bearer, updated audit assertion to admin email
+- `src/test/kotlin/io/sdkman/state/acceptance/VendorAuditAcceptanceSpec.kt` — Basic Auth → JWT Bearer, updated all audit assertions (email, vendorId)
+- `src/test/kotlin/io/sdkman/state/acceptance/IdempotentPostVersionAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+- `src/test/kotlin/io/sdkman/state/acceptance/DeleteTaggedVersionAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionVisibilityAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+- `src/test/kotlin/io/sdkman/state/acceptance/PostVersionTagsAcceptanceSpec.kt` — Basic Auth → JWT Bearer
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Gotchas:_ Phases 6.5, 6.6, 7.1, 7.2, 9.1-9.3, and 10.1-10.11 MUST be bundled atomically — removing `authenticatedUsername()` and changing `configureRouting`'s signature breaks all existing tests until they are migrated to JWT Bearer tokens. The plan's claim of independent atomic tasks was incorrect for this transition.
+- _Gotchas:_ Ktor 3.x uses `call.request.local.remoteHost` (not `origin.remoteAddress`) for client IP.
+- _Gotchas:_ `HealthCheckAcceptanceSpec` has its own inline app setup (not using `withTestApplication`), requiring separate JWT migration.
+- _Patterns:_ Detekt `LongMethod` threshold of 60 lines required splitting `adminVendorRoutes` into 3 separate route functions and `versionWriteRoutes` into 2.
+- _Context:_ `VendorsTable` is `internal` in the main source but accessible from tests since they're in the same Kotlin module.
+
+---

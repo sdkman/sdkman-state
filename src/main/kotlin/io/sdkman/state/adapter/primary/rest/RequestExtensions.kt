@@ -9,6 +9,7 @@ import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
@@ -18,11 +19,29 @@ import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 
-fun ApplicationCall.authenticatedUsername(): String =
-    principal<UserIdPrincipal>()
+fun ApplicationCall.authenticatedVendorId(): java.util.UUID =
+    principal<JWTPrincipal>()
         .toOption()
-        .map { it.name }
+        .map { java.util.UUID.fromString(it.payload.getClaim("vendor_id").asString()) }
+        .getOrElse { java.util.UUID(0L, 0L) }
+
+fun ApplicationCall.authenticatedEmail(): String =
+    principal<JWTPrincipal>()
+        .toOption()
+        .map { it.payload.subject }
         .getOrElse { "unknown" }
+
+fun ApplicationCall.authenticatedRole(): String =
+    principal<JWTPrincipal>()
+        .toOption()
+        .map { it.payload.getClaim("role").asString() }
+        .getOrElse { "unknown" }
+
+fun ApplicationCall.authenticatedCandidates(): List<String> =
+    principal<JWTPrincipal>()
+        .toOption()
+        .map { it.payload.getClaim("candidates").asList(String::class.java) ?: emptyList() }
+        .getOrElse { emptyList() }
 
 fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
     when (this.queryParameters["visible"].toOption()) {
