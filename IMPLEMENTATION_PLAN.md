@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–11 complete (37/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–12 complete (39/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
 
 ### Evidence
 
@@ -275,11 +275,11 @@ Depends on Phase 4 (persistence adapters) and Phase 9 (test infrastructure).
 
 Depends on Phase 5 (application services).
 
-- [ ] **12.1 Add `RateLimiterUnitSpec`**
+- [x] **12.1 Add `RateLimiterUnitSpec`**
   Test rate limiter in isolation: first 5 attempts within 1 minute are allowed, 6th attempt is rate-limited, attempts after 60 seconds reset the window, different IPs are tracked independently, concurrent access does not corrupt state.
   - File: `src/test/kotlin/io/sdkman/state/application/service/RateLimiterUnitSpec.kt`
 
-- [ ] **12.2 Add `AuthServiceImplUnitSpec`**
+- [x] **12.2 Add `AuthServiceImplUnitSpec`**
   Test login logic with MockK for `VendorRepository` and `RateLimiter`: admin login success (correct email + password -> JWT with role `"admin"`), vendor login success (correct email + password -> JWT with role `"vendor"` and `candidates`), wrong password for admin returns `InvalidCredentials`, wrong password for vendor returns `InvalidCredentials`, non-existent email returns `InvalidCredentials` (constant-time -- still performs BCrypt compare), soft-deleted vendor returns `InvalidCredentials`, rate limiting (mock `RateLimiter.isRateLimited` returns true -> `RateLimitExceeded`), generated JWT contains correct claims (`iss`, `aud`, `sub`, `role`, `vendor_id`, `candidates`, `iat`, `exp`).
   - File: `src/test/kotlin/io/sdkman/state/application/service/AuthServiceImplUnitSpec.kt`
 

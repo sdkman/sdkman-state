@@ -191,3 +191,19 @@ Each entry must follow this structure exactly:
 - _Patterns:_ Integration tests use `withCleanDatabase { }` which handles Flyway migration and table cleanup including the new VendorsTable
 
 ---
+
+### [2026-03-26 02:30] — Phase 12: Tasks 12.1, 12.2
+
+**Summary:** Added unit tests for RateLimiter (5 tests) and AuthServiceImpl (7 tests with MockK).
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/application/service/RateLimiterUnitSpec.kt` — tests for rate limiting within window, 6th attempt blocked, independent IPs, unknown IP, cleanup
+- `src/test/kotlin/io/sdkman/state/application/service/AuthServiceImplUnitSpec.kt` — tests for admin login, vendor login, wrong passwords, non-existent email, soft-deleted vendor, rate limit exceeded
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Patterns:_ AuthServiceImpl hashes admin password at construction time, so MockK stubs for `appConfig` must be set before constructing the service (use val initialization, not beforeEach)
+- _Patterns:_ `clearAllMocks()` in `beforeEach` requires re-stubbing appConfig and rateLimiter defaults in a second `beforeEach` block
+
+---
