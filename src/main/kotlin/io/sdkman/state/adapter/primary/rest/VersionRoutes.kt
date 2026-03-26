@@ -98,6 +98,7 @@ private fun Route.versionCreateRoute(versionService: VersionService) {
                 call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
             },
             ifRight = { validVersion ->
+                // Admin tokens bypass candidate authorization — admin can operate on any candidate
                 if (role == "vendor" && validVersion.candidate !in candidates) {
                     call.respond(
                         HttpStatusCode.Forbidden,
@@ -135,6 +136,7 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
+            // Admin tokens bypass candidate authorization — admin can operate on any candidate
             if (role == "vendor" && validUniqueVersion.candidate !in candidates) {
                 call.respond(
                     HttpStatusCode.Forbidden,

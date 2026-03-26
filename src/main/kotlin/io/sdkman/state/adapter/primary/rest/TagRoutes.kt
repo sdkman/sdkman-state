@@ -37,6 +37,7 @@ fun Route.tagRoutes(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
+            // Admin tokens bypass candidate authorization — admin can operate on any candidate
             if (role == "vendor" && uniqueTag.candidate !in candidates) {
                 call.respond(
                     HttpStatusCode.Forbidden,
