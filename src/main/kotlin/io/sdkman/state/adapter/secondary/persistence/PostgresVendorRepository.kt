@@ -14,7 +14,6 @@ import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -107,43 +106,46 @@ class PostgresVendorRepository : VendorRepository {
         Either
             .catch {
                 dbQuery {
-                    val existing =
-                        VendorsTable
-                            .selectAll()
-                            .where { VendorsTable.email eq email }
-                            .map { it.toVendor() }
-                            .firstOrNull()
+                    val candidatesList = candidates.getOrElse { emptyList() }
+                    val updateCandidates = candidates.isSome()
+                    val conn = TransactionManager.current().connection.connection as java.sql.Connection
 
-                    if (existing != null) {
-                        val now = Instant.now()
-                        VendorsTable.update({ VendorsTable.email eq email }) {
-                            it[password] = hashedPassword
-                            it[updatedAt] = now
-                            it[deletedAt] = null
-                            candidates.map { newCandidates ->
-                                it[VendorsTable.candidates] = newCandidates
-                            }
-                        }
-                        val updated =
-                            VendorsTable
-                                .selectAll()
-                                .where { VendorsTable.email eq email }
-                                .map { it.toVendor() }
-                                .first()
-                        Pair(updated, false)
-                    } else {
-                        VendorsTable.insert {
-                            it[VendorsTable.email] = email
-                            it[password] = hashedPassword
-                            it[VendorsTable.candidates] = candidates.getOrElse { emptyList() }
-                        }
-                        val created =
-                            VendorsTable
-                                .selectAll()
-                                .where { VendorsTable.email eq email }
-                                .map { it.toVendor() }
-                                .first()
-                        Pair(created, true)
+                    @Suppress("MaxLineLength")
+                    val sql =
+                        """
+                        INSERT INTO vendors (email, password, candidates, created_at, updated_at)
+                        VALUES (?, ?, ?, NOW(), NOW())
+                        ON CONFLICT (email) DO UPDATE SET
+                            password = EXCLUDED.password,
+                            candidates = CASE WHEN ? THEN EXCLUDED.candidates ELSE vendors.candidates END,
+                            updated_at = NOW(),
+                            deleted_at = NULL
+                        RETURNING *, (xmax = 0) AS is_new
+                        """.trimIndent()
+
+                    conn.prepareStatement(sql).use { stmt ->
+                        stmt.setString(1, email)
+                        stmt.setString(2, hashedPassword)
+                        stmt.setArray(3, conn.createArrayOf("text", candidatesList.toTypedArray()))
+                        stmt.setBoolean(4, updateCandidates)
+
+                        val rs = stmt.executeQuery()
+                        rs.next()
+
+                        @Suppress("UNCHECKED_CAST")
+                        val vendor =
+                            Vendor(
+                                id = UUID.fromString(rs.getString("id")),
+                                email = rs.getString("email"),
+                                hashedPassword = rs.getString("password"),
+                                candidates = (rs.getArray("candidates").array as Array<String>).toList(),
+                                createdAt = rs.getTimestamp("created_at").toInstant(),
+                                updatedAt = rs.getTimestamp("updated_at").toInstant(),
+                                deletedAt = rs.getTimestamp("deleted_at")?.toInstant().toOption(),
+                            )
+                        val isNew = rs.getBoolean("is_new")
+
+                        Pair(vendor, isNew)
                     }
                 }
             }.mapLeft { error ->
