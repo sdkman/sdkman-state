@@ -18,6 +18,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.AuthError
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
+import io.sdkman.state.security.BCRYPT_COST
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.time.Instant
@@ -26,7 +27,6 @@ import java.util.UUID
 private const val JWT_SECRET = "test-secret-for-unit-tests"
 private const val ADMIN_EMAIL = "admin@test.com"
 private const val ADMIN_PASSWORD = "admin-password"
-private const val BCRYPT_COST = 12
 
 class AuthServiceImplUnitSpec :
     ShouldSpec({

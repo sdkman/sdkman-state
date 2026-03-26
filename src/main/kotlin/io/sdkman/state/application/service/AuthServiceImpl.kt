@@ -10,13 +10,13 @@ import io.sdkman.state.domain.error.AuthError
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
+import io.sdkman.state.security.BCRYPT_COST
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
 
 private const val ISSUER = "sdkman-state"
 private const val AUDIENCE = "sdkman-state"
-private const val BCRYPT_COST = 12
 private const val SECONDS_PER_MINUTE = 60L
 
 class AuthServiceImpl(
