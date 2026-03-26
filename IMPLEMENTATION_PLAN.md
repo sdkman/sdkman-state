@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–5 complete (13/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0. `RateLimiter` component implemented with per-IP tracking. `AuthServiceImpl` implemented with admin/vendor login, constant-time BCrypt verification, JWT creation, and rate limiting.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–10 complete (36/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
 
 ### Evidence
 
@@ -129,27 +129,27 @@ Depends on Phase 4 (repositories and updated audit signatures).
 
 Depends on Phase 5 (application services) and Phase 1.3 (config).
 
-- [ ] **6.1 Add JWT authentication configuration to `Authentication.kt`**
+- [x] **6.1 Add JWT authentication configuration to `Authentication.kt`**
   Add `configureJwtAuthentication(config: AppConfig)` alongside the existing `configureBasicAuthentication()` (do NOT remove basic auth yet — it is still called by `Application.kt` and test `Application.kt`; removal happens in Phase 7.1). The new function installs the Ktor JWT authentication plugin with name `"auth-jwt"`. Configure HS256 verification using `com.auth0:java-jwt`'s `Algorithm.HMAC256(config.jwtSecret)`. Validate issuer (`"sdkman-state"`) and audience (`"sdkman-state"`). The verifier must accept only HS256 and reject other algorithms including `none`.
   - File: `src/main/kotlin/io/sdkman/state/config/Authentication.kt`
 
-- [ ] **6.2 Create admin route DTOs**
+- [x] **6.2 Create admin route DTOs**
   Create request/response DTOs for admin endpoints with `@Serializable`: `LoginRequest(email: String, password: String)`, `LoginResponse(token: String)`, `CreateVendorRequest(email: String, candidates: Option<List<String>>)` -- Arrow `Option` serializes as absent/null in JSON via `OptionSerializer`, so omitting `candidates` in the request means `None` (keep existing), while providing `candidates: []` is an explicit empty list (rejected with 400). Also: `VendorResponse(id: String, email: String, candidates: List<String>, createdAt: String, updatedAt: String, deletedAt: Option<String>)`, `VendorWithPasswordResponse` (includes `password: String` for create/update only). The file requires `@file:UseSerializers(OptionSerializer::class)` since multiple DTOs use Arrow `Option` fields. Place in `adapter/primary/rest/dto/`.
   - File: `src/main/kotlin/io/sdkman/state/adapter/primary/rest/dto/AdminDto.kt`
 
-- [ ] **6.3 Add JWT-aware helpers to `RequestExtensions.kt`**
+- [x] **6.3 Add JWT-aware helpers to `RequestExtensions.kt`**
   Add new JWT-aware helper functions alongside the existing `authenticatedUsername()` (do NOT remove it yet — callers in `VersionRoutes.kt` and `TagRoutes.kt` still reference it; removal happens in Phase 6.5): `authenticatedVendorId(): UUID` (from `vendor_id` claim, nil UUID for admin), `authenticatedEmail(): String` (from `sub` claim), `authenticatedRole(): String` (from `role` claim), `authenticatedCandidates(): List<String>` (from `candidates` claim, empty for admin). Extract from `JWTPrincipal` payload claims.
   - File: `src/main/kotlin/io/sdkman/state/adapter/primary/rest/RequestExtensions.kt`
 
-- [ ] **6.4 Create `AdminRoutes.kt`**
+- [x] **6.4 Create `AdminRoutes.kt`**
   Implement admin endpoints: `POST /admin/login` (public, not behind authenticate block -- validate request, call `authService.login` passing client IP, map `AuthError` to HTTP status: `InvalidCredentials` -> 401, `RateLimitExceeded` -> 429, `TokenCreationFailed` -> 500). `GET /admin/vendors` (behind JWT auth, admin role check -- call `vendorRepo.findAll`, query param `include_deleted`). `POST /admin/vendors` (admin role check -- validate email with RFC regex, reject admin email collision with 400, reject explicitly provided empty candidates `[]` with 400 but allow omitted candidates, generate 32-byte `SecureRandom` base64 password, BCrypt hash it cost 12, call `vendorRepo.upsert`, return 201 if created or 200 if updated with plaintext password). `DELETE /admin/vendors/{id}` (admin role check -- parse UUID, call `vendorRepo.softDelete`, 404 if not found or already deleted). Admin role check: verify `role` claim is `"admin"`, return 401 otherwise (no info leakage about admin-only endpoints).
   - File: `src/main/kotlin/io/sdkman/state/adapter/primary/rest/AdminRoutes.kt`
 
-- [ ] **6.5 Add candidate authorization to write routes and remove old `authenticatedUsername()`**
+- [x] **6.5 Add candidate authorization to write routes and remove old `authenticatedUsername()`**
   In `VersionRoutes.kt` and `TagRoutes.kt`, replace `call.authenticatedUsername()` with JWT claim extraction (`authenticatedVendorId()`, `authenticatedEmail()`, `authenticatedRole()`, `authenticatedCandidates()`). Add authorization logic: if role is `"vendor"`, verify the requested candidate is in the token's `candidates` claim list; return 403 Forbidden with `ErrorResponse("Forbidden", "Not authorized for candidate: $candidate")` if unauthorized. For `TagRoutes.kt`, the candidate must be extracted from the parsed `UniqueTagDto` request body before the authorization check. Admin role bypasses candidate check. Pass `vendorId` and `email` to service methods instead of `username`. Now that all callers are migrated, remove the old `authenticatedUsername()` function and its `UserIdPrincipal` import from `RequestExtensions.kt`.
   - Files: `src/main/kotlin/io/sdkman/state/adapter/primary/rest/VersionRoutes.kt`, `src/main/kotlin/io/sdkman/state/adapter/primary/rest/TagRoutes.kt`, `src/main/kotlin/io/sdkman/state/adapter/primary/rest/RequestExtensions.kt`
 
-- [ ] **6.6 Update `Routing.kt` to wire JWT auth and admin routes**
+- [x] **6.6 Update `Routing.kt` to wire JWT auth and admin routes**
   Add `authService: AuthService`, `vendorRepository: VendorRepository`, and `appConfig: AppConfig` parameters to `configureRouting`. Replace `authenticate("auth-basic")` with `authenticate("auth-jwt")`. Add admin routes: `POST /admin/login` outside the authenticate block (public endpoint), `GET/POST/DELETE /admin/vendors*` inside the JWT authenticate block. Pass `authService`, `vendorRepository`, and `appConfig` to admin routes.
   - File: `src/main/kotlin/io/sdkman/state/adapter/primary/rest/Routing.kt`
 
@@ -159,13 +159,13 @@ Depends on Phase 5 (application services) and Phase 1.3 (config).
 
 Depends on Phase 6 (all adapters and config ready).
 
-- [ ] **7.1 Update main and test `Application.kt` module wiring, remove Basic Auth**
+- [x] **7.1 Update main and test `Application.kt` module wiring, remove Basic Auth**
   **Main:** Replace `configureBasicAuthentication(appConfig)` with `configureJwtAuthentication(appConfig)`. Instantiate `PostgresVendorRepository`, `RateLimiter`, and `AuthServiceImpl(vendorRepo, appConfig, rateLimiter)`. Pass `authService`, `vendorRepository`, and `appConfig` to `configureRouting`. The `AuthServiceImpl` constructor BCrypt-hashes the admin password once at startup.
   **Test:** Update the test `Application.kt` to match the new `configureRouting` signature. Replace `configureBasicAuthentication(appConfig)` with `configureJwtAuthentication(appConfig)`. Add `admin.email`, `admin.password`, `jwt.secret`, `jwt.expiry` to `testApplicationConfig()` with placeholder test values. Instantiate `PostgresVendorRepository`, `RateLimiter`, and `AuthServiceImpl`. Pass all new parameters to `configureRouting`. This ensures both main and test code compile atomically after `configureRouting`'s signature change in Phase 6.6.
   **Cleanup:** Remove the now-unused `configureBasicAuthentication()` function from `Authentication.kt` (added in Phase 6.1 alongside `configureJwtAuthentication()`, now safe to remove since no callers remain).
   - Files: `src/main/kotlin/io/sdkman/state/Application.kt`, `src/test/kotlin/io/sdkman/state/support/Application.kt`, `src/main/kotlin/io/sdkman/state/config/Authentication.kt`
 
-- [ ] **7.2 Remove old Basic Auth config**
+- [x] **7.2 Remove old Basic Auth config**
   Remove the `api { username, password }` block from `application.conf` (keep `api.cache.control`). Remove `authUsername`/`authPassword` from `AppConfig` interface and `DefaultAppConfig`.
   - Files: `src/main/resources/application.conf`, `src/main/kotlin/io/sdkman/state/config/AppConfig.kt`
 
@@ -197,15 +197,15 @@ Can proceed after API changes are finalised.
 
 Depends on Phase 6.1 (JWT auth config). Must be done before test migration.
 
-- [ ] **9.1 Create `JwtTestSupport` utility**
+- [x] **9.1 Create `JwtTestSupport` utility**
   Create test utility that generates: valid admin tokens (role `"admin"`, sub `"admin@sdkman.io"`, `vendor_id` as nil UUID), valid vendor tokens (with specific `vendor_id`, `candidates` list, role `"vendor"`), expired tokens, and tokens signed with a wrong secret. Use `com.auth0:java-jwt` with a known test secret (e.g., `"test-jwt-secret"`). Define the test secret as a constant. Include a helper for generating tokens with custom claims for edge-case tests.
   - File: `src/test/kotlin/io/sdkman/state/support/JwtTestSupport.kt`
 
-- [ ] **9.2 Align test `Application.kt` config with `JwtTestSupport` constants**
+- [x] **9.2 Align test `Application.kt` config with `JwtTestSupport` constants**
   Update `testApplicationConfig()` values set in Phase 7.1 to use the canonical test constants from `JwtTestSupport`: set `jwt.secret` to `JwtTestSupport.TEST_SECRET`, `admin.email` to `"admin@sdkman.io"`, `admin.password` to `"testadminpassword"`. Remove `api.username`/`api.password` (no longer needed after Phase 7.2). Keep `api.cache.control`. This ensures acceptance tests can use tokens from `JwtTestSupport` that are validated by the test app's JWT verifier.
   - File: `src/test/kotlin/io/sdkman/state/support/Application.kt`
 
-- [ ] **9.3 Update test `Postgres.kt` support for new audit schema**
+- [x] **9.3 Update test `Postgres.kt` support for new audit schema**
   Update `VendorAuditRecord` data class: replace `username: String` with `vendorId: UUID` and `email: String`. Note: the existing `timestamp` field uses `kotlin.time.Instant` -- maintain this convention (use the `toKotlinTimeInstant()` converter from `PostgresConnectivity.kt` or equivalent inline conversion). Update `selectAuditRecords()`, rename `selectAuditRecordsByUsername()` to `selectAuditRecordsByEmail()`, update `selectAuditRecordsByOperation()` -- all to read `vendor_id` and `email` from the new `AuditTable` columns. Update `withCleanDatabase` to also clear the `vendors` table (via `VendorsTable`). Add helper functions: `insertVendor(vendor)` and `selectVendors()` for test setup/verification.
   - File: `src/test/kotlin/io/sdkman/state/support/Postgres.kt`
 
@@ -215,47 +215,47 @@ Depends on Phase 6.1 (JWT auth config). Must be done before test migration.
 
 Depends on Phase 9 (test infrastructure). All existing acceptance tests that use Basic Auth must switch to JWT Bearer tokens. Read-only endpoint tests (`GetVersionsAcceptanceSpec`, `GetVersionAcceptanceSpec`, `GetVersionTagsAcceptanceSpec`, `HealthCheckAcceptanceSpec`) do not use authentication and require no auth-related changes -- they will continue to pass once the test `Application.kt` is rewired in Phase 9.2.
 
-- [ ] **10.1 Update `PostVersionAcceptanceSpec` to use JWT auth**
+- [x] **10.1 Update `PostVersionAcceptanceSpec` to use JWT auth**
   Replace `basicAuth("testuser", "password123")` / `BASIC_AUTH_HEADER` headers with `bearerAuth(adminToken)` using token from `JwtTestSupport`. Update audit assertions to check `vendorId` and `email` instead of `username`.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/PostVersionAcceptanceSpec.kt`
 
-- [ ] **10.2 Update `IdempotentPostVersionAcceptanceSpec` to use JWT auth**
+- [x] **10.2 Update `IdempotentPostVersionAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token from `JwtTestSupport`.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/IdempotentPostVersionAcceptanceSpec.kt`
 
-- [ ] **10.3 Update `DeleteVersionAcceptanceSpec` to use JWT auth**
+- [x] **10.3 Update `DeleteVersionAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token. Update audit assertions for new schema.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/DeleteVersionAcceptanceSpec.kt`
 
-- [ ] **10.4 Update `DeleteTaggedVersionAcceptanceSpec` to use JWT auth**
+- [x] **10.4 Update `DeleteTaggedVersionAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/DeleteTaggedVersionAcceptanceSpec.kt`
 
-- [ ] **10.5 Update `DeleteTagAcceptanceSpec` to use JWT auth**
+- [x] **10.5 Update `DeleteTagAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token. Update audit assertions for new schema.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/DeleteTagAcceptanceSpec.kt`
 
-- [ ] **10.6 Update `PostVersionVisibilityAcceptanceSpec` to use JWT auth**
+- [x] **10.6 Update `PostVersionVisibilityAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/PostVersionVisibilityAcceptanceSpec.kt`
 
-- [ ] **10.7 Update `PostVersionTagsAcceptanceSpec` to use JWT auth**
+- [x] **10.7 Update `PostVersionTagsAcceptanceSpec` to use JWT auth**
   Replace Basic Auth header with JWT Bearer token.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/PostVersionTagsAcceptanceSpec.kt`
 
-- [ ] **10.8 Update `VendorAuditAcceptanceSpec` for new audit schema**
+- [x] **10.8 Update `VendorAuditAcceptanceSpec` for new audit schema**
   Update assertions to check `vendorId` (nil UUID for admin) and `email` columns instead of `username`. Use JWT Bearer token. Update `selectAuditRecordsByEmail()` calls.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/VendorAuditAcceptanceSpec.kt`
 
-- [ ] **10.9 Update `PostgresAuditRepositoryIntegrationSpec` for new schema**
+- [x] **10.9 Update `PostgresAuditRepositoryIntegrationSpec` for new schema**
   Update test to pass `vendorId: UUID` and `email: String` instead of `username`. Update assertions for new `vendor_id` and `email` columns in `AuditTable`.
   - File: `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepositoryIntegrationSpec.kt`
 
-- [ ] **10.10 Update `VersionServiceUnitSpec` for new audit parameters**
+- [x] **10.10 Update `VersionServiceUnitSpec` for new audit parameters**
   Update mock expectations: `auditRepo.recordAudit` now expects `(vendorId: UUID, email: String, ...)` instead of `(username, ...)`. Update `versionService.createOrUpdate` and `delete` calls to pass `vendorId` and `email`.
   - File: `src/test/kotlin/io/sdkman/state/application/service/VersionServiceUnitSpec.kt`
 
-- [ ] **10.11 Update `TagServiceUnitSpec` for new audit parameters**
+- [x] **10.11 Update `TagServiceUnitSpec` for new audit parameters**
   Update mock expectations: `auditRepo.recordAudit` now expects `(vendorId: UUID, email: String, ...)`. Update `tagService.deleteTag` calls to pass `vendorId` and `email`.
   - File: `src/test/kotlin/io/sdkman/state/application/service/TagServiceUnitSpec.kt`
 

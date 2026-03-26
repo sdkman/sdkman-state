@@ -5,23 +5,20 @@ import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.ktor.client.request.header
+import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
-
-// testuser:password123 base64 encoded
-private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
 @Tags("acceptance")
 class IdempotentPostVersionAcceptanceSpec :
@@ -47,7 +44,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -56,7 +53,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
@@ -100,7 +97,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(originalVersion.toJsonString())
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -109,7 +106,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(updatedVersion.toJsonString())
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
@@ -142,7 +139,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
@@ -151,7 +148,7 @@ class IdempotentPostVersionAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(requestBody)
-                            header(HttpHeaders.Authorization, BASIC_AUTH_HEADER)
+                            bearerAuth(JwtTestSupport.adminToken())
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }

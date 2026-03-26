@@ -9,8 +9,6 @@ interface AppConfig {
     val databaseName: String
     val databaseUsername: Option<String>
     val databasePassword: Option<String>
-    val authUsername: String
-    val authPassword: String
     val cacheMaxAge: Int
     val adminEmail: String
     val adminPassword: String
@@ -26,8 +24,6 @@ class DefaultAppConfig(
     override val databaseName: String = config.getStringOrDefault("database.name", "sdkman")
     override val databaseUsername: Option<String> = config.getOptionString("database.username")
     override val databasePassword: Option<String> = config.getOptionString("database.password")
-    override val authUsername: String = config.getStringOrDefault("api.username", "")
-    override val authPassword: String = config.getStringOrDefault("api.password", "")
     override val cacheMaxAge: Int = config.getIntOrDefault("api.cache.control", 600)
     override val adminEmail: String = config.getStringOrDefault("admin.email", "admin@sdkman.io")
     override val adminPassword: String = config.getStringOrDefault("admin.password", "changeme")

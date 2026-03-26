@@ -10,6 +10,7 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
@@ -20,7 +21,6 @@ import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.service.VersionService
-import java.util.UUID
 
 fun Route.versionReadRoutes(versionService: VersionService) {
     get("/versions/{candidate}") {
@@ -80,11 +80,17 @@ fun Route.versionReadRoutes(versionService: VersionService) {
     }
 }
 
-private val NIL_UUID: UUID = UUID(0L, 0L)
-
 fun Route.versionWriteRoutes(versionService: VersionService) {
+    versionCreateRoute(versionService)
+    versionDeleteRoute(versionService)
+}
+
+private fun Route.versionCreateRoute(versionService: VersionService) {
     post("/versions") {
-        val username = call.authenticatedUsername()
+        val vendorId = call.authenticatedVendorId()
+        val email = call.authenticatedEmail()
+        val role = call.authenticatedRole()
+        val candidates = call.authenticatedCandidates()
         val requestBody = call.receiveText()
         VersionRequestValidator.validateRequest(requestBody).fold(
             ifLeft = { errors ->
@@ -92,15 +98,28 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                 call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
             },
             ifRight = { validVersion ->
-                versionService.createOrUpdate(validVersion, NIL_UUID, username).fold(
+                if (role == "vendor" && validVersion.candidate !in candidates) {
+                    call.respond(
+                        HttpStatusCode.Forbidden,
+                        ErrorResponse("Forbidden", "Not authorized for candidate: ${validVersion.candidate}"),
+                    )
+                    return@post
+                }
+                versionService.createOrUpdate(validVersion, vendorId, email).fold(
                     ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
             },
         )
     }
+}
+
+private fun Route.versionDeleteRoute(versionService: VersionService) {
     delete("/versions") {
-        val username = call.authenticatedUsername()
+        val vendorId = call.authenticatedVendorId()
+        val email = call.authenticatedEmail()
+        val role = call.authenticatedRole()
+        val candidates = call.authenticatedCandidates()
         either<DomainError, Unit> {
             val uniqueVersion =
                 Either
@@ -116,7 +135,14 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
-            versionService.delete(validUniqueVersion, NIL_UUID, username).bind()
+            if (role == "vendor" && validUniqueVersion.candidate !in candidates) {
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    ErrorResponse("Forbidden", "Not authorized for candidate: ${validUniqueVersion.candidate}"),
+                )
+                return@delete
+            }
+            versionService.delete(validUniqueVersion, vendorId, email).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },

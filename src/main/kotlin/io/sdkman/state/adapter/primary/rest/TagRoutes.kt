@@ -8,19 +8,20 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.application.validation.UniqueTagValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.error.FieldError
 import io.sdkman.state.domain.service.TagService
-import java.util.UUID
-
-private val NIL_UUID: UUID = UUID(0L, 0L)
 
 fun Route.tagRoutes(tagService: TagService) {
     delete("/versions/tags") {
-        val username = call.authenticatedUsername()
+        val vendorId = call.authenticatedVendorId()
+        val email = call.authenticatedEmail()
+        val role = call.authenticatedRole()
+        val candidates = call.authenticatedCandidates()
         either<DomainError, Unit> {
             val uniqueTag =
                 Either
@@ -36,7 +37,14 @@ fun Route.tagRoutes(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            tagService.deleteTag(uniqueTag, NIL_UUID, username).bind()
+            if (role == "vendor" && uniqueTag.candidate !in candidates) {
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    ErrorResponse("Forbidden", "Not authorized for candidate: ${uniqueTag.candidate}"),
+                )
+                return@delete
+            }
+            tagService.deleteTag(uniqueTag, vendorId, email).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },
