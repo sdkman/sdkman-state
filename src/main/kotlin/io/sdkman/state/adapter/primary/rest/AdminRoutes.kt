@@ -18,16 +18,17 @@ import io.sdkman.state.domain.error.AuthError
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
+import io.sdkman.state.security.BCRYPT_COST
 import java.security.SecureRandom
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import java.util.UUID
 
-private const val BCRYPT_COST = 12
 private const val PASSWORD_BYTES = 32
 private val EMAIL_REGEX = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
 private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
+private val secureRandom = SecureRandom()
 
 fun Route.adminLoginRoute(authService: AuthService) {
     post("/admin/login") {
@@ -168,7 +169,7 @@ fun Route.adminDeleteVendorRoute(vendorRepository: VendorRepository) {
 
 private fun generatePassword(): String {
     val bytes = ByteArray(PASSWORD_BYTES)
-    SecureRandom().nextBytes(bytes)
+    secureRandom.nextBytes(bytes)
     return Base64.getEncoder().encodeToString(bytes)
 }
 
