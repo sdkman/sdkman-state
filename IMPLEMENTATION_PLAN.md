@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–13 complete (43/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **All 14 phases complete (47/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth. OpenAPI specification fully updated with bearerAuth scheme, admin endpoints, and 403 responses. Full validation chain passes.
 
 ### Evidence
 
@@ -175,19 +175,19 @@ Depends on Phase 6 (all adapters and config ready).
 
 Can proceed after API changes are finalised.
 
-- [ ] **8.1 Replace `basicAuth` with `bearerAuth` security scheme**
+- [x] **8.1 Replace `basicAuth` with `bearerAuth` security scheme**
   Remove `basicAuth` security scheme. Add `bearerAuth` scheme with `type: http`, `scheme: bearer`, `bearerFormat: JWT`. Update security references on all existing protected endpoints (`POST /versions`, `DELETE /versions`, `DELETE /versions/tags`).
   - File: `src/main/resources/openapi/documentation.yaml`
 
-- [ ] **8.2 Document `POST /admin/login` endpoint**
+- [x] **8.2 Document `POST /admin/login` endpoint**
   Add path with request body schema (`LoginRequest`), `200` response (`LoginResponse`), `401 Unauthorized`, and `429 Too Many Requests` error responses. No security scheme (public endpoint).
   - File: `src/main/resources/openapi/documentation.yaml`
 
-- [ ] **8.3 Document admin vendor management endpoints**
+- [x] **8.3 Document admin vendor management endpoints**
   Add `GET /admin/vendors` (with `include_deleted` query param, `200` response with array of `VendorResponse`), `POST /admin/vendors` (request body `CreateVendorRequest`, `201`/`200` response with `VendorWithPasswordResponse`, `400` for validation errors), `DELETE /admin/vendors/{id}` (`200` response with `VendorResponse`, `404`). All secured with `bearerAuth`. Document `401` on all.
   - File: `src/main/resources/openapi/documentation.yaml`
 
-- [ ] **8.4 Add `403 Forbidden` responses to existing write endpoints**
+- [x] **8.4 Add `403 Forbidden` responses to existing write endpoints**
   Update `POST /versions`, `DELETE /versions`, `DELETE /versions/tags` to document `403` response for candidate authorization failures when vendor token lacks the required candidate.
   - File: `src/main/resources/openapi/documentation.yaml`
 
@@ -312,7 +312,7 @@ Depends on Phase 9 (test infrastructure) and Phase 10 (existing tests updated).
 
 ## Phase 14: Final Validation
 
-- [ ] **14.1 Run full validation chain**
+- [x] **14.1 Run full validation chain**
   Execute `./gradlew check` to verify compile, detekt, ktlintCheck, and all tests pass. Fix any issues that arise.
 
 ---

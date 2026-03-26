@@ -27,7 +27,7 @@ paths:
     delete:
       description: ""
       security:
-        - basicAuth: []
+        - bearerAuth: []
       requestBody:
         content:
           '*/*':
@@ -53,6 +53,14 @@ paths:
             '*/*':
               schema:
                 type: "object"
+        "401":
+          description: "Unauthorized - Missing or invalid token"
+        "403":
+          description: "Forbidden - Vendor not authorized for this candidate"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: "Not Found"
           content:
@@ -78,7 +86,7 @@ paths:
     post:
       description: ""
       security:
-        - basicAuth: []
+        - bearerAuth: []
       requestBody:
         content:
           '*/*':
@@ -104,6 +112,14 @@ paths:
             '*/*':
               schema:
                 type: "object"
+        "401":
+          description: "Unauthorized - Missing or invalid token"
+        "403":
+          description: "Forbidden - Vendor not authorized for this candidate"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           description: "Internal Server Error"
           content:
@@ -120,7 +136,7 @@ paths:
     delete:
       description: "Remove a tag by its unique scope (candidate, tag, distribution, platform)"
       security:
-        - basicAuth: []
+        - bearerAuth: []
       requestBody:
         content:
           'application/json':
@@ -162,6 +178,12 @@ paths:
                         message: "Tag must not be blank"
         "401":
           description: "Unauthorized - Missing or invalid authentication"
+        "403":
+          description: "Forbidden - Vendor not authorized for this candidate"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: "Not Found - Tag does not exist for the given scope"
           content:
@@ -174,6 +196,138 @@ paths:
                   value:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
+  /admin/login:
+    post:
+      description: "Authenticate and obtain a JWT token"
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: "OK - Authentication successful"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: "Unauthorized - Invalid credentials"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: "Too Many Requests - Rate limit exceeded"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: "Internal Server Error - Token creation failed"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/vendors:
+    get:
+      description: "List all vendors"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "include_deleted"
+          in: "query"
+          required: false
+          schema:
+            type: "boolean"
+            default: false
+          description: "Include soft-deleted vendors in the response"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            'application/json':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/VendorResponse"
+        "401":
+          description: "Unauthorized - Missing, invalid, or non-admin token"
+    post:
+      description: "Create or update a vendor"
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/CreateVendorRequest"
+        required: true
+      responses:
+        "201":
+          description: "Created - New vendor created"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/VendorWithPasswordResponse"
+        "200":
+          description: "OK - Existing vendor updated or resurrected"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/VendorWithPasswordResponse"
+        "400":
+          description: "Bad Request - Validation errors"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalid_email:
+                  summary: "Invalid email format"
+                  value:
+                    error: "Bad Request"
+                    message: "Invalid email format"
+                empty_candidates:
+                  summary: "Empty candidates list"
+                  value:
+                    error: "Bad Request"
+                    message: "Candidates list cannot be empty"
+                admin_email:
+                  summary: "Admin email collision"
+                  value:
+                    error: "Bad Request"
+                    message: "Cannot use admin email"
+        "401":
+          description: "Unauthorized - Missing, invalid, or non-admin token"
+  /admin/vendors/{id}:
+    delete:
+      description: "Soft delete a vendor"
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        "200":
+          description: "OK - Vendor soft deleted"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/VendorResponse"
+        "401":
+          description: "Unauthorized - Missing, invalid, or non-admin token"
+        "404":
+          description: "Not Found - Vendor not found or already deleted"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /versions/{candidate}:
     get:
       description: ""
@@ -253,9 +407,10 @@ paths:
                 type: "object"
 components:
   securitySchemes:
-    basicAuth:
+    bearerAuth:
       type: http
-      scheme: basic
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthCheckResponse:
       type: "object"
@@ -402,6 +557,91 @@ components:
         - "error"
         - "message"
         - "tags"
+    LoginRequest:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+        password:
+          type: "string"
+      required:
+        - "email"
+        - "password"
+    LoginResponse:
+      type: "object"
+      properties:
+        token:
+          type: "string"
+      required:
+        - "token"
+    CreateVendorRequest:
+      type: "object"
+      properties:
+        email:
+          type: "string"
+        candidates:
+          type: "array"
+          items:
+            type: "string"
+          description: "List of candidate identifiers the vendor is authorized to manage. Omit to preserve existing candidates on update."
+      required:
+        - "email"
+    VendorResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        email:
+          type: "string"
+        candidates:
+          type: "array"
+          items:
+            type: "string"
+        created_at:
+          type: "string"
+          format: "date-time"
+        updated_at:
+          type: "string"
+          format: "date-time"
+        deleted_at:
+          type: "string"
+          format: "date-time"
+          nullable: true
+      required:
+        - "id"
+        - "email"
+        - "candidates"
+        - "created_at"
+        - "updated_at"
+    VendorWithPasswordResponse:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        email:
+          type: "string"
+        password:
+          type: "string"
+          description: "Generated plaintext password, shown only on create/update"
+        candidates:
+          type: "array"
+          items:
+            type: "string"
+        created_at:
+          type: "string"
+          format: "date-time"
+        updated_at:
+          type: "string"
+          format: "date-time"
+      required:
+        - "id"
+        - "email"
+        - "password"
+        - "candidates"
+        - "created_at"
+        - "updated_at"
     Version:
       type: "object"
       properties:
