@@ -159,12 +159,13 @@ class PostgresVendorRepository : VendorRepository {
         Either
             .catch {
                 dbQuery {
+                    val now = Instant.now()
                     val updated =
                         VendorsTable.update({
                             (VendorsTable.id eq id) and (VendorsTable.deletedAt eq null)
                         }) {
-                            it[deletedAt] = Instant.now()
-                            it[updatedAt] = Instant.now()
+                            it[deletedAt] = now
+                            it[updatedAt] = now
                         }
                     if (updated > 0) {
                         VendorsTable
