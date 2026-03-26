@@ -37,10 +37,9 @@ class AuthServiceImpl(
         password: String,
         clientIp: String,
     ): Either<AuthError, String> {
-        if (rateLimiter.isRateLimited(clientIp)) {
+        if (rateLimiter.checkAndRecord(clientIp)) {
             return AuthError.RateLimitExceeded.left()
         }
-        rateLimiter.recordAttempt(clientIp)
 
         return if (email == appConfig.adminEmail) {
             verifyAdminLogin(email, password)

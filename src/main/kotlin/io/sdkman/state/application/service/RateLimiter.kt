@@ -9,27 +9,20 @@ private const val WINDOW_SECONDS = 60L
 class RateLimiter {
     private val attempts = ConcurrentHashMap<String, MutableList<Instant>>()
 
-    fun isRateLimited(clientIp: String): Boolean {
+    fun checkAndRecord(clientIp: String): Boolean {
         val now = Instant.now()
         val windowStart = now.minusSeconds(WINDOW_SECONDS)
-        val timestamps = attempts[clientIp] ?: return false
-        synchronized(timestamps) {
-            timestamps.removeAll { it.isBefore(windowStart) }
-            return timestamps.size >= MAX_ATTEMPTS
-        }
-    }
-
-    fun recordAttempt(clientIp: String) {
-        val now = Instant.now()
+        var rateLimited = false
         attempts.compute(clientIp) { _, existing ->
             val list = existing ?: mutableListOf()
-            synchronized(list) {
-                val windowStart = now.minusSeconds(WINDOW_SECONDS)
-                list.removeAll { it.isBefore(windowStart) }
+            list.removeAll { it.isBefore(windowStart) }
+            rateLimited = list.size >= MAX_ATTEMPTS
+            if (!rateLimited) {
                 list.add(now)
             }
             list
         }
+        return rateLimited
     }
 
     fun cleanup() {
