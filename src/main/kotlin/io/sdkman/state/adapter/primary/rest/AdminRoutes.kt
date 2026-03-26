@@ -3,6 +3,7 @@ package io.sdkman.state.adapter.primary.rest
 import arrow.core.Some
 import at.favre.lib.crypto.bcrypt.BCrypt
 import io.ktor.http.*
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -31,7 +32,7 @@ private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 fun Route.adminLoginRoute(authService: AuthService) {
     post("/admin/login") {
         val request = call.receive<LoginRequest>()
-        val clientIp = call.request.local.remoteHost
+        val clientIp = call.request.origin.remoteHost
         authService.login(request.email, request.password, clientIp).fold(
             ifLeft = { error ->
                 when (error) {

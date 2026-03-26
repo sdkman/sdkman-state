@@ -7,6 +7,7 @@ import io.ktor.server.application.*
 import io.ktor.server.http.content.*
 import io.ktor.server.plugins.cachingheaders.*
 import io.ktor.server.plugins.compression.*
+import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -23,6 +24,7 @@ fun Application.configureHTTP(config: AppConfig) {
             )
         }
     }
+    install(XForwardedHeaders)
     install(CachingHeaders) {
         options { _, content ->
             content.contentType
