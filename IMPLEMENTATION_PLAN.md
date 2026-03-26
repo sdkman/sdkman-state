@@ -22,10 +22,9 @@
 
 ## HIGH Priority
 
-- [ ] **Fix 3 — Rate Limiter: Periodic Cleanup**
-  - Launch a coroutine in `Application.module()` (after `RateLimiter` instantiation at line 35) that calls `rateLimiter.cleanup()` every 60 seconds
-  - The `cleanup()` method exists in `RateLimiter.kt:35` but is never invoked anywhere
-  - Prevents unbounded memory growth in the `ConcurrentHashMap`
+- [x] **Fix 3 — Rate Limiter: Periodic Cleanup** ✅
+  - Launched a background coroutine in `Application.module()` that calls `rateLimiter.cleanup()` every 60 seconds
+  - Uses Ktor's `Application` coroutine scope so the job is cancelled on shutdown
 
 - [ ] **Fix 4 — `authenticatedVendorId()` Safe Parsing**
   - In `RequestExtensions.kt:22-26`, wrap `UUID.fromString(...)` (line 25) in `runCatching` inside the `Option` chain

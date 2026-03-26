@@ -32,3 +32,12 @@ Append-only log of implementation progress. Each entry follows this template:
 - Updated `RateLimiterUnitSpec` to test via `checkAndRecord()` API, added test verifying no recording when rate-limited
 - Updated `AuthServiceImplUnitSpec` mocks to use `checkAndRecord()`
 **Verification:** `./gradlew check` — BUILD SUCCESSFUL (detekt, ktlint, all tests pass)
+
+## 2026-03-26 — Fix 3: Rate Limiter: Periodic Cleanup
+
+**Status:** Complete
+**Changes:**
+- Added `launch` coroutine in `Application.module()` that calls `rateLimiter.cleanup()` every 60 seconds to prevent unbounded memory growth in the `ConcurrentHashMap`
+- Uses Ktor's `Application` coroutine scope — the cleanup job is automatically cancelled on application shutdown
+- Added `kotlinx.coroutines.delay` and `kotlinx.coroutines.launch` imports
+**Verification:** `./gradlew check` — BUILD SUCCESSFUL (detekt, ktlint, all tests pass)
