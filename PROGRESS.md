@@ -177,3 +177,17 @@ Each entry must follow this structure exactly:
 - _Context:_ `VendorsTable` is `internal` in the main source but accessible from tests since they're in the same Kotlin module.
 
 ---
+
+### [2026-03-26 02:15] — Phase 11: Task 11.1
+
+**Summary:** Added `PostgresVendorRepositoryIntegrationSpec` testing all repository methods against Testcontainers Postgres.
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVendorRepositoryIntegrationSpec.kt` — 11 test cases covering create, findByEmail, findById, findAll (with/without deleted), softDelete, double-delete, upsert update, resurrection, and candidates preservation
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Patterns:_ Integration tests use `withCleanDatabase { }` which handles Flyway migration and table cleanup including the new VendorsTable
+
+---

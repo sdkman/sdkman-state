@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–10 complete (36/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–11 complete (37/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
 
 ### Evidence
 
@@ -265,7 +265,7 @@ Depends on Phase 9 (test infrastructure). All existing acceptance tests that use
 
 Depends on Phase 4 (persistence adapters) and Phase 9 (test infrastructure).
 
-- [ ] **11.1 Add `PostgresVendorRepositoryIntegrationSpec`**
+- [x] **11.1 Add `PostgresVendorRepositoryIntegrationSpec`**
   Test all `VendorRepository` methods against Testcontainers Postgres: create new vendor via `upsert`, `findByEmail` returns the vendor, `findById` returns the vendor, `findAll(includeDeleted=false)` excludes deleted, `findAll(includeDeleted=true)` includes deleted, `softDelete` sets `deleted_at`, `softDelete` on already-deleted returns `None`, `upsert` on existing vendor updates password and candidates, `upsert` on soft-deleted vendor resurrects (clears `deleted_at`), `findByEmail` on non-existent returns `None`.
   - File: `src/test/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVendorRepositoryIntegrationSpec.kt`
 
