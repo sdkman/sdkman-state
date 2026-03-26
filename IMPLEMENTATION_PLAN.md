@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–4 complete (11/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–4 complete, Phase 5.1 complete (12/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0. `RateLimiter` component implemented with per-IP tracking.
 
 ### Evidence
 
@@ -115,7 +115,7 @@ Depends on Phase 2 (ports) and Phase 3 (migrations). The `AuditRepository` port 
 
 Depends on Phase 4 (repositories and updated audit signatures).
 
-- [ ] **5.1 Create `RateLimiter` component**
+- [x] **5.1 Create `RateLimiter` component**
   Create a standalone `RateLimiter` class in `application/service/` with a `ConcurrentHashMap<String, MutableList<Instant>>` tracking per-IP timestamps. Expose `isRateLimited(clientIp: String): Boolean` (returns true if >= 5 attempts in the last 60 seconds) and `recordAttempt(clientIp: String)`. Include periodic cleanup of expired entries to prevent unbounded memory growth. This isolates rate limiting logic for independent testability and keeps `AuthServiceImpl` focused on authentication.
   - File: `src/main/kotlin/io/sdkman/state/application/service/RateLimiter.kt`
 

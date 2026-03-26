@@ -107,3 +107,18 @@ Each entry must follow this structure exactly:
 - _Patterns:_ Follows the same `Either.catch { dbQuery { ... } }.mapLeft { DatabaseFailure.QueryExecutionFailure(...) }` pattern used by all other repository implementations in this codebase.
 
 ---
+
+### [2026-03-26 01:00] — Phase 5: Task 5.1
+
+**Summary:** Created `RateLimiter` component with per-IP tracking using `ConcurrentHashMap` and sliding window of 5 attempts per 60 seconds.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/application/service/RateLimiter.kt` — new standalone rate limiter with `isRateLimited`, `recordAttempt`, and `cleanup` methods
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Patterns:_ ktlint enforces no blank line at start of class body — class fields must start immediately after opening brace
+- _Context:_ `RateLimiter` is a pure application-layer component with no infrastructure dependencies, making it independently testable (Phase 12.1)
+
+---
