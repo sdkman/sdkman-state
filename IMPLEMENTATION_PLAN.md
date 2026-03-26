@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–12 complete (39/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–13 complete (43/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth.
 
 ### Evidence
 
@@ -289,22 +289,22 @@ Depends on Phase 5 (application services).
 
 Depends on Phase 9 (test infrastructure) and Phase 10 (existing tests updated).
 
-- [ ] **13.1 Add admin login acceptance tests**
+- [x] **13.1 Add admin login acceptance tests**
   Happy paths: admin login returns 200 with valid JWT containing `role: "admin"`, `sub: admin email`; vendor login returns 200 with valid JWT containing `role: "vendor"`, `candidates` claim, `vendor_id` claim.
   Unhappy paths: wrong password returns 401, non-existent email returns 401, soft-deleted vendor returns 401, rate limit exceeded (6th attempt) returns 429.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/AdminLoginAcceptanceSpec.kt`
 
-- [ ] **13.2 Add vendor management acceptance tests**
+- [x] **13.2 Add vendor management acceptance tests**
   Happy paths: list vendors (empty) returns 200 with `[]`, create vendor returns 201 with generated password, list vendors (populated) returns 200 with vendor details (no password), update vendor returns 200 with regenerated password, soft delete returns 200 with `deleted_at`, list with `include_deleted=true` includes deleted vendor, list without filter excludes deleted vendor, resurrect soft-deleted vendor via `POST /admin/vendors` returns 200 with `deleted_at` cleared and new password.
   Unhappy paths: all admin endpoints without token return 401, all admin endpoints with vendor token return 401, create with invalid email returns 400, create with empty candidates `[]` returns 400, create with admin email returns 400, delete non-existent returns 404, delete already-deleted returns 404.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/AdminVendorManagementAcceptanceSpec.kt`
 
-- [ ] **13.3 Add vendor authorization acceptance tests**
+- [x] **13.3 Add vendor authorization acceptance tests**
   Happy paths: vendor token can `POST /versions` for authorized candidate (204), vendor token can `DELETE /versions` for authorized candidate (204), vendor token can `DELETE /versions/tags` for authorized candidate (204), admin token can access any candidate (204).
   Unhappy paths: vendor token returns 403 for unauthorized candidate on `POST /versions`, `DELETE /versions`, `DELETE /versions/tags`.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/VendorAuthorizationAcceptanceSpec.kt`
 
-- [ ] **13.4 Add token validation acceptance tests**
+- [x] **13.4 Add token validation acceptance tests**
   Unhappy paths: request without token returns 401, expired token returns 401, token with invalid signature returns 401.
   - File: `src/test/kotlin/io/sdkman/state/acceptance/TokenValidationAcceptanceSpec.kt`
 

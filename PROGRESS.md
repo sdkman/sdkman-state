@@ -207,3 +207,20 @@ Each entry must follow this structure exactly:
 - _Patterns:_ `clearAllMocks()` in `beforeEach` requires re-stubbing appConfig and rateLimiter defaults in a second `beforeEach` block
 
 ---
+
+### [2026-03-26 02:50] — Phase 13: Tasks 13.1-13.4
+
+**Summary:** Added 4 new acceptance test specs: AdminLoginAcceptanceSpec (6 tests), AdminVendorManagementAcceptanceSpec (15 tests), VendorAuthorizationAcceptanceSpec (7 tests), TokenValidationAcceptanceSpec (3 tests).
+
+**Files changed:**
+- `src/test/kotlin/io/sdkman/state/acceptance/AdminLoginAcceptanceSpec.kt` — admin/vendor login happy paths, wrong password, non-existent email, soft-deleted vendor, rate limit exceeded
+- `src/test/kotlin/io/sdkman/state/acceptance/AdminVendorManagementAcceptanceSpec.kt` — list, create, update, soft delete, resurrect, include_deleted filter, 401 without/vendor token, 400 for invalid email/empty candidates/admin email, 404 for non-existent/already-deleted
+- `src/test/kotlin/io/sdkman/state/acceptance/VendorAuthorizationAcceptanceSpec.kt` — vendor POST/DELETE versions and tags for authorized candidate, admin access any candidate, 403 for unauthorized candidate on all write endpoints
+- `src/test/kotlin/io/sdkman/state/acceptance/TokenValidationAcceptanceSpec.kt` — 401 for no token, expired token, invalid signature
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Patterns:_ Rate limit test works by making 5 failed login attempts then verifying the 6th returns 429 — the in-memory RateLimiter state persists across requests within a single test application instance
+
+---
