@@ -20,6 +20,10 @@ import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
+import java.util.UUID
+
+private val NIL_UUID: UUID = UUID(0L, 0L)
+private val VENDOR_UUID: UUID = UUID.fromString("22222222-2222-2222-2222-222222222222")
 
 class TagServiceUnitSpec :
     ShouldSpec({
@@ -118,16 +122,16 @@ class TagServiceUnitSpec :
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.DELETE, uniqueTag)
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, uniqueTag)
                 } returns Either.Right(Unit)
 
                 // when: deleting the tag
-                val result = service.deleteTag(uniqueTag, "admin")
+                val result = service.deleteTag(uniqueTag, NIL_UUID, "admin")
 
                 // then: succeeds and records audit
                 result.shouldBeRight()
                 coVerify { tagsRepo.deleteTag(uniqueTag) }
-                coVerify { auditRepo.recordAudit("admin", AuditOperation.DELETE, uniqueTag) }
+                coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, uniqueTag) }
             }
 
             should("return TagNotFound when tag does not exist") {
@@ -142,7 +146,7 @@ class TagServiceUnitSpec :
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(0)
 
                 // when: deleting a non-existent tag
-                val result = service.deleteTag(uniqueTag, "admin")
+                val result = service.deleteTag(uniqueTag, NIL_UUID, "admin")
 
                 // then: returns TagNotFound
                 result.shouldBeLeft()
@@ -150,7 +154,7 @@ class TagServiceUnitSpec :
                     error.shouldBeInstanceOf<DomainError.TagNotFound>()
                     error.tagName shouldBe "nonexistent"
                 }
-                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
             }
 
             should("return DatabaseError when tag deletion fails") {
@@ -170,7 +174,7 @@ class TagServiceUnitSpec :
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Left(dbFailure)
 
                 // when: deleting a tag when DB fails
-                val result = service.deleteTag(uniqueTag, "admin")
+                val result = service.deleteTag(uniqueTag, NIL_UUID, "admin")
 
                 // then: returns DatabaseError wrapping the failure
                 result.shouldBeLeft()
@@ -178,7 +182,7 @@ class TagServiceUnitSpec :
                     error.shouldBeInstanceOf<DomainError.DatabaseError>()
                     error.failure shouldBe dbFailure
                 }
-                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
             }
 
             should("still succeed when audit logging fails after tag deletion") {
@@ -192,7 +196,7 @@ class TagServiceUnitSpec :
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
                 coEvery {
-                    auditRepo.recordAudit("admin", AuditOperation.DELETE, uniqueTag)
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, uniqueTag)
                 } returns
                     Either.Left(
                         DatabaseFailure.QueryExecutionFailure(
@@ -202,14 +206,14 @@ class TagServiceUnitSpec :
                     )
 
                 // when: deleting a tag with failing audit
-                val result = service.deleteTag(uniqueTag, "admin")
+                val result = service.deleteTag(uniqueTag, NIL_UUID, "admin")
 
                 // then: still succeeds (audit failure is logged but non-fatal)
                 result.shouldBeRight()
             }
 
-            should("pass correct username to audit record") {
-                // given: a specific vendor username
+            should("pass correct vendor identity to audit record") {
+                // given: a specific vendor identity
                 val uniqueTag =
                     UniqueTag(
                         candidate = "java",
@@ -219,16 +223,16 @@ class TagServiceUnitSpec :
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
                 coEvery {
-                    auditRepo.recordAudit("vendor-user", AuditOperation.DELETE, uniqueTag)
+                    auditRepo.recordAudit(VENDOR_UUID, "vendor@example.com", AuditOperation.DELETE, uniqueTag)
                 } returns Either.Right(Unit)
 
-                // when: deleting a tag as a specific user
-                val result = service.deleteTag(uniqueTag, "vendor-user")
+                // when: deleting a tag as a specific vendor
+                val result = service.deleteTag(uniqueTag, VENDOR_UUID, "vendor@example.com")
 
-                // then: audit records the correct username
+                // then: audit records the correct vendor identity
                 result.shouldBeRight()
                 coVerify {
-                    auditRepo.recordAudit("vendor-user", AuditOperation.DELETE, uniqueTag)
+                    auditRepo.recordAudit(VENDOR_UUID, "vendor@example.com", AuditOperation.DELETE, uniqueTag)
                 }
             }
         }

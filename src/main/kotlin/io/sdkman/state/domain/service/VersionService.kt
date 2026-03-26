@@ -7,6 +7,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
+import java.util.UUID
 
 interface VersionService {
     suspend fun findByCandidate(
@@ -25,11 +26,13 @@ interface VersionService {
 
     suspend fun createOrUpdate(
         version: Version,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit>
 
     suspend fun delete(
         uniqueVersion: UniqueVersion,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit>
 }

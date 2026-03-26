@@ -14,6 +14,9 @@ import io.sdkman.state.application.validation.UniqueTagValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.error.FieldError
 import io.sdkman.state.domain.service.TagService
+import java.util.UUID
+
+private val NIL_UUID: UUID = UUID(0L, 0L)
 
 fun Route.tagRoutes(tagService: TagService) {
     delete("/versions/tags") {
@@ -33,7 +36,7 @@ fun Route.tagRoutes(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            tagService.deleteTag(uniqueTag, username).bind()
+            tagService.deleteTag(uniqueTag, NIL_UUID, username).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },

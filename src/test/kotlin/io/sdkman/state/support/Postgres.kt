@@ -32,7 +32,8 @@ val DB_PASSWORD: String get() = PostgresTestContainer.password
 
 data class VendorAuditRecord(
     val id: Long = 0,
-    val username: String,
+    val vendorId: java.util.UUID,
+    val email: String,
     val timestamp: kotlin.time.Instant,
     val operation: AuditOperation,
     val versionData: String,
@@ -185,7 +186,8 @@ fun selectAuditRecords(): List<VendorAuditRecord> =
         AuditTable.selectAll().map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,
@@ -197,12 +199,13 @@ fun selectAuditRecords(): List<VendorAuditRecord> =
         }
     }
 
-fun selectAuditRecordsByUsername(username: String): List<VendorAuditRecord> =
+fun selectAuditRecordsByEmail(email: String): List<VendorAuditRecord> =
     dbQuery {
-        AuditTable.selectAll().where { AuditTable.username eq username }.map { row ->
+        AuditTable.selectAll().where { AuditTable.email eq email }.map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,
@@ -219,7 +222,8 @@ fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRe
         AuditTable.selectAll().where { AuditTable.operation eq operation.name }.map { row ->
             VendorAuditRecord(
                 id = row[AuditTable.id],
-                username = row[AuditTable.username],
+                vendorId = row[AuditTable.vendorId],
+                email = row[AuditTable.email],
                 timestamp =
                     kotlin.time.Instant.fromEpochSeconds(
                         row[AuditTable.timestamp].epochSecond,

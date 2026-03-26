@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–2 complete (7/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete: Vendor model, AuthError, VendorRepository port, AuthService port.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–3 complete, Phase 4.2 done (10/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically.
 
 ### Evidence
 
@@ -87,11 +87,11 @@ Domain models, error types, and port interfaces -- no infrastructure dependencie
 
 Must come before persistence adapters. Migrations are additive and do not affect existing functionality.
 
-- [ ] **3.1 Add V13 migration: Create `vendors` table**
+- [x] **3.1 Add V13 migration: Create `vendors` table**
   Create `vendors` table with columns: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`, `email TEXT NOT NULL UNIQUE`, `password TEXT NOT NULL`, `candidates TEXT[] NOT NULL DEFAULT '{}'`, `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `deleted_at TIMESTAMPTZ`. No foreign keys to other tables.
   - File: `src/main/resources/db/migration/V13__create_vendors_table.sql`
 
-- [ ] **3.2 Add V14 migration: Recreate `vendor_audit` table**
+- [x] **3.2 Add V14 migration: Recreate `vendor_audit` table**
   Drop existing `vendor_audit` table (currently created by V11 with columns: `id BIGSERIAL`, `username TEXT`, `timestamp TIMESTAMPTZ`, `operation TEXT`, `version_data JSONB` plus indexes on `username`, `timestamp DESC`, `operation`, and GIN on `version_data`) and recreate with: `id BIGSERIAL PRIMARY KEY`, `vendor_id UUID NOT NULL` (no FK -- admin uses nil UUID sentinel), `email TEXT NOT NULL`, `timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW()`, `operation TEXT NOT NULL`, `version_data JSONB NOT NULL`. Add indexes on `vendor_id`, `email`, `timestamp DESC`, `operation`, and GIN index on `version_data`. Service is not yet live, so no data loss concern.
   - File: `src/main/resources/db/migration/V14__recreate_vendor_audit_table.sql`
 
@@ -105,7 +105,7 @@ Depends on Phase 2 (ports) and Phase 3 (migrations). The `AuditRepository` port 
   Implement `VendorRepository` port with Exposed ORM. Define `VendorsTable` Exposed table object mapping all columns including the PostgreSQL `TEXT[]` array for `candidates`. Implement all methods: `findByEmail`, `findAll` (filter on `deleted_at IS NULL` unless `includeDeleted`), `upsert` (insert or update by email with resurrection -- clear `deleted_at`, update `updated_at`, regenerate password; return `Pair<Vendor, Boolean>` indicating created vs updated), `softDelete` (set `deleted_at`, return `None` if not found or already deleted), `findById`.
   - File: `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVendorRepository.kt`
 
-- [ ] **4.2 Update `AuditRepository` port, `PostgresAuditRepository`, and service callers atomically**
+- [x] **4.2 Update `AuditRepository` port, `PostgresAuditRepository`, and service callers atomically**
   Change `AuditRepository.recordAudit(username: String, ...)` to `recordAudit(vendorId: UUID, email: String, ...)`. Simultaneously update `PostgresAuditRepository` (replace `username` column mapping with `vendorId` uuid and `email` text columns in `AuditTable`), `VersionServiceImpl`, `TagServiceImpl`, and their port interfaces (`VersionService`, `TagService`) to pass `vendorId: UUID` and `email: String` instead of `username: String`. This is a single atomic commit that keeps the codebase compiling. Specifically: `VersionService.createOrUpdate(version, username)` -> `createOrUpdate(version, vendorId: UUID, email: String)`, `VersionService.delete(uniqueVersion, username)` -> `delete(uniqueVersion, vendorId: UUID, email: String)`, `TagService.deleteTag(uniqueTag, username)` -> `deleteTag(uniqueTag, vendorId: UUID, email: String)`. Note: `TagService.replaceTags` does not take audit params (audit is handled by the version create flow via `VersionServiceImpl.logAudit`).
   - Files: `src/main/kotlin/io/sdkman/state/domain/repository/AuditRepository.kt`, `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresAuditRepository.kt`, `src/main/kotlin/io/sdkman/state/domain/service/VersionService.kt`, `src/main/kotlin/io/sdkman/state/domain/service/TagService.kt`, `src/main/kotlin/io/sdkman/state/application/service/VersionServiceImpl.kt`, `src/main/kotlin/io/sdkman/state/application/service/TagServiceImpl.kt`
 

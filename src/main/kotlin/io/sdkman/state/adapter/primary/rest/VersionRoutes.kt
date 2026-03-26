@@ -20,6 +20,7 @@ import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.service.VersionService
+import java.util.UUID
 
 fun Route.versionReadRoutes(versionService: VersionService) {
     get("/versions/{candidate}") {
@@ -79,6 +80,8 @@ fun Route.versionReadRoutes(versionService: VersionService) {
     }
 }
 
+private val NIL_UUID: UUID = UUID(0L, 0L)
+
 fun Route.versionWriteRoutes(versionService: VersionService) {
     post("/versions") {
         val username = call.authenticatedUsername()
@@ -89,7 +92,7 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                 call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
             },
             ifRight = { validVersion ->
-                versionService.createOrUpdate(validVersion, username).fold(
+                versionService.createOrUpdate(validVersion, NIL_UUID, username).fold(
                     ifLeft = { error -> call.respondDomainError(error) },
                     ifRight = { call.respond(HttpStatusCode.NoContent) },
                 )
@@ -113,7 +116,7 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
-            versionService.delete(validUniqueVersion, username).bind()
+            versionService.delete(validUniqueVersion, NIL_UUID, username).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
             ifRight = { call.respond(HttpStatusCode.NoContent) },

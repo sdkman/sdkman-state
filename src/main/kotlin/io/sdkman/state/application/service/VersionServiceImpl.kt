@@ -15,6 +15,7 @@ import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.VersionService
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class VersionServiceImpl(
     private val versionsRepo: VersionRepository,
@@ -45,19 +46,21 @@ class VersionServiceImpl(
 
     override suspend fun createOrUpdate(
         version: Version,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit> =
         versionsRepo
             .createOrUpdate(version)
             .mapLeft { DomainError.DatabaseError(it) }
             .map { versionId ->
-                logAudit(username, AuditOperation.CREATE, version)
+                logAudit(vendorId, email, AuditOperation.CREATE, version)
                 processTags(versionId, version)
             }
 
     override suspend fun delete(
         uniqueVersion: UniqueVersion,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit> =
         either {
             val versionToDelete =
@@ -85,7 +88,7 @@ class VersionServiceImpl(
                     .findTagNamesByVersionId(versionId)
                     .bind()
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-            logAudit(username, AuditOperation.DELETE, versionToDelete)
+            logAudit(vendorId, email, AuditOperation.DELETE, versionToDelete)
             val deleted =
                 versionsRepo
                     .delete(uniqueVersion)
@@ -97,11 +100,12 @@ class VersionServiceImpl(
         }
 
     private suspend fun logAudit(
-        username: String,
+        vendorId: UUID,
+        email: String,
         operation: AuditOperation,
         data: Auditable,
     ) {
-        auditRepo.recordAudit(username, operation, data).onLeft { error ->
+        auditRepo.recordAudit(vendorId, email, operation, data).onLeft { error ->
             logger.warn("Audit logging failed: ${error.message}", error)
         }
     }
