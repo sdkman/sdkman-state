@@ -15,10 +15,10 @@
   - Installed `XForwardedHeaders` plugin in `HTTP.kt`
   - Changed `call.request.local.remoteHost` → `call.request.origin.remoteHost` in `AdminRoutes.kt`
 
-- [ ] **Fix 2 — Rate Limiter: Atomic Check-and-Record**
-  - Replace separate `isRateLimited()` (line 12) + `recordAttempt()` (line 22) in `RateLimiter.kt` with a single `checkAndRecord(clientIp: String): Boolean` using `ConcurrentHashMap.compute`
-  - Update `AuthServiceImpl.kt:40-43` to use the new single method
-  - Fixes TOCTOU race condition on concurrent requests from the same IP
+- [x] **Fix 2 — Rate Limiter: Atomic Check-and-Record** ✅
+  - Replaced `isRateLimited()` + `recordAttempt()` with single `checkAndRecord()` using `ConcurrentHashMap.compute`
+  - Updated `AuthServiceImpl.kt` to use the new atomic method
+  - Updated `RateLimiterUnitSpec` and `AuthServiceImplUnitSpec` tests
 
 ## HIGH Priority
 

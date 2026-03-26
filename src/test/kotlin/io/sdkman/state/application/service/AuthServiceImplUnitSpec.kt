@@ -49,8 +49,7 @@ class AuthServiceImplUnitSpec :
             every { appConfig.adminPassword } returns ADMIN_PASSWORD
             every { appConfig.jwtSecret } returns JWT_SECRET
             every { appConfig.jwtExpiry } returns 10
-            every { rateLimiter.isRateLimited(any()) } returns false
-            every { rateLimiter.recordAttempt(any()) } returns Unit
+            every { rateLimiter.checkAndRecord(any()) } returns false
         }
 
         should("return JWT with admin role for valid admin login") {
@@ -159,7 +158,7 @@ class AuthServiceImplUnitSpec :
 
         should("return RateLimitExceeded when rate limiter blocks") {
             // given
-            every { rateLimiter.isRateLimited("1.2.3.4") } returns true
+            every { rateLimiter.checkAndRecord("1.2.3.4") } returns true
 
             // when
             val result = service.login(ADMIN_EMAIL, ADMIN_PASSWORD, "1.2.3.4")
