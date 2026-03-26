@@ -41,3 +41,11 @@ Append-only log of implementation progress. Each entry follows this template:
 - Uses Ktor's `Application` coroutine scope — the cleanup job is automatically cancelled on application shutdown
 - Added `kotlinx.coroutines.delay` and `kotlinx.coroutines.launch` imports
 **Verification:** `./gradlew check` — BUILD SUCCESSFUL (detekt, ktlint, all tests pass)
+
+## 2026-03-26 — Fix 4: authenticatedVendorId() Safe Parsing
+
+**Status:** Complete
+**Changes:**
+- Changed `authenticatedVendorId()` in `RequestExtensions.kt` from `.map { UUID.fromString(...) }` to `.flatMap { runCatching { UUID.fromString(...) }.getOrNull().toOption() }`
+- Missing, null, or malformed `vendor_id` claims now return nil UUID (`UUID(0L, 0L)`) instead of throwing `IllegalArgumentException` (500 error)
+**Verification:** `./gradlew check` — BUILD SUCCESSFUL (detekt, ktlint, all tests pass)

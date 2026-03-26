@@ -22,8 +22,11 @@ import io.sdkman.state.domain.model.Distribution
 fun ApplicationCall.authenticatedVendorId(): java.util.UUID =
     principal<JWTPrincipal>()
         .toOption()
-        .map { java.util.UUID.fromString(it.payload.getClaim("vendor_id").asString()) }
-        .getOrElse { java.util.UUID(0L, 0L) }
+        .flatMap {
+            runCatching {
+                java.util.UUID.fromString(it.payload.getClaim("vendor_id").asString())
+            }.getOrNull().toOption()
+        }.getOrElse { java.util.UUID(0L, 0L) }
 
 fun ApplicationCall.authenticatedEmail(): String =
     principal<JWTPrincipal>()
