@@ -10,16 +10,16 @@ Spec reference: `specs/jwt-authentication.md`
 
 Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **All 14 phases complete (47/47 tasks done).** Full JWT authentication stack implemented: domain layer, persistence adapters, application services (AuthServiceImpl, RateLimiter), REST adapters (AdminRoutes, JWT auth config, admin DTOs), application wiring, and Basic Auth fully removed. All existing acceptance tests migrated from Basic Auth to JWT Bearer tokens. Test infrastructure (JwtTestSupport, test Application.kt) aligned with JWT auth. OpenAPI specification fully updated with bearerAuth scheme, admin endpoints, and 403 responses. Full validation chain passes.
 
-### Evidence
+### Final Verification (2026-03-26)
 
-- No JWT-related files exist (`Vendor.kt`, `AuthError.kt`, `VendorRepository.kt`, `AuthService.kt`, `PostgresVendorRepository.kt`, `RateLimiter.kt`, `AuthServiceImpl.kt`, `AdminRoutes.kt`, `AdminDto.kt`, `JwtTestSupport.kt` — all absent)
-- No JWT/BCrypt dependencies in `build.gradle.kts` (only `ktor-server-auth-jvm`, no `ktor-server-auth-jwt`, `com.auth0:java-jwt`, or `at.favre.lib:bcrypt`)
-- Zero matches for `jwt|JWT|JsonWebToken` across all `.kt` files
-- Only V1–V12 migrations exist (no V13/V14)
-- `Authentication.kt` still configures `basic("auth-basic")`; `AuditRepository` still uses `username: String`
-- `application.conf` has no `admin` or `jwt` config blocks; `AppConfig` still has `authUsername`/`authPassword`
-- All write-path acceptance tests use `basicAuth` or `BASIC_AUTH_HEADER`
-- OpenAPI spec uses `basicAuth` security scheme
+- `./gradlew check` passes: compile, detekt, ktlint, all tests (BUILD SUCCESSFUL)
+- All JWT-related files present: `Vendor.kt`, `AuthError.kt`, `VendorRepository.kt`, `AuthService.kt`, `PostgresVendorRepository.kt`, `RateLimiter.kt`, `AuthServiceImpl.kt`, `AdminRoutes.kt`, `AdminDto.kt`, `JwtTestSupport.kt`
+- JWT/BCrypt dependencies in `build.gradle.kts`: `ktor-server-auth-jwt`, `com.auth0:java-jwt:4.5.0`, `at.favre.lib:bcrypt:0.10.2`
+- V13 and V14 migrations present (`vendors` table, recreated `vendor_audit`)
+- `Authentication.kt` configures `auth-jwt` (Basic Auth removed); `AuditRepository` uses `vendorId: UUID, email: String`
+- `application.conf` has `admin` and `jwt` config blocks; `AppConfig` has `adminEmail`/`adminPassword`/`jwtSecret`/`jwtExpiry`
+- All write-path acceptance tests use JWT Bearer tokens
+- OpenAPI spec uses `bearerAuth` security scheme with admin endpoints documented
 
 ### Gaps and Issues Found
 
