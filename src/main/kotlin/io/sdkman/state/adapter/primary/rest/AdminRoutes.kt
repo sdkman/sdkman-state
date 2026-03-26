@@ -3,21 +3,16 @@ package io.sdkman.state.adapter.primary.rest
 import arrow.core.Some
 import at.favre.lib.crypto.bcrypt.BCrypt
 import io.ktor.http.*
-import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.CreateVendorRequest
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
-import io.sdkman.state.adapter.primary.rest.dto.LoginRequest
-import io.sdkman.state.adapter.primary.rest.dto.LoginResponse
 import io.sdkman.state.adapter.primary.rest.dto.VendorResponse
 import io.sdkman.state.adapter.primary.rest.dto.VendorWithPasswordResponse
 import io.sdkman.state.config.AppConfig
-import io.sdkman.state.domain.error.AuthError
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
-import io.sdkman.state.domain.service.AuthService
 import io.sdkman.state.security.BCRYPT_COST
 import java.security.SecureRandom
 import java.time.ZoneOffset
@@ -29,39 +24,6 @@ private const val PASSWORD_BYTES = 32
 private val EMAIL_REGEX = Regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")
 private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 private val secureRandom = SecureRandom()
-
-fun Route.adminLoginRoute(authService: AuthService) {
-    post("/admin/login") {
-        val request = call.receive<LoginRequest>()
-        val clientIp = call.request.origin.remoteHost
-        authService.login(request.email, request.password, clientIp).fold(
-            ifLeft = { error ->
-                when (error) {
-                    is AuthError.InvalidCredentials ->
-                        call.respond(
-                            HttpStatusCode.Unauthorized,
-                            ErrorResponse("Unauthorized", "Invalid credentials"),
-                        )
-
-                    is AuthError.RateLimitExceeded ->
-                        call.respond(
-                            HttpStatusCode.TooManyRequests,
-                            ErrorResponse("Too Many Requests", "Rate limit exceeded"),
-                        )
-
-                    is AuthError.TokenCreationFailed ->
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            ErrorResponse("Internal Server Error", "Token creation failed"),
-                        )
-                }
-            },
-            ifRight = { token ->
-                call.respond(HttpStatusCode.OK, LoginResponse(token))
-            },
-        )
-    }
-}
 
 fun Route.adminListVendorsRoute(vendorRepository: VendorRepository) {
     get("/admin/vendors") {

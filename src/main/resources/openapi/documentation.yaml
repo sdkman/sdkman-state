@@ -196,7 +196,7 @@ paths:
                   value:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
-  /admin/login:
+  /login:
     post:
       description: "Authenticate and obtain a JWT token"
       requestBody:

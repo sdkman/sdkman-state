@@ -15,14 +15,14 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 @Tags("acceptance")
-class AdminLoginAcceptanceSpec :
+class LoginAcceptanceSpec :
     ShouldSpec({
 
         should("return 200 with JWT for valid admin credentials") {
             withCleanDatabase {
                 withTestApplication {
                     val response =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"admin@sdkman.io","password":"testadminpassword"}""")
                         }
@@ -50,7 +50,7 @@ class AdminLoginAcceptanceSpec :
 
                     // when: login with vendor credentials
                     val loginResponse =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"vendor@test.com","password":"$vendorPassword"}""")
                         }
@@ -67,7 +67,7 @@ class AdminLoginAcceptanceSpec :
             withCleanDatabase {
                 withTestApplication {
                     val response =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"admin@sdkman.io","password":"wrong"}""")
                         }
@@ -81,7 +81,7 @@ class AdminLoginAcceptanceSpec :
             withCleanDatabase {
                 withTestApplication {
                     val response =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"unknown@test.com","password":"any"}""")
                         }
@@ -111,7 +111,7 @@ class AdminLoginAcceptanceSpec :
 
                     // when
                     val loginResponse =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"deleted@test.com","password":"$vendorPassword"}""")
                         }
@@ -127,7 +127,7 @@ class AdminLoginAcceptanceSpec :
                 withTestApplication {
                     // given: exhaust rate limit with 5 attempts
                     repeat(5) {
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"admin@sdkman.io","password":"wrong"}""")
                         }
@@ -135,13 +135,27 @@ class AdminLoginAcceptanceSpec :
 
                     // when: 6th attempt
                     val response =
-                        client.post("/admin/login") {
+                        client.post("/login") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"email":"admin@sdkman.io","password":"wrong"}""")
                         }
 
                     // then
                     response.status shouldBe HttpStatusCode.TooManyRequests
+                }
+            }
+        }
+
+        should("return 404 for old /admin/login path") {
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/admin/login") {
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"email":"admin@sdkman.io","password":"testadminpassword"}""")
+                        }
+
+                    response.status shouldBe HttpStatusCode.NotFound
                 }
             }
         }
