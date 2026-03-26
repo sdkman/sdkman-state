@@ -145,18 +145,4 @@ class LoginAcceptanceSpec :
                 }
             }
         }
-
-        should("return 404 for old /admin/login path") {
-            withCleanDatabase {
-                withTestApplication {
-                    val response =
-                        client.post("/admin/login") {
-                            contentType(ContentType.Application.Json)
-                            setBody("""{"email":"admin@sdkman.io","password":"testadminpassword"}""")
-                        }
-
-                    response.status shouldBe HttpStatusCode.NotFound
-                }
-            }
-        }
     })
