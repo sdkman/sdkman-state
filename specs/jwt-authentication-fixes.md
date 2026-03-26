@@ -4,7 +4,7 @@
 **Depends on:** `specs/jwt-authentication.md`
 **Service:** sdkman-state (Kotlin/Ktor)
 
-Fixes nine issues identified during code review of the JWT authentication implementation.
+Fixes ten issues identified during code review of the JWT authentication implementation.
 
 ---
 
@@ -266,3 +266,39 @@ No behavioural change. Code comment only.
 
 - **Verify:** Comment is present in both `VersionRoutes.kt` and `TagRoutes.kt` above the relevant `if` block.
 - **Test:** Admin token can still publish/delete any candidate's version. Vendor token is still restricted to own candidates. Existing tests pass.
+
+---
+
+## 10. Rename Login Endpoint and Extract AuthRoutes
+
+**Problem:** `POST /admin/login` is a public endpoint used by both admin and vendors, but the `/admin` prefix implies it is admin-only. This is misleading for vendor integrations. The login route also lives in `AdminRoutes.kt` alongside admin-only vendor management routes, conflating two separate concerns.
+
+**Fix:**
+
+1. Rename the login endpoint from `POST /admin/login` to `POST /login`.
+
+2. Extract the login route into a new file `src/main/kotlin/io/sdkman/state/adapter/primary/rest/AuthRoutes.kt`:
+   ```kotlin
+   fun Route.loginRoute(authService: AuthService) {
+       post("/login") {
+           // same implementation as current adminLoginRoute
+       }
+   }
+   ```
+
+3. Remove `adminLoginRoute` from `AdminRoutes.kt`. The remaining routes in `AdminRoutes.kt` (`GET /admin/vendors`, `POST /admin/vendors`, `DELETE /admin/vendors/{id}`) are all genuinely admin-only and keep the `/admin` prefix.
+
+4. Update `Routing.kt` to wire `loginRoute(authService)` outside the `authenticate("auth-jwt")` block (it remains public), replacing `adminLoginRoute(authService)`.
+
+5. Update `OpenAPI documentation.yaml`: rename the `POST /admin/login` path to `POST /login`.
+
+6. Update all tests that call `/admin/login` to use `/login` instead.
+
+**Acceptance criteria:**
+
+- **Test:** `POST /login` with valid admin credentials returns 200 with JWT containing `role: "admin"`.
+- **Test:** `POST /login` with valid vendor credentials returns 200 with JWT containing `role: "vendor"` and `candidates`.
+- **Test:** `POST /login` with wrong password returns 401.
+- **Test:** `POST /admin/login` returns 404 (old path no longer exists).
+- **Verify:** `AuthRoutes.kt` exists and contains only the login route. `AdminRoutes.kt` contains only vendor management routes.
+- **Verify:** OpenAPI spec updated to `POST /login`.
