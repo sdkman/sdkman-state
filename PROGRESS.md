@@ -224,3 +224,18 @@ Each entry must follow this structure exactly:
 - _Patterns:_ Rate limit test works by making 5 failed login attempts then verifying the 6th returns 429 — the in-memory RateLimiter state persists across requests within a single test application instance
 
 ---
+
+### [2026-03-26 12:00] — Phase 8 (8.1–8.4) + Phase 14.1
+
+**Summary:** Updated OpenAPI specification with JWT bearerAuth scheme, admin endpoint documentation, and 403 responses on all write endpoints. Ran full validation chain — all checks pass.
+
+**Files changed:**
+- `src/main/resources/openapi/documentation.yaml` — replaced basicAuth with bearerAuth, added 401/403 to POST /versions and DELETE /versions/tags, documented POST /admin/login, GET/POST /admin/vendors, DELETE /admin/vendors/{id}, added LoginRequest, LoginResponse, CreateVendorRequest, VendorResponse, VendorWithPasswordResponse schemas
+- `IMPLEMENTATION_PLAN.md` — marked phases 8.1–8.4 and 14.1 complete (47/47)
+
+**Test outcome:** PASS — `./gradlew check` BUILD SUCCESSFUL
+
+**Learnings:**
+- _Patterns:_ OpenAPI spec changes are documentation-only so no compilation or test impact — just need to ensure schema definitions match actual DTO shapes
+
+---
