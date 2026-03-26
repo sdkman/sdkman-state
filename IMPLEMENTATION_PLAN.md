@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–4 complete, Phase 5.1 complete (12/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0. `RateLimiter` component implemented with per-IP tracking.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–5 complete (13/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0. `RateLimiter` component implemented with per-IP tracking. `AuthServiceImpl` implemented with admin/vendor login, constant-time BCrypt verification, JWT creation, and rate limiting.
 
 ### Evidence
 
@@ -119,7 +119,7 @@ Depends on Phase 4 (repositories and updated audit signatures).
   Create a standalone `RateLimiter` class in `application/service/` with a `ConcurrentHashMap<String, MutableList<Instant>>` tracking per-IP timestamps. Expose `isRateLimited(clientIp: String): Boolean` (returns true if >= 5 attempts in the last 60 seconds) and `recordAttempt(clientIp: String)`. Include periodic cleanup of expired entries to prevent unbounded memory growth. This isolates rate limiting logic for independent testability and keeps `AuthServiceImpl` focused on authentication.
   - File: `src/main/kotlin/io/sdkman/state/application/service/RateLimiter.kt`
 
-- [ ] **5.2 Create `AuthServiceImpl`**
+- [x] **5.2 Create `AuthServiceImpl`**
   Implement `AuthService` port. Constructor takes `VendorRepository`, `AppConfig`, and `RateLimiter`. Login logic: (1) check rate limit first via `RateLimiter.isRateLimited(clientIp)`, return `RateLimitExceeded` if exceeded; (2) record attempt via `RateLimiter.recordAttempt(clientIp)`; (3) check admin email first (compare against `AppConfig.adminEmail`), verify against BCrypt-hashed admin password held in memory (hashed once at construction time, cost factor 12); (4) if not admin, query `VendorRepository.findByEmail`; (5) if vendor found and not soft-deleted, BCrypt verify; (6) if email not found or soft-deleted, BCrypt verify against a dummy hash (same cost factor 12) to ensure constant-time behaviour. JWT creation with `com.auth0:java-jwt` using HS256: claims `iss: "sdkman-state"`, `aud: "sdkman-state"`, `sub: email`, `role`, `vendor_id` (for vendors, nil UUID for admin), `candidates` (for vendors), `iat`, `exp`. Note: JWT token creation uses `com.auth0:java-jwt` directly in the application layer -- accepted pragmatic exception to hexagonal purity since JWT is a stateless transport concern with no infrastructure side effects.
   - File: `src/main/kotlin/io/sdkman/state/application/service/AuthServiceImpl.kt`
 

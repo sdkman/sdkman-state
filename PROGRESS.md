@@ -122,3 +122,19 @@ Each entry must follow this structure exactly:
 - _Context:_ `RateLimiter` is a pure application-layer component with no infrastructure dependencies, making it independently testable (Phase 12.1)
 
 ---
+
+### [2026-03-26 01:15] — Phase 5: Task 5.2
+
+**Summary:** Implemented `AuthServiceImpl` with admin/vendor login, constant-time BCrypt verification, JWT token creation via `com.auth0:java-jwt`, and rate limiting integration.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/application/service/AuthServiceImpl.kt` — new AuthService implementation with admin password hashed once at construction, dummy hash for constant-time verification on unknown/deleted emails, JWT creation with HS256 and all required claims
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all tests)
+
+**Learnings:**
+- _Patterns:_ ktlint enforces `Either.catch { ... }.mapLeft { ... }` to be formatted as `Either\n.catch { ... }.mapLeft { ... }` with chain method continuation on new lines
+- _Gotchas:_ BCrypt `hash()` returns `byte[]`, must wrap in `String()` constructor for storage; `verify()` takes `byte[]` for both password and hash
+- _Context:_ Admin password is BCrypt-hashed once at `AuthServiceImpl` construction time and held in memory — avoids repeated hashing on every login attempt
+
+---
