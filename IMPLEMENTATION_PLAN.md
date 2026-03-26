@@ -8,7 +8,7 @@ Spec reference: `specs/jwt-authentication.md`
 
 ## Validation Summary
 
-Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–3 complete, Phase 4.2 done (10/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically.
+Validated 2026-03-26 against the current codebase (branch `jwt_authentication_replay`). **Phase 1–4 complete (11/47 tasks done).** JWT/BCrypt dependencies added, admin/jwt config blocks in place, AppConfig extended. Domain layer complete. V13/V14 migrations added. AuditRepository port updated from `username` to `vendorId`/`email` with all callers migrated atomically. `PostgresVendorRepository` implemented with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0.
 
 ### Evidence
 
@@ -101,7 +101,7 @@ Must come before persistence adapters. Migrations are additive and do not affect
 
 Depends on Phase 2 (ports) and Phase 3 (migrations). The `AuditRepository` port signature change is bundled here so the compilation break is resolved within a single phase.
 
-- [ ] **4.1 Create `PostgresVendorRepository`**
+- [x] **4.1 Create `PostgresVendorRepository`**
   Implement `VendorRepository` port with Exposed ORM. Define `VendorsTable` Exposed table object mapping all columns including the PostgreSQL `TEXT[]` array for `candidates`. Implement all methods: `findByEmail`, `findAll` (filter on `deleted_at IS NULL` unless `includeDeleted`), `upsert` (insert or update by email with resurrection -- clear `deleted_at`, update `updated_at`, regenerate password; return `Pair<Vendor, Boolean>` indicating created vs updated), `softDelete` (set `deleted_at`, return `None` if not found or already deleted), `findById`.
   - File: `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVendorRepository.kt`
 

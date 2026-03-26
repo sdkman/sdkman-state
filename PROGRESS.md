@@ -91,3 +91,19 @@ Each entry must follow this structure exactly:
 - _Context:_ The `selectAuditRecordsByUsername` test helper was renamed to `selectAuditRecordsByEmail` since the underlying column changed.
 
 ---
+
+### [2026-03-26 00:45] — Phase 4: Task 4.1
+
+**Summary:** Implemented `PostgresVendorRepository` with custom `TextArrayColumnType` for PostgreSQL `TEXT[]` array mapping in Exposed 0.57.0.
+
+**Files changed:**
+- `src/main/kotlin/io/sdkman/state/adapter/secondary/persistence/PostgresVendorRepository.kt` — new file implementing `VendorRepository` port with `VendorsTable` Exposed table object, custom `TextArrayColumnType` for `TEXT[]` columns, and all five repository methods (findByEmail, findAll, upsert with resurrection, softDelete, findById)
+
+**Test outcome:** PASS — `./gradlew check` passes (compile, detekt, ktlint, all 185 tests)
+
+**Learnings:**
+- _Gotchas:_ Exposed 0.57.0 does not have a built-in array column type. Required a custom `TextArrayColumnType` extending `ColumnType<List<String>>()` with `sqlType() = "TEXT[]"`, `valueFromDB` handling `java.sql.Array`, and `notNullValueToDB` using `connection.createArrayOf("text", ...)`. Note: `notNullValueToDB` takes the generic type `List<String>`, not `Any`.
+- _Gotchas:_ `VendorsTable` uses plain `Table` (not `IdTable`/`UUIDTable`) since `exposed-dao` is not a dependency. UUID primary key uses `uuid("id").autoGenerate()` with manual `PrimaryKey(id)` override. Insert uses `Table.insert` (not `insertAndGetId`), followed by a re-query by email to return the created entity.
+- _Patterns:_ Follows the same `Either.catch { dbQuery { ... } }.mapLeft { DatabaseFailure.QueryExecutionFailure(...) }` pattern used by all other repository implementations in this codebase.
+
+---
