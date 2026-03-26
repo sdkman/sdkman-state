@@ -12,10 +12,14 @@ interface AppConfig {
     val authUsername: String
     val authPassword: String
     val cacheMaxAge: Int
+    val adminEmail: String
+    val adminPassword: String
+    val jwtSecret: String
+    val jwtExpiry: Int
 }
 
 class DefaultAppConfig(
-    config: ApplicationConfig,
+    private val config: ApplicationConfig,
 ) : AppConfig {
     override val databaseHost: String = config.getStringOrDefault("database.host", "localhost")
     override val databasePort: Int = config.getIntOrDefault("database.port", 5432)
@@ -25,4 +29,9 @@ class DefaultAppConfig(
     override val authUsername: String = config.getStringOrDefault("api.username", "")
     override val authPassword: String = config.getStringOrDefault("api.password", "")
     override val cacheMaxAge: Int = config.getIntOrDefault("api.cache.control", 600)
+    override val adminEmail: String = config.getStringOrDefault("admin.email", "admin@sdkman.io")
+    override val adminPassword: String = config.getStringOrDefault("admin.password", "changeme")
+    override val jwtSecret: String
+        get() = config.property("jwt.secret").getString()
+    override val jwtExpiry: Int = config.getIntOrDefault("jwt.expiry", 10)
 }
