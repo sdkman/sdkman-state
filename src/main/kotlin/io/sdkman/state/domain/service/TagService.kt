@@ -6,6 +6,7 @@ import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
+import java.util.UUID
 
 interface TagService {
     suspend fun replaceTags(
@@ -20,6 +21,7 @@ interface TagService {
 
     suspend fun deleteTag(
         uniqueTag: UniqueTag,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit>
 }

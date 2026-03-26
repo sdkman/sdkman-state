@@ -15,7 +15,10 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
 import io.sdkman.state.support.extractTags
+import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
+
+private val NIL_UUID: UUID = UUID(0L, 0L)
 
 private const val BASIC_AUTH_HEADER = "Basic dGVzdHVzZXI6cGFzc3dvcmQxMjM="
 
@@ -53,7 +56,8 @@ class VendorAuditAcceptanceSpec :
                 val auditRecords = selectAuditRecords()
                 auditRecords shouldHaveSize 1
                 val auditRecord = auditRecords.first()
-                auditRecord.username shouldBe "testuser"
+                auditRecord.vendorId shouldBe NIL_UUID
+                auditRecord.email shouldBe "testuser"
                 auditRecord.operation shouldBe AuditOperation.CREATE
 
                 val deserializedVersion = deserializeVersionData(auditRecord.versionData)
@@ -100,7 +104,8 @@ class VendorAuditAcceptanceSpec :
                 val auditRecords = selectAuditRecordsByOperation(AuditOperation.DELETE)
                 auditRecords shouldHaveSize 1
                 val auditRecord = auditRecords.first()
-                auditRecord.username shouldBe "testuser"
+                auditRecord.vendorId shouldBe NIL_UUID
+                auditRecord.email shouldBe "testuser"
                 auditRecord.operation shouldBe AuditOperation.DELETE
 
                 val deserializedVersion = deserializeVersionData(auditRecord.versionData)
@@ -108,7 +113,7 @@ class VendorAuditAcceptanceSpec :
             }
         }
 
-        should("capture correct username from authentication") {
+        should("capture correct email from authentication") {
             // given: a version request with authenticated user
             val version =
                 Version(
@@ -129,10 +134,10 @@ class VendorAuditAcceptanceSpec :
                     }
                 }
 
-                // then: audit record has correct username
-                val auditRecords = selectAuditRecordsByUsername("testuser")
+                // then: audit record has correct email
+                val auditRecords = selectAuditRecordsByEmail("testuser")
                 auditRecords shouldHaveSize 1
-                auditRecords.first().username shouldBe "testuser"
+                auditRecords.first().email shouldBe "testuser"
             }
         }
 

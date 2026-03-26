@@ -13,10 +13,14 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.selectAuditRecords
+import io.sdkman.state.support.selectAuditRecordsByEmail
 import io.sdkman.state.support.selectAuditRecordsByOperation
-import io.sdkman.state.support.selectAuditRecordsByUsername
 import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.withCleanDatabase
+import java.util.UUID
+
+private val NIL_UUID: UUID = UUID(0L, 0L)
+private val VENDOR_UUID: UUID = UUID.fromString("11111111-1111-1111-1111-111111111111")
 
 @Tags("integration")
 class PostgresAuditRepositoryIntegrationSpec :
@@ -40,13 +44,14 @@ class PostgresAuditRepositoryIntegrationSpec :
                         )
 
                     // when: recording a CREATE audit
-                    val result = repo.recordAudit("test-admin", AuditOperation.CREATE, version)
+                    val result = repo.recordAudit(NIL_UUID, "test-admin", AuditOperation.CREATE, version)
 
                     // then: audit record is persisted
                     result.shouldBeRight()
                     val records = selectAuditRecords()
                     records shouldHaveSize 1
-                    records.first().username shouldBe "test-admin"
+                    records.first().vendorId shouldBe NIL_UUID
+                    records.first().email shouldBe "test-admin"
                     records.first().operation shouldBe AuditOperation.CREATE
                     records.first().versionData shouldContain "java"
                     records.first().versionData shouldContain "21.0.1"
@@ -66,20 +71,21 @@ class PostgresAuditRepositoryIntegrationSpec :
                         )
 
                     // when: recording a DELETE audit
-                    val result = repo.recordAudit("tag-admin", AuditOperation.DELETE, uniqueTag)
+                    val result = repo.recordAudit(VENDOR_UUID, "tag-admin", AuditOperation.DELETE, uniqueTag)
 
                     // then: audit record is persisted
                     result.shouldBeRight()
                     val records = selectAuditRecords()
                     records shouldHaveSize 1
-                    records.first().username shouldBe "tag-admin"
+                    records.first().vendorId shouldBe VENDOR_UUID
+                    records.first().email shouldBe "tag-admin"
                     records.first().operation shouldBe AuditOperation.DELETE
                     records.first().versionData shouldContain "java"
                     records.first().versionData shouldContain "latest"
                 }
             }
 
-            should("record multiple audit entries with different usernames") {
+            should("record multiple audit entries with different emails") {
                 withCleanDatabase {
                     // given: two versions
                     val version1 =
@@ -102,18 +108,18 @@ class PostgresAuditRepositoryIntegrationSpec :
                         )
 
                     // when: recording audits from different users
-                    repo.recordAudit("admin-1", AuditOperation.CREATE, version1)
-                    repo.recordAudit("admin-2", AuditOperation.CREATE, version2)
+                    repo.recordAudit(NIL_UUID, "admin-1@example.com", AuditOperation.CREATE, version1)
+                    repo.recordAudit(VENDOR_UUID, "admin-2@example.com", AuditOperation.CREATE, version2)
 
-                    // then: both records exist and are filterable by username
+                    // then: both records exist and are filterable by email
                     val allRecords = selectAuditRecords()
                     allRecords shouldHaveSize 2
 
-                    val admin1Records = selectAuditRecordsByUsername("admin-1")
+                    val admin1Records = selectAuditRecordsByEmail("admin-1@example.com")
                     admin1Records shouldHaveSize 1
                     admin1Records.first().versionData shouldContain "java"
 
-                    val admin2Records = selectAuditRecordsByUsername("admin-2")
+                    val admin2Records = selectAuditRecordsByEmail("admin-2@example.com")
                     admin2Records shouldHaveSize 1
                     admin2Records.first().versionData shouldContain "kotlin"
                 }
@@ -140,8 +146,8 @@ class PostgresAuditRepositoryIntegrationSpec :
                         )
 
                     // when: recording CREATE and DELETE audits
-                    repo.recordAudit("admin", AuditOperation.CREATE, version)
-                    repo.recordAudit("admin", AuditOperation.DELETE, uniqueTag)
+                    repo.recordAudit(NIL_UUID, "admin@example.com", AuditOperation.CREATE, version)
+                    repo.recordAudit(NIL_UUID, "admin@example.com", AuditOperation.DELETE, uniqueTag)
 
                     // then: records are filterable by operation type
                     val createRecords = selectAuditRecordsByOperation(AuditOperation.CREATE)
@@ -168,7 +174,7 @@ class PostgresAuditRepositoryIntegrationSpec :
                         )
 
                     // when: recording audit
-                    val result = repo.recordAudit("admin", AuditOperation.CREATE, version)
+                    val result = repo.recordAudit(NIL_UUID, "admin@example.com", AuditOperation.CREATE, version)
 
                     // then: audit record stores version data without distribution
                     result.shouldBeRight()

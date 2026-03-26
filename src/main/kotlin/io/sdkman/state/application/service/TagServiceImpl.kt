@@ -12,6 +12,7 @@ import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
 import io.sdkman.state.domain.service.TagService
 import org.slf4j.LoggerFactory
+import java.util.UUID
 
 class TagServiceImpl(
     private val tagsRepo: TagRepository,
@@ -37,7 +38,8 @@ class TagServiceImpl(
 
     override suspend fun deleteTag(
         uniqueTag: UniqueTag,
-        username: String,
+        vendorId: UUID,
+        email: String,
     ): Either<DomainError, Unit> =
         either {
             val deletedCount =
@@ -47,7 +49,7 @@ class TagServiceImpl(
                     .bind()
             if (deletedCount == 0) raise(DomainError.TagNotFound(uniqueTag.tag))
             auditRepo
-                .recordAudit(username, AuditOperation.DELETE, uniqueTag)
+                .recordAudit(vendorId, email, AuditOperation.DELETE, uniqueTag)
                 .onLeft { error ->
                     logger.warn("Audit logging failed for tag deletion: ${error.message}")
                 }

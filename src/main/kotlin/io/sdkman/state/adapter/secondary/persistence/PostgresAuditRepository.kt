@@ -15,10 +15,12 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.json.json
 import java.time.Instant
+import java.util.UUID
 
 internal object AuditTable : Table(name = "vendor_audit") {
     val id = long("id").autoIncrement()
-    val username = text("username")
+    val vendorId = uuid("vendor_id")
+    val email = text("email")
     val timestamp = timestamp("timestamp")
     val operation = text("operation")
     val versionData = json<JsonElement>("version_data", Json.Default)
@@ -34,7 +36,8 @@ class PostgresAuditRepository : AuditRepository {
         }
 
     override suspend fun recordAudit(
-        username: String,
+        vendorId: UUID,
+        email: String,
         operation: AuditOperation,
         data: Auditable,
     ): Either<DatabaseFailure, Unit> =
@@ -42,7 +45,8 @@ class PostgresAuditRepository : AuditRepository {
             .catch {
                 dbQuery {
                     AuditTable.insert {
-                        it[this.username] = username
+                        it[this.vendorId] = vendorId
+                        it[this.email] = email
                         it[this.timestamp] = Instant.now()
                         it[this.operation] = operation.name
                         it[this.versionData] = data.toJsonElement()

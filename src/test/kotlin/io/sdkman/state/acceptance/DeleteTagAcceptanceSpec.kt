@@ -488,7 +488,7 @@ class DeleteTagAcceptanceSpec :
                 val auditRecords = selectAuditRecords()
                 auditRecords.size shouldBe 1
                 val record = auditRecords.first()
-                record.username shouldBe "testuser"
+                record.email shouldBe "testuser"
                 record.operation shouldBe io.sdkman.state.domain.model.AuditOperation.DELETE
 
                 val auditData = Json.parseToJsonElement(record.versionData).jsonObject
