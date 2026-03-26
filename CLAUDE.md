@@ -39,9 +39,11 @@ docker run --restart=always \
     -d postgres
 ```
 
-## Commit
+## Git Commit
 
-Use the `/commit` skill for all commits. This ensures conventional commit format.
+* Use atomic Git commits with small incremental changes. **NO BULK COMMITS PLEASE!**
+* Use Conventional Commits for well structured commit messages: https://www.conventionalcommits.org/en/v1.0.0/
+* Always delegate Git commits to the `/commit` skill if available on the system. This ensures Conventional Commit format.
 
 ## Rules
 
