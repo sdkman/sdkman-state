@@ -47,7 +47,10 @@ class CacheHeadersAcceptanceSpec :
                 withTestApplication {
                     val response =
                         client.get("/versions/java/17.0.1") {
-                            url { parameters.append("platform", "linuxx64") }
+                            url {
+                                parameters.append("platform", "linuxx64")
+                                parameters.append("distribution", "TEMURIN")
+                            }
                         }
 
                     response.status shouldBe HttpStatusCode.OK

@@ -7,6 +7,7 @@ import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
+
 fun Application.configureHTTP() {
     install(Compression) {
         gzip {

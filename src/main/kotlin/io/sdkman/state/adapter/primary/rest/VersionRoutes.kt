@@ -45,6 +45,11 @@ fun Route.versionReadRoutes(
                 }.getOrNull()
         }
     }
+    versionsByCandidateRoute(versionService)
+    uniqueVersionRoute(versionService)
+}
+
+private fun Route.versionsByCandidateRoute(versionService: VersionService) {
     get("/versions/{candidate}") {
         option {
             val candidateId =
@@ -69,6 +74,9 @@ fun Route.versionReadRoutes(
             call.respond(HttpStatusCode.BadRequest)
         }
     }
+}
+
+private fun Route.uniqueVersionRoute(versionService: VersionService) {
     get("/versions/{candidate}/{version}") {
         option {
             val candidateId =
