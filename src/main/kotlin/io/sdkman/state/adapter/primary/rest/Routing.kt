@@ -20,7 +20,7 @@ fun Application.configureRouting(
 ) {
     routing {
         healthRoutes(healthRepo)
-        versionReadRoutes(versionService)
+        versionReadRoutes(versionService, appConfig)
         loginRoute(authService)
         authenticate("auth-jwt") {
             versionWriteRoutes(versionService)

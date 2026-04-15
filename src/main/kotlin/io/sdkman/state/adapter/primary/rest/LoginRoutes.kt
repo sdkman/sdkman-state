@@ -13,6 +13,7 @@ import io.sdkman.state.domain.service.AuthService
 
 fun Route.loginRoute(authService: AuthService) {
     post("/login") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val request = call.receive<LoginRequest>()
         val clientIp = call.request.origin.remoteHost
         authService.login(request.email, request.password, clientIp).fold(

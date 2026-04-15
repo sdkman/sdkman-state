@@ -39,7 +39,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
         application {
             val appConfig = DefaultAppConfig(environment.config)
             configureDatabase(appConfig)
-            configureHTTP(appConfig)
+            configureHTTP()
             configureSerialization()
             configureJwtAuthentication(appConfig)
 
