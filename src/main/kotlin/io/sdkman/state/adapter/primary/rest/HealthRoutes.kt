@@ -10,6 +10,7 @@ import io.sdkman.state.domain.repository.HealthRepository
 
 fun Route.healthRoutes(healthRepo: HealthRepository) {
     get("/meta/health") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         healthRepo
             .checkDatabaseConnection()
             .map {

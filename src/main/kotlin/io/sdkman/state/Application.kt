@@ -25,7 +25,7 @@ fun Application.module() {
     configureDatabaseMigration(appConfig)
     configureDatabase(appConfig)
 
-    configureHTTP(appConfig)
+    configureHTTP()
     configureSerialization()
     configureJwtAuthentication(appConfig)
 

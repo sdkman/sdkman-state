@@ -18,6 +18,7 @@ import io.sdkman.state.domain.service.TagService
 
 fun Route.tagRoutes(tagService: TagService) {
     delete("/versions/tags") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         val role = call.authenticatedRole()

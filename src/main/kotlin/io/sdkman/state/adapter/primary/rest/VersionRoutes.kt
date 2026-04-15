@@ -7,9 +7,12 @@ import arrow.core.raise.either
 import arrow.core.raise.option
 import arrow.core.toOption
 import io.ktor.http.*
+import io.ktor.http.content.*
+import io.ktor.server.plugins.cachingheaders.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.util.date.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
@@ -18,11 +21,30 @@ import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.application.validation.UniqueVersionValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
+import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.service.VersionService
+import java.time.Instant
 
-fun Route.versionReadRoutes(versionService: VersionService) {
+fun Route.versionReadRoutes(
+    versionService: VersionService,
+    appConfig: AppConfig,
+) {
+    install(CachingHeaders) {
+        options { _, content ->
+            content.contentType
+                .toOption()
+                .map { it.withoutParameters() }
+                .filter { it == ContentType.Application.Json }
+                .map {
+                    CachingOptions(
+                        cacheControl = CacheControl.MaxAge(maxAgeSeconds = appConfig.cacheMaxAge),
+                        expires = GMTDate(Instant.now().plusSeconds(appConfig.cacheMaxAge.toLong()).toEpochMilli()),
+                    )
+                }.getOrNull()
+        }
+    }
     get("/versions/{candidate}") {
         option {
             val candidateId =
@@ -87,6 +109,7 @@ fun Route.versionWriteRoutes(versionService: VersionService) {
 
 private fun Route.versionCreateRoute(versionService: VersionService) {
     post("/versions") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         val role = call.authenticatedRole()
@@ -117,6 +140,7 @@ private fun Route.versionCreateRoute(versionService: VersionService) {
 
 private fun Route.versionDeleteRoute(versionService: VersionService) {
     delete("/versions") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         val role = call.authenticatedRole()

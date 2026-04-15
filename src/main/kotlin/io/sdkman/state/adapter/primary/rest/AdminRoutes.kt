@@ -27,6 +27,7 @@ private val secureRandom = SecureRandom()
 
 fun Route.adminListVendorsRoute(vendorRepository: VendorRepository) {
     get("/admin/vendors") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
         if (role != "admin") {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
@@ -52,6 +53,7 @@ fun Route.adminCreateVendorRoute(
     appConfig: AppConfig,
 ) {
     post("/admin/vendors") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
         if (role != "admin") {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
@@ -92,6 +94,7 @@ fun Route.adminCreateVendorRoute(
 
 fun Route.adminDeleteVendorRoute(vendorRepository: VendorRepository) {
     delete("/admin/vendors/{id}") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
         if (role != "admin") {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
