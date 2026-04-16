@@ -480,6 +480,49 @@ class PostgresVersionRepositoryIntegrationSpec :
             }
         }
 
+        context("findByVersionId") {
+            should("retrieve a version with tags by its database ID") {
+                val repo = PostgresVersionRepository()
+                val tagRepo = PostgresTagRepository()
+
+                withCleanDatabase {
+                    // given: a version with tags
+                    val version =
+                        Version(
+                            candidate = "java",
+                            version = "25.0.2",
+                            platform = Platform.LINUX_X64,
+                            url = "https://java-25.0.2",
+                            visible = true.some(),
+                            distribution = Distribution.TEMURIN.some(),
+                        )
+                    val versionId = repo.createOrUpdate(version).shouldBeRight()
+                    tagRepo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts"))
+
+                    // when: looking up by version ID
+                    val result = repo.findByVersionId(versionId).shouldBeRight()
+
+                    // then: returns the version with tags
+                    result.shouldBeSome()
+                    result.onSome {
+                        it shouldBe version.copy(tags = listOf("lts").some())
+                    }
+                }
+            }
+
+            should("return None for a non-existent version ID") {
+                val repo = PostgresVersionRepository()
+
+                withCleanDatabase {
+                    // when: looking up a non-existent ID
+                    val result = repo.findByVersionId(999999).shouldBeRight()
+
+                    // then: None returned
+                    result shouldBe None
+                }
+            }
+        }
+
         context("delete") {
             should("delete an existing version with distribution") {
                 val repo = PostgresVersionRepository()

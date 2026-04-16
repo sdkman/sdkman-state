@@ -1,6 +1,7 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.None
 import arrow.core.Option
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
@@ -43,6 +44,29 @@ class VersionServiceImpl(
         versionsRepo
             .findUnique(candidate, version, platform, distribution)
             .mapLeft { DomainError.DatabaseError(it) }
+
+    override suspend fun resolveByTag(
+        candidate: String,
+        tag: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DomainError, Option<Version>> =
+        either {
+            val maybeVersionId =
+                versionsRepo
+                    .findVersionIdByTag(candidate, tag, distribution, platform)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+            maybeVersionId.fold(
+                ifEmpty = { None },
+                ifSome = { id ->
+                    versionsRepo
+                        .findByVersionId(id)
+                        .mapLeft { DomainError.DatabaseError(it) }
+                        .bind()
+                },
+            )
+        }
 
     override suspend fun createOrUpdate(
         version: Version,

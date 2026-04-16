@@ -46,6 +46,7 @@ fun Route.versionReadRoutes(
         }
     }
     versionsByCandidateRoute(versionService)
+    resolveVersionByTagRoute(versionService)
     uniqueVersionRoute(versionService)
 }
 
@@ -99,6 +100,40 @@ private fun Route.uniqueVersionRoute(versionService: VersionService) {
                     .toOption()
                     .flatMap { it.toDistribution() }
             versionService.findUnique(candidateId, versionId, platform, distribution).fold(
+                ifLeft = { error -> call.respondDomainError(error) },
+                ifRight = { maybeVersion ->
+                    maybeVersion
+                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                },
+            )
+        }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
+    }
+}
+
+private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
+    get("/versions/{candidate}/tags/{tag}") {
+        option {
+            val candidateId =
+                call.parameters["candidate"]
+                    .toOption()
+                    .filter { it.isNotBlank() }
+                    .bind()
+            val tag =
+                call.parameters["tag"]
+                    .toOption()
+                    .filter { it.isNotBlank() }
+                    .bind()
+            val platform =
+                call.request.queryParameters["platform"]
+                    .toOption()
+                    .map { Platform.findByPlatformId(it) }
+                    .getOrElse { Platform.UNIVERSAL }
+            val distribution =
+                call.request.queryParameters["distribution"]
+                    .toOption()
+                    .flatMap { it.toDistribution() }
+            versionService.resolveByTag(candidateId, tag, distribution, platform).fold(
                 ifLeft = { error -> call.respondDomainError(error) },
                 ifRight = { maybeVersion ->
                     maybeVersion

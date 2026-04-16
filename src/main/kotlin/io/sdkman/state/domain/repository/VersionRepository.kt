@@ -27,6 +27,8 @@ interface VersionRepository {
 
     suspend fun findVersionId(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Option<Int>>
 
+    suspend fun findByVersionId(id: Int): Either<DatabaseFailure, Option<Version>>
+
     suspend fun findVersionIdByTag(
         candidate: String,
         tag: String,

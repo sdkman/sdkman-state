@@ -24,6 +24,13 @@ interface VersionService {
         distribution: Option<Distribution>,
     ): Either<DomainError, Option<Version>>
 
+    suspend fun resolveByTag(
+        candidate: String,
+        tag: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DomainError, Option<Version>>
+
     suspend fun createOrUpdate(
         version: Version,
         vendorId: UUID,

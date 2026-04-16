@@ -362,6 +362,54 @@ paths:
             '*/*':
               schema:
                 type: "object"
+  /versions/{candidate}/tags/{tag}:
+    get:
+      description: "Resolve a tag to the single version it points to within the given candidate, distribution, and platform scope"
+      parameters:
+        - name: "candidate"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+          description: "The candidate name (e.g. java, scala)"
+        - name: "tag"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+          description: "The tag to resolve (e.g. lts, latest)"
+        - name: "distribution"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+          description: "Distribution name (e.g. TEMURIN, CORRETTO)"
+        - name: "platform"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            default: "UNIVERSAL"
+          description: "Platform ID (e.g. linuxx64, darwinarm64). Defaults to UNIVERSAL"
+      responses:
+        "200":
+          description: "OK - Tag resolved successfully"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Version"
+        "400":
+          description: "Bad Request - Missing or blank candidate or tag"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+        "404":
+          description: "Not Found - No version carries this tag in the given scope"
+          content:
+            '*/*':
+              schema:
+                type: "object"
   /versions/{candidate}/{version}:
     get:
       description: ""

@@ -216,6 +216,24 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
+    override suspend fun findByVersionId(id: Int): Either<DatabaseFailure, Option<Version>> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable
+                        .selectAll()
+                        .where { VersionsTable.id eq id }
+                        .map { it[VersionsTable.id].value to it.toVersion() }
+                        .firstOrNone()
+                        .map { (versionId, v) -> v.withTags(fetchTagNames(versionId)) }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find version by ID: ${error.message}",
+                    cause = error,
+                )
+            }
+
     override suspend fun findVersionIdByTag(
         candidate: String,
         tag: String,
