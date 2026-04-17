@@ -462,7 +462,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     // when: resolving one of the tags
                     val resolved =
                         repo
-                            .findByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .findByTag("java", "latest", Platform.LINUX_X64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
                     // then: returns the version with every tag attached
@@ -487,7 +487,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     // when: resolving a tag that does not exist
                     val resolved =
                         repo
-                            .findByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .findByTag("java", "latest", Platform.LINUX_X64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
                     // then: None returned
@@ -527,7 +527,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     // when: resolving the tag for Corretto
                     val resolved =
                         repo
-                            .findByTag("java", "lts", Distribution.CORRETTO.some(), Platform.LINUX_X64)
+                            .findByTag("java", "lts", Platform.LINUX_X64, Distribution.CORRETTO.some())
                             .shouldBeRight()
 
                     // then: the Corretto version is returned, not Temurin
@@ -571,7 +571,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     // when: resolving the tag for macOS
                     val resolved =
                         repo
-                            .findByTag("java", "lts", Distribution.TEMURIN.some(), Platform.MAC_ARM64)
+                            .findByTag("java", "lts", Platform.MAC_ARM64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
                     // then: the mac version is returned, not the linux one

@@ -133,7 +133,7 @@ private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
                 call.request.queryParameters["distribution"]
                     .toOption()
                     .flatMap { it.toDistribution() }
-            versionService.resolveByTag(candidateId, tag, distribution, platform).fold(
+            versionService.resolveByTag(candidateId, tag, platform, distribution).fold(
                 ifLeft = { error -> call.respondDomainError(error) },
                 ifRight = { maybeVersion ->
                     maybeVersion

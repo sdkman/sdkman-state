@@ -503,11 +503,11 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-25.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
                 } returns Either.Right(version.some())
 
                 // when: resolving a tag
-                val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
 
                 // then: returns the version
                 result shouldBe Either.Right(version.some())
@@ -516,11 +516,11 @@ class VersionServiceUnitSpec :
             should("return None when tag does not exist") {
                 // given: repository returns None
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
                 } returns Either.Right(None)
 
                 // when: resolving a non-existent tag
-                val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
 
                 // then: returns None
                 result shouldBe Either.Right(None)
@@ -534,11 +534,11 @@ class VersionServiceUnitSpec :
                         RuntimeException("timeout"),
                     )
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
                 } returns Either.Left(dbFailure)
 
                 // when: resolving a tag with DB failure
-                val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
 
                 // then: returns DatabaseError
                 result.shouldBeLeft()

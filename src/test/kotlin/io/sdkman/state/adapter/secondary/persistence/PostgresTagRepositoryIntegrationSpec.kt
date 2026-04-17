@@ -351,8 +351,8 @@ class PostgresTagRepositoryIntegrationSpec :
                             .findByTag(
                                 "gradle",
                                 "latest",
-                                None,
                                 Platform.UNIVERSAL,
+                                None,
                             ).shouldBeRight()
                     resolved.shouldBeSome()
                     resolved.onSome { v ->

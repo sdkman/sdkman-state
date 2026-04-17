@@ -64,7 +64,7 @@ Update `VersionServiceUnitSpec.resolveByTag`: mock `versionsRepo.findByTag` dire
 
 ### Task 2: Align parameter ordering with `findUnique`
 
-- [ ] Reorder the last two parameters of `resolveByTag` / `findByTag` to match `findUnique`
+- [X] Reorder the last two parameters of `resolveByTag` / `findByTag` to match `findUnique`
 
 **Prompt**: The existing `VersionRepository.findUnique` and `VersionService.findUnique` use the parameter order `(candidate, version, platform, distribution)`. The tag-resolution API — introduced on this branch — uses `(candidate, tag, distribution, platform)`. Swapping the last two between otherwise-parallel operations is a tab-completion foot-gun.
 

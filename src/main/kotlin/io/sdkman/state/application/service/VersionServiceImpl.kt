@@ -47,11 +47,11 @@ class VersionServiceImpl(
     override suspend fun resolveByTag(
         candidate: String,
         tag: String,
-        distribution: Option<Distribution>,
         platform: Platform,
+        distribution: Option<Distribution>,
     ): Either<DomainError, Option<Version>> =
         versionsRepo
-            .findByTag(candidate, tag, distribution, platform)
+            .findByTag(candidate, tag, platform, distribution)
             .mapLeft { DomainError.DatabaseError(it) }
 
     override suspend fun createOrUpdate(

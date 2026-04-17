@@ -219,8 +219,8 @@ class PostgresVersionRepository : VersionRepository {
     override suspend fun findByTag(
         candidate: String,
         tag: String,
-        distribution: Option<Distribution>,
         platform: Platform,
+        distribution: Option<Distribution>,
     ): Either<DatabaseFailure, Option<Version>> =
         Either
             .catch {

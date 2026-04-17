@@ -30,8 +30,8 @@ interface VersionRepository {
     suspend fun findByTag(
         candidate: String,
         tag: String,
-        distribution: Option<Distribution>,
         platform: Platform,
+        distribution: Option<Distribution>,
     ): Either<DatabaseFailure, Option<Version>>
 
     suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
