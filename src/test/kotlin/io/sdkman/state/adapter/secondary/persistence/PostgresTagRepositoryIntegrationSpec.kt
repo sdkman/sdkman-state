@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.selectTagNames
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.withCleanDatabase
 
 @Tags("integration")
@@ -347,13 +348,17 @@ class PostgresTagRepositoryIntegrationSpec :
                     val versionRepo = PostgresVersionRepository()
                     val resolved =
                         versionRepo
-                            .findVersionIdByTag(
+                            .findByTag(
                                 "gradle",
                                 "latest",
                                 None,
                                 Platform.UNIVERSAL,
                             ).shouldBeRight()
-                    resolved shouldBe versionId.some()
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.candidate shouldBe "gradle"
+                        v.version shouldBe "8.12"
+                    }
                 }
             }
 

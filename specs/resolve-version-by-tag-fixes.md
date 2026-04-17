@@ -16,7 +16,7 @@ Consider the following rules during execution of the tasks:
 
 ### Task 1: Consolidate tag resolution into a single repository port
 
-- [ ] Replace the `findVersionIdByTag` + `findByVersionId` composition with a single `findByTag` port
+- [X] Replace the `findVersionIdByTag` + `findByVersionId` composition with a single `findByTag` port
 
 **Prompt**: The current implementation resolves a tag in two steps: `VersionRepository.findVersionIdByTag` returns an `Option<Int>`, and `VersionRepository.findByVersionId` then fetches the full `Version`. `VersionServiceImpl.resolveByTag` glues the two together inside an `either { ... }` block with a nested `fold`. Both ports are used *only* by `resolveByTag` — they are speculative abstractions that leak a persistence concept (surrogate integer IDs) into the application layer.
 

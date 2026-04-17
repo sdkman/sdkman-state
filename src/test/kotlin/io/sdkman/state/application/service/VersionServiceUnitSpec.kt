@@ -493,8 +493,8 @@ class VersionServiceUnitSpec :
 
         context("resolveByTag") {
 
-            should("return the version when tag resolves to a version ID") {
-                // given: tag resolves to version ID and version exists
+            should("return the version when tag resolves successfully") {
+                // given: repository returns the tagged version
                 val version =
                     Version(
                         candidate = "java",
@@ -503,10 +503,7 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-25.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findVersionIdByTag("java", "lts", None, Platform.LINUX_X64)
-                } returns Either.Right(42.some())
-                coEvery {
-                    versionsRepo.findByVersionId(42)
+                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
                 } returns Either.Right(version.some())
 
                 // when: resolving a tag
@@ -517,9 +514,9 @@ class VersionServiceUnitSpec :
             }
 
             should("return None when tag does not exist") {
-                // given: tag is not found
+                // given: repository returns None
                 coEvery {
-                    versionsRepo.findVersionIdByTag("java", "lts", None, Platform.LINUX_X64)
+                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
                 } returns Either.Right(None)
 
                 // when: resolving a non-existent tag
@@ -527,63 +524,20 @@ class VersionServiceUnitSpec :
 
                 // then: returns None
                 result shouldBe Either.Right(None)
-                coVerify(exactly = 0) { versionsRepo.findByVersionId(any()) }
             }
 
-            should("return None when version ID found but version is missing") {
-                // given: tag resolves to version ID but version no longer exists
-                coEvery {
-                    versionsRepo.findVersionIdByTag("java", "lts", None, Platform.LINUX_X64)
-                } returns Either.Right(42.some())
-                coEvery {
-                    versionsRepo.findByVersionId(42)
-                } returns Either.Right(None)
-
-                // when: resolving a tag whose version was deleted
-                val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
-
-                // then: returns None
-                result shouldBe Either.Right(None)
-            }
-
-            should("return DatabaseError when findVersionIdByTag fails") {
-                // given: tag lookup fails
+            should("return DatabaseError when repository fails") {
+                // given: repository returns a database failure
                 val dbFailure =
                     DatabaseFailure.QueryExecutionFailure(
                         "connection lost",
                         RuntimeException("timeout"),
                     )
                 coEvery {
-                    versionsRepo.findVersionIdByTag("java", "lts", None, Platform.LINUX_X64)
+                    versionsRepo.findByTag("java", "lts", None, Platform.LINUX_X64)
                 } returns Either.Left(dbFailure)
 
                 // when: resolving a tag with DB failure
-                val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
-
-                // then: returns DatabaseError
-                result.shouldBeLeft()
-                result.onLeft { error ->
-                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
-                    error.failure shouldBe dbFailure
-                }
-                coVerify(exactly = 0) { versionsRepo.findByVersionId(any()) }
-            }
-
-            should("return DatabaseError when findByVersionId fails") {
-                // given: tag resolves but version lookup fails
-                val dbFailure =
-                    DatabaseFailure.QueryExecutionFailure(
-                        "connection lost",
-                        RuntimeException("timeout"),
-                    )
-                coEvery {
-                    versionsRepo.findVersionIdByTag("java", "lts", None, Platform.LINUX_X64)
-                } returns Either.Right(42.some())
-                coEvery {
-                    versionsRepo.findByVersionId(42)
-                } returns Either.Left(dbFailure)
-
-                // when: resolving a tag with DB failure on version lookup
                 val result = service.resolveByTag("java", "lts", None, Platform.LINUX_X64)
 
                 // then: returns DatabaseError
