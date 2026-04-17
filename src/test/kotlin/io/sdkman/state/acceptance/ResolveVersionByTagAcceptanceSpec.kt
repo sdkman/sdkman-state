@@ -169,6 +169,28 @@ class ResolveVersionByTagAcceptanceSpec :
             }
         }
 
+        should("return 400 when candidate is blank") {
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/%20/tags/lts").apply {
+                        // then: blank candidate fails the isNotBlank guard
+                        status shouldBe HttpStatusCode.BadRequest
+                    }
+                }
+            }
+        }
+
+        should("return 400 when tag is blank") {
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/tags/%20").apply {
+                        // then: blank tag fails the isNotBlank guard
+                        status shouldBe HttpStatusCode.BadRequest
+                    }
+                }
+            }
+        }
+
         should("return tagged version regardless of visibility") {
             val version =
                 Version(

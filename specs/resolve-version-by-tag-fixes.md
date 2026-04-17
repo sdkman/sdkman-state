@@ -88,7 +88,7 @@ Update the adapter implementation, the service implementation, the route call-si
 
 ### Task 3: Add acceptance tests for 400 on blank candidate or tag
 
-- [ ] Cover the blank-guard branch of `resolveVersionByTagRoute` with acceptance tests
+- [X] Cover the blank-guard branch of `resolveVersionByTagRoute` with acceptance tests
 
 **Prompt**: `specs/resolve-version-by-tag.md` specifies that the endpoint returns `400 Bad Request` when either the `candidate` or `tag` path segment is missing or blank. The route handler implements this via `option { ... }.getOrElse { call.respond(HttpStatusCode.BadRequest) }`, filtering on `isNotBlank()`. No acceptance test currently exercises this branch — every existing test uses a populated, non-blank value.
 
