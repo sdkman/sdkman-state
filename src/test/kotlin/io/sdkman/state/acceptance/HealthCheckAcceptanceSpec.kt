@@ -1,7 +1,7 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
 import arrow.core.getOrElse
+import arrow.core.none
 import arrow.core.toOption
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -74,7 +74,7 @@ class HealthCheckAcceptanceSpec :
 
                         val response = Json.decodeFromString<HealthCheckResponse>(bodyAsText())
                         response.status shouldBe "SUCCESS"
-                        response.message shouldBe None
+                        response.message shouldBe none()
                     }
                 }
             }

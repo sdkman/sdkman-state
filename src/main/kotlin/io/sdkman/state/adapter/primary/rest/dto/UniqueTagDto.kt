@@ -2,8 +2,8 @@
 
 package io.sdkman.state.adapter.primary.rest.dto
 
-import arrow.core.None
 import arrow.core.Option
+import arrow.core.none
 import arrow.core.serialization.OptionSerializer
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
@@ -15,7 +15,7 @@ import kotlinx.serialization.UseSerializers
 data class UniqueTagDto(
     val candidate: String,
     val tag: String,
-    val distribution: Option<Distribution> = None,
+    val distribution: Option<Distribution> = none(),
     val platform: Platform,
 )
 

@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -237,7 +237,7 @@ class DeleteTagAcceptanceSpec :
 
                 // then: both tags and version are gone
                 selectTagNames(versionId) shouldBe emptyList()
-                selectVersion(candidate, version, distribution.some(), platform) shouldBe None
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
 
@@ -255,10 +255,10 @@ class DeleteTagAcceptanceSpec :
                             platform = platform,
                             url = "https://gradle-8.10.zip",
                             visible = true.some(),
-                            distribution = None,
+                            distribution = none(),
                         ),
                     )
-                insertTag(candidate, "latest", None, platform, versionId)
+                insertTag(candidate, "latest", none(), platform, versionId)
 
                 // when: deleting the tag without distribution
                 withTestApplication {
@@ -269,7 +269,7 @@ class DeleteTagAcceptanceSpec :
                                 UniqueTag(
                                     candidate = candidate,
                                     tag = "latest",
-                                    distribution = None,
+                                    distribution = none(),
                                     platform = platform,
                                 ).toJsonString(),
                             )

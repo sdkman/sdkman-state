@@ -1,10 +1,10 @@
 package io.sdkman.state.adapter.primary.rest
 
-import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
+import arrow.core.none
 import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -48,7 +48,7 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
 
 fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
     when (this.queryParameters["visible"].toOption()) {
-        Some("all") -> None
+        Some("all") -> none()
         Some("false") -> Some(false)
         Some("true") -> Some(true)
         else -> Some(true)

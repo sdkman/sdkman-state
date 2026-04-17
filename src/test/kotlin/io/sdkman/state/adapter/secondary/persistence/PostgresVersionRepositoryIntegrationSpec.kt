@@ -1,6 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -62,7 +62,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -98,7 +98,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     originalVersion.copy(
                         url = "https://kotlin-1.9.0-updated",
                         visible = false.some(),
-                        md5sum = None,
+                        md5sum = none(),
                         sha256sum = "new-hash".some(),
                     )
 
@@ -127,7 +127,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://groovy-4.0.0-original",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -195,9 +195,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
-                            visible = None,
+                            platform = none(),
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -237,8 +237,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                         repo.findByCandidate(
                             candidate = "java",
                             platform = Platform.LINUX_X64.some(),
-                            distribution = None,
-                            visible = None,
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -276,9 +276,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
+                            platform = none(),
                             distribution = Distribution.TEMURIN.some(),
-                            visible = None,
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -317,8 +317,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val visibleResult =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
+                            platform = none(),
+                            distribution = none(),
                             visible = true.some(),
                         )
 
@@ -329,8 +329,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val hiddenResult =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
+                            platform = none(),
+                            distribution = none(),
                             visible = false.some(),
                         )
 
@@ -347,9 +347,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "nonexistent",
-                            platform = None,
-                            distribution = None,
-                            visible = None,
+                            platform = none(),
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     result.shouldBeRight().shouldBeEmpty()
@@ -396,7 +396,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                         tags = emptyList<String>().some(),
                     )
 
@@ -408,7 +408,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             candidate = "scala",
                             version = "3.3.1",
                             platform = Platform.UNIVERSAL,
-                            distribution = None,
+                            distribution = none(),
                         )
 
                     retrieved.shouldBeRight()
@@ -416,7 +416,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                 }
             }
 
-            should("return None when version does not exist") {
+            should("return none() when version does not exist") {
                 val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
@@ -425,22 +425,22 @@ class PostgresVersionRepositoryIntegrationSpec :
                             candidate = "nonexistent",
                             version = "1.0.0",
                             platform = Platform.UNIVERSAL,
-                            distribution = None,
+                            distribution = none(),
                         )
 
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
         }
 
-        context("findVersionIdByTag") {
-            should("resolve a tag to the correct version ID") {
+        context("findByTag") {
+            should("resolve a tag to the version with its full tag list") {
                 val repo = PostgresVersionRepository()
                 val tagRepo = PostgresTagRepository()
 
                 withCleanDatabase {
-                    // given: a tagged version
+                    // given: a version carrying multiple tags
                     val version =
                         Version(
                             candidate = "java",
@@ -451,74 +451,135 @@ class PostgresVersionRepositoryIntegrationSpec :
                             distribution = Distribution.TEMURIN.some(),
                         )
                     val versionId = repo.createOrUpdate(version).shouldBeRight()
-                    tagRepo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("latest"))
+                    tagRepo.replaceTags(
+                        versionId,
+                        "java",
+                        Distribution.TEMURIN.some(),
+                        Platform.LINUX_X64,
+                        listOf("latest", "lts"),
+                    )
 
-                    // when: resolving the tag
+                    // when: resolving one of the tags
                     val resolved =
                         repo
-                            .findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .findByTag("java", "latest", Platform.LINUX_X64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
-                    // then: correct version ID returned
-                    resolved shouldBe versionId.some()
+                    // then: returns the version with every tag attached
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.candidate shouldBe "java"
+                        v.version shouldBe "27.0.2"
+                        v.tags.shouldBeSome()
+                        v.tags.onSome { tags ->
+                            tags shouldContain "latest"
+                            tags shouldContain "lts"
+                            tags shouldHaveSize 2
+                        }
+                    }
                 }
             }
 
-            should("return None for a non-existent tag") {
+            should("return none() for a non-existent tag") {
                 val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
                     // when: resolving a tag that does not exist
                     val resolved =
                         repo
-                            .findVersionIdByTag("java", "latest", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                            .findByTag("java", "latest", Platform.LINUX_X64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
-                    // then: None returned
-                    resolved shouldBe None
+                    // then: none() returned
+                    resolved shouldBe none()
                 }
             }
-        }
 
-        context("findByVersionId") {
-            should("retrieve a version with tags by its database ID") {
+            should("scope resolution to distribution") {
                 val repo = PostgresVersionRepository()
                 val tagRepo = PostgresTagRepository()
 
                 withCleanDatabase {
-                    // given: a version with tags
-                    val version =
+                    // given: two versions of java tagged "lts" across distributions
+                    val temurin =
                         Version(
                             candidate = "java",
                             version = "25.0.2",
                             platform = Platform.LINUX_X64,
-                            url = "https://java-25.0.2",
+                            url = "https://java-25.0.2-temurin",
                             visible = true.some(),
                             distribution = Distribution.TEMURIN.some(),
                         )
-                    val versionId = repo.createOrUpdate(version).shouldBeRight()
-                    tagRepo.replaceTags(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts"))
+                    val corretto =
+                        Version(
+                            candidate = "java",
+                            version = "25.0.2",
+                            platform = Platform.LINUX_X64,
+                            url = "https://java-25.0.2-corretto",
+                            visible = true.some(),
+                            distribution = Distribution.CORRETTO.some(),
+                        )
+                    val temurinId = repo.createOrUpdate(temurin).shouldBeRight()
+                    val correttoId = repo.createOrUpdate(corretto).shouldBeRight()
+                    tagRepo.replaceTags(temurinId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts"))
+                    tagRepo.replaceTags(correttoId, "java", Distribution.CORRETTO.some(), Platform.LINUX_X64, listOf("lts"))
 
-                    // when: looking up by version ID
-                    val result = repo.findByVersionId(versionId).shouldBeRight()
+                    // when: resolving the tag for Corretto
+                    val resolved =
+                        repo
+                            .findByTag("java", "lts", Platform.LINUX_X64, Distribution.CORRETTO.some())
+                            .shouldBeRight()
 
-                    // then: returns the version with tags
-                    result.shouldBeSome()
-                    result.onSome {
-                        it shouldBe version.copy(tags = listOf("lts").some())
+                    // then: the Corretto version is returned, not Temurin
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.distribution shouldBe Distribution.CORRETTO.some()
+                        v.url shouldBe "https://java-25.0.2-corretto"
                     }
                 }
             }
 
-            should("return None for a non-existent version ID") {
+            should("scope resolution to platform") {
                 val repo = PostgresVersionRepository()
+                val tagRepo = PostgresTagRepository()
 
                 withCleanDatabase {
-                    // when: looking up a non-existent ID
-                    val result = repo.findByVersionId(999999).shouldBeRight()
+                    // given: the same tag assigned to different platforms
+                    val linux =
+                        Version(
+                            candidate = "java",
+                            version = "25.0.2",
+                            platform = Platform.LINUX_X64,
+                            url = "https://java-25.0.2-linux",
+                            visible = true.some(),
+                            distribution = Distribution.TEMURIN.some(),
+                        )
+                    val mac =
+                        Version(
+                            candidate = "java",
+                            version = "25.0.2",
+                            platform = Platform.MAC_ARM64,
+                            url = "https://java-25.0.2-mac",
+                            visible = true.some(),
+                            distribution = Distribution.TEMURIN.some(),
+                        )
+                    val linuxId = repo.createOrUpdate(linux).shouldBeRight()
+                    val macId = repo.createOrUpdate(mac).shouldBeRight()
+                    tagRepo.replaceTags(linuxId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts"))
+                    tagRepo.replaceTags(macId, "java", Distribution.TEMURIN.some(), Platform.MAC_ARM64, listOf("lts"))
 
-                    // then: None returned
-                    result shouldBe None
+                    // when: resolving the tag for macOS
+                    val resolved =
+                        repo
+                            .findByTag("java", "lts", Platform.MAC_ARM64, Distribution.TEMURIN.some())
+                            .shouldBeRight()
+
+                    // then: the mac version is returned, not the linux one
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.platform shouldBe Platform.MAC_ARM64
+                        v.url shouldBe "https://java-25.0.2-mac"
+                    }
                 }
             }
         }
@@ -559,7 +620,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             distribution = version.distribution,
                         )
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
 
@@ -572,7 +633,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -598,7 +659,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             distribution = version.distribution,
                         )
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
 
@@ -610,7 +671,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         UniqueVersion(
                             candidate = "nonexistent",
                             version = "1.0.0",
-                            distribution = None,
+                            distribution = none(),
                             platform = Platform.UNIVERSAL,
                         )
 

@@ -1,6 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.selectTagNames
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.withCleanDatabase
 
 @Tags("integration")
@@ -334,12 +335,12 @@ class PostgresTagRepositoryIntegrationSpec :
                                 platform = Platform.UNIVERSAL,
                                 url = "https://gradle-8.12",
                                 visible = true.some(),
-                                distribution = None,
+                                distribution = none(),
                             ),
                         )
 
-                    // when: tags are assigned with None distribution
-                    repo.replaceTags(versionId, "gradle", None, Platform.UNIVERSAL, listOf("latest", "8"))
+                    // when: tags are assigned with none() distribution
+                    repo.replaceTags(versionId, "gradle", none(), Platform.UNIVERSAL, listOf("latest", "8"))
 
                     // then: tags are stored and retrievable
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest", "8")
@@ -347,13 +348,17 @@ class PostgresTagRepositoryIntegrationSpec :
                     val versionRepo = PostgresVersionRepository()
                     val resolved =
                         versionRepo
-                            .findVersionIdByTag(
+                            .findByTag(
                                 "gradle",
                                 "latest",
-                                None,
                                 Platform.UNIVERSAL,
+                                none(),
                             ).shouldBeRight()
-                    resolved shouldBe versionId.some()
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.candidate shouldBe "gradle"
+                        v.version shouldBe "8.12"
+                    }
                 }
             }
 
@@ -368,7 +373,7 @@ class PostgresTagRepositoryIntegrationSpec :
                                 platform = Platform.UNIVERSAL,
                                 url = "https://gradle-8.12",
                                 visible = true.some(),
-                                distribution = None,
+                                distribution = none(),
                             ),
                         )
                     val versionId2 =
@@ -379,13 +384,13 @@ class PostgresTagRepositoryIntegrationSpec :
                                 platform = Platform.UNIVERSAL,
                                 url = "https://gradle-8.13",
                                 visible = true.some(),
-                                distribution = None,
+                                distribution = none(),
                             ),
                         )
-                    repo.replaceTags(versionId1, "gradle", None, Platform.UNIVERSAL, listOf("latest"))
+                    repo.replaceTags(versionId1, "gradle", none(), Platform.UNIVERSAL, listOf("latest"))
 
                     // when: reassigning the tag to a new version
-                    repo.replaceTags(versionId2, "gradle", None, Platform.UNIVERSAL, listOf("latest"))
+                    repo.replaceTags(versionId2, "gradle", none(), Platform.UNIVERSAL, listOf("latest"))
 
                     // then: tag moved to the new version
                     selectTagNames(versionId1).shouldBeEmpty()

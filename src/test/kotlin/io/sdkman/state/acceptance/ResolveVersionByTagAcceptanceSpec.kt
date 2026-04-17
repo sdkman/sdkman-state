@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -67,13 +67,13 @@ class ResolveVersionByTagAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://scala-3.6.4.tar.gz",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                     tags = listOf("latest").some(),
                 )
 
             withCleanDatabase {
                 val versionId = insertVersionWithId(version)
-                insertTag("scala", "latest", None, Platform.UNIVERSAL, versionId)
+                insertTag("scala", "latest", none(), Platform.UNIVERSAL, versionId)
                 withTestApplication {
                     client.get("/versions/scala/tags/latest").apply {
                         // then: resolves without distribution, platform defaults to UNIVERSAL
@@ -92,13 +92,13 @@ class ResolveVersionByTagAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://gradle-8.12.tar.gz",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                     tags = listOf("latest").some(),
                 )
 
             withCleanDatabase {
                 val versionId = insertVersionWithId(version)
-                insertTag("gradle", "latest", None, Platform.UNIVERSAL, versionId)
+                insertTag("gradle", "latest", none(), Platform.UNIVERSAL, versionId)
                 withTestApplication {
                     client.get("/versions/gradle/tags/latest").apply {
                         // then: resolves with UNIVERSAL default
@@ -164,6 +164,28 @@ class ResolveVersionByTagAcceptanceSpec :
                     client.get("/versions/java/tags/LTS?distribution=TEMURIN&platform=linuxx64").apply {
                         // then: LTS != lts, so 404
                         status shouldBe HttpStatusCode.NotFound
+                    }
+                }
+            }
+        }
+
+        should("return 400 when candidate is blank") {
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/%20/tags/lts").apply {
+                        // then: blank candidate fails the isNotBlank guard
+                        status shouldBe HttpStatusCode.BadRequest
+                    }
+                }
+            }
+        }
+
+        should("return 400 when tag is blank") {
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/tags/%20").apply {
+                        // then: blank tag fails the isNotBlank guard
+                        status shouldBe HttpStatusCode.BadRequest
                     }
                 }
             }

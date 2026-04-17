@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -89,7 +89,7 @@ class PostVersionVisibilityAcceptanceSpec :
                     version = "3.1.0",
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/scala-3.1.0.tar.gz",
-                    visible = None,
+                    visible = none(),
                 )
             val requestBody = version.toJsonString()
 
@@ -179,7 +179,7 @@ class PostVersionVisibilityAcceptanceSpec :
                     response1.status shouldBe HttpStatusCode.NoContent
 
                     // Second POST updates with visible omitted (should default to true)
-                    val updatedVersion = initialVersion.copy(visible = None)
+                    val updatedVersion = initialVersion.copy(visible = none())
                     val requestBody2 = updatedVersion.toJsonString()
                     val response2 =
                         client.post("/versions") {

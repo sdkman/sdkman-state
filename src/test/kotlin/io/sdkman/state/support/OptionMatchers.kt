@@ -12,13 +12,13 @@ import io.kotest.matchers.shouldBe
 
 fun <A> Option<A>.shouldBeSome(): A =
     fold(
-        { throw AssertionError("Expected Some but got None") },
+        { throw AssertionError("Expected Some but got none()") },
         { it },
     )
 
 infix fun <A> Option<A>.shouldBeSome(expected: A): A =
     fold(
-        { throw AssertionError("Expected Some($expected) but got None") },
+        { throw AssertionError("Expected Some($expected) but got none()") },
         {
             it shouldBe expected
             it
@@ -28,5 +28,5 @@ infix fun <A> Option<A>.shouldBeSome(expected: A): A =
 fun <A> Option<A>.shouldBeNone() =
     fold(
         { },
-        { throw AssertionError("Expected None but got Some($it)") },
+        { throw AssertionError("Expected none() but got Some($it)") },
     )

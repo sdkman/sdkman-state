@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -69,7 +69,7 @@ class VendorAuditAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/kotlin-1.9.0.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
             val deleteRequest =
                 """
@@ -117,7 +117,7 @@ class VendorAuditAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/gradle-8.0.0.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
 
             withCleanDatabase {
@@ -145,7 +145,7 @@ class VendorAuditAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/maven-3.9.0.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
 
             withCleanDatabase {
@@ -228,11 +228,11 @@ class VendorAuditAcceptanceSpec :
                     version = "3.3.0",
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/scala-3.3.0.zip",
-                    visible = None,
-                    distribution = None,
-                    md5sum = None,
-                    sha256sum = None,
-                    sha512sum = None,
+                    visible = none(),
+                    distribution = none(),
+                    md5sum = none(),
+                    sha256sum = none(),
+                    sha512sum = none(),
                 )
 
             withCleanDatabase {
@@ -244,15 +244,15 @@ class VendorAuditAcceptanceSpec :
                     }
                 }
 
-                // then: optional fields are correctly serialized as None
+                // then: optional fields are correctly serialized as none()
                 val auditRecords = selectAuditRecords()
                 val deserializedVersion = deserializeVersionData(auditRecords.first().versionData)
 
                 deserializedVersion.candidate shouldBe version.candidate
-                deserializedVersion.distribution shouldBe None
-                deserializedVersion.md5sum shouldBe None
-                deserializedVersion.sha256sum shouldBe None
-                deserializedVersion.sha512sum shouldBe None
+                deserializedVersion.distribution shouldBe none()
+                deserializedVersion.md5sum shouldBe none()
+                deserializedVersion.sha256sum shouldBe none()
+                deserializedVersion.sha512sum shouldBe none()
             }
         }
 
@@ -285,7 +285,7 @@ class VendorAuditAcceptanceSpec :
             }
         }
 
-        should("handle DELETE with distribution=Some vs distribution=None") {
+        should("handle DELETE with distribution=Some vs distribution=none()") {
             // given: two versions - one with distribution, one without
             val versionWithDist =
                 Version(
@@ -303,7 +303,7 @@ class VendorAuditAcceptanceSpec :
                     platform = Platform.LINUX_X64,
                     url = "https://example.com/java-17.0.0.tar.gz",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
 
             withCleanDatabase {

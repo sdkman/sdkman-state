@@ -1,7 +1,7 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
@@ -77,7 +77,7 @@ class AuthServiceImplUnitSpec :
                     candidates = listOf("java", "kotlin"),
                     createdAt = Instant.now(),
                     updatedAt = Instant.now(),
-                    deletedAt = None,
+                    deletedAt = none(),
                 )
             coEvery { vendorRepo.findByEmail("vendor@test.com") } returns Either.Right(vendor.some())
 
@@ -112,7 +112,7 @@ class AuthServiceImplUnitSpec :
                     candidates = listOf("java"),
                     createdAt = Instant.now(),
                     updatedAt = Instant.now(),
-                    deletedAt = None,
+                    deletedAt = none(),
                 )
             coEvery { vendorRepo.findByEmail("vendor@test.com") } returns Either.Right(vendor.some())
 
@@ -125,7 +125,7 @@ class AuthServiceImplUnitSpec :
 
         should("return InvalidCredentials for non-existent email") {
             // given
-            coEvery { vendorRepo.findByEmail("unknown@test.com") } returns Either.Right(None)
+            coEvery { vendorRepo.findByEmail("unknown@test.com") } returns Either.Right(none())
 
             // when
             val result = service.login("unknown@test.com", "any-pw", "127.0.0.1")

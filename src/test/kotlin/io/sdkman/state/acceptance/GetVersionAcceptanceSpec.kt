@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -30,7 +30,7 @@ class GetVersionAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://kotlin-2.1.0-tem",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                     tags = emptyList<String>().some(),
                 )
 
@@ -76,7 +76,7 @@ class GetVersionAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://scala-3.1.2",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                     tags = emptyList<String>().some(),
                 )
 

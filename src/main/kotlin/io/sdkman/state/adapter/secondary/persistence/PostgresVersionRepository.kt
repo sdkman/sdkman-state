@@ -216,47 +216,34 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    override suspend fun findByVersionId(id: Int): Either<DatabaseFailure, Option<Version>> =
-        Either
-            .catch {
-                dbQuery {
-                    VersionsTable
-                        .selectAll()
-                        .where { VersionsTable.id eq id }
-                        .map { it[VersionsTable.id].value to it.toVersion() }
-                        .firstOrNone()
-                        .map { (versionId, v) -> v.withTags(fetchTagNames(versionId)) }
-                }
-            }.mapLeft { error ->
-                DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to find version by ID: ${error.message}",
-                    cause = error,
-                )
-            }
-
-    override suspend fun findVersionIdByTag(
+    override suspend fun findByTag(
         candidate: String,
         tag: String,
-        distribution: Option<Distribution>,
         platform: Platform,
-    ): Either<DatabaseFailure, Option<Int>> =
+        distribution: Option<Distribution>,
+    ): Either<DatabaseFailure, Option<Version>> =
         Either
             .catch {
                 dbQuery {
                     val distDb = distribution.map { it.name }.getOrElse { NA_SENTINEL }
                     VersionTagsTable
-                        .selectAll()
+                        .join(
+                            VersionsTable,
+                            JoinType.INNER,
+                            additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
+                        ).selectAll()
                         .where {
                             (VersionTagsTable.candidate eq candidate) and
                                 (VersionTagsTable.tag eq tag) and
                                 (VersionTagsTable.distribution eq distDb) and
                                 (VersionTagsTable.platform eq platform.name)
-                        }.map { it[VersionTagsTable.versionId] }
+                        }.map { it[VersionsTable.id].value to it.toVersion() }
                         .firstOrNone()
+                        .map { (id, v) -> v.withTags(fetchTagNames(id)) }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to find version ID by tag: ${error.message}",
+                    message = "Failed to find version by tag: ${error.message}",
                     cause = error,
                 )
             }

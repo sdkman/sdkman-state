@@ -36,7 +36,7 @@ class UniqueTagValidatorSpec :
                     UniqueTag(
                         candidate = "gradle",
                         tag = "latest",
-                        distribution = arrow.core.None,
+                        distribution = arrow.core.none(),
                         platform = Platform.UNIVERSAL,
                     )
 

@@ -1,6 +1,6 @@
 package io.sdkman.state.application.validation
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -38,11 +38,11 @@ class VersionRequestValidatorSpec :
                     version.version shouldBe "17.0.1"
                     version.platform shouldBe Platform.LINUX_X64
                     version.url shouldBe "https://example.com/java-17.0.1.tar.gz"
-                    version.visible shouldBe None
-                    version.distribution shouldBe None
-                    version.md5sum shouldBe None
-                    version.sha256sum shouldBe None
-                    version.sha512sum shouldBe None
+                    version.visible shouldBe none()
+                    version.distribution shouldBe none()
+                    version.md5sum shouldBe none()
+                    version.sha256sum shouldBe none()
+                    version.sha512sum shouldBe none()
                 }
             }
 

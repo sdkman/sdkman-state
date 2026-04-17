@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -62,7 +62,7 @@ class PostVersionAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://example.com/maven-3.9.0.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
             val requestBody = version.toJsonString()
 
@@ -93,7 +93,7 @@ class PostVersionAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://github.com/JetBrains/kotlin/releases/download/1.9.0-RC1/kotlin.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
             val requestBody = version.toJsonString()
 
