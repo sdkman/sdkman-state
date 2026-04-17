@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -128,7 +128,7 @@ class IdempotentPostVersionAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://scala-3.2.0",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
             val requestBody = version.toJsonString()
 

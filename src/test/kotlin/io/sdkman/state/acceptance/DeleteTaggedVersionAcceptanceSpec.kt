@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -166,7 +166,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                 }
 
                 // and: the version is removed from the database
-                selectVersion(candidate, version, distribution.some(), platform) shouldBe None
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
 
@@ -212,7 +212,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                 }
 
                 // and: the version is removed from the database
-                selectVersion(candidate, version, distribution.some(), platform) shouldBe None
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
     })

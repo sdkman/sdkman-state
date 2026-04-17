@@ -1,7 +1,7 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -60,11 +60,11 @@ class TagServiceUnitSpec :
                         RuntimeException("constraint violation"),
                     )
                 coEvery {
-                    tagsRepo.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
+                    tagsRepo.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
                 } returns Either.Left(dbFailure)
 
                 // when: replacing tags
-                val result = service.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
+                val result = service.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
 
                 // then: returns DatabaseError
                 result.shouldBeLeft()
@@ -117,7 +117,7 @@ class TagServiceUnitSpec :
                     UniqueTag(
                         candidate = "java",
                         tag = "lts",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
@@ -140,7 +140,7 @@ class TagServiceUnitSpec :
                     UniqueTag(
                         candidate = "java",
                         tag = "nonexistent",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(0)
@@ -163,7 +163,7 @@ class TagServiceUnitSpec :
                     UniqueTag(
                         candidate = "java",
                         tag = "lts",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val dbFailure =
@@ -191,7 +191,7 @@ class TagServiceUnitSpec :
                     UniqueTag(
                         candidate = "java",
                         tag = "lts",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
@@ -218,7 +218,7 @@ class TagServiceUnitSpec :
                     UniqueTag(
                         candidate = "java",
                         tag = "lts",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)

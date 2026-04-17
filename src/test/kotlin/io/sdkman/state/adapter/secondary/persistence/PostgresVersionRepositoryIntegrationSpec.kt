@@ -1,6 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -62,7 +62,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -98,7 +98,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                     originalVersion.copy(
                         url = "https://kotlin-1.9.0-updated",
                         visible = false.some(),
-                        md5sum = None,
+                        md5sum = none(),
                         sha256sum = "new-hash".some(),
                     )
 
@@ -127,7 +127,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://groovy-4.0.0-original",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -195,9 +195,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
-                            visible = None,
+                            platform = none(),
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -237,8 +237,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                         repo.findByCandidate(
                             candidate = "java",
                             platform = Platform.LINUX_X64.some(),
-                            distribution = None,
-                            visible = None,
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -276,9 +276,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
+                            platform = none(),
                             distribution = Distribution.TEMURIN.some(),
-                            visible = None,
+                            visible = none(),
                         )
 
                     val versions = result.shouldBeRight()
@@ -317,8 +317,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val visibleResult =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
+                            platform = none(),
+                            distribution = none(),
                             visible = true.some(),
                         )
 
@@ -329,8 +329,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val hiddenResult =
                         repo.findByCandidate(
                             candidate = "java",
-                            platform = None,
-                            distribution = None,
+                            platform = none(),
+                            distribution = none(),
                             visible = false.some(),
                         )
 
@@ -347,9 +347,9 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val result =
                         repo.findByCandidate(
                             candidate = "nonexistent",
-                            platform = None,
-                            distribution = None,
-                            visible = None,
+                            platform = none(),
+                            distribution = none(),
+                            visible = none(),
                         )
 
                     result.shouldBeRight().shouldBeEmpty()
@@ -396,7 +396,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                         tags = emptyList<String>().some(),
                     )
 
@@ -408,7 +408,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             candidate = "scala",
                             version = "3.3.1",
                             platform = Platform.UNIVERSAL,
-                            distribution = None,
+                            distribution = none(),
                         )
 
                     retrieved.shouldBeRight()
@@ -416,7 +416,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                 }
             }
 
-            should("return None when version does not exist") {
+            should("return none() when version does not exist") {
                 val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
@@ -425,11 +425,11 @@ class PostgresVersionRepositoryIntegrationSpec :
                             candidate = "nonexistent",
                             version = "1.0.0",
                             platform = Platform.UNIVERSAL,
-                            distribution = None,
+                            distribution = none(),
                         )
 
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
         }
@@ -480,7 +480,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                 }
             }
 
-            should("return None for a non-existent tag") {
+            should("return none() for a non-existent tag") {
                 val repo = PostgresVersionRepository()
 
                 withCleanDatabase {
@@ -490,8 +490,8 @@ class PostgresVersionRepositoryIntegrationSpec :
                             .findByTag("java", "latest", Platform.LINUX_X64, Distribution.TEMURIN.some())
                             .shouldBeRight()
 
-                    // then: None returned
-                    resolved shouldBe None
+                    // then: none() returned
+                    resolved shouldBe none()
                 }
             }
 
@@ -620,7 +620,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             distribution = version.distribution,
                         )
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
 
@@ -633,7 +633,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         platform = Platform.UNIVERSAL,
                         url = "https://scala-3.3.1",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     )
 
                 withCleanDatabase {
@@ -659,7 +659,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                             distribution = version.distribution,
                         )
                     retrieved.shouldBeRight()
-                    retrieved.onRight { it shouldBe None }
+                    retrieved.onRight { it shouldBe none() }
                 }
             }
 
@@ -671,7 +671,7 @@ class PostgresVersionRepositoryIntegrationSpec :
                         UniqueVersion(
                             candidate = "nonexistent",
                             version = "1.0.0",
-                            distribution = None,
+                            distribution = none(),
                             platform = Platform.UNIVERSAL,
                         )
 

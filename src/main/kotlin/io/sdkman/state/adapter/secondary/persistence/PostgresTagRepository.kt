@@ -1,9 +1,9 @@
 package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.Either
-import arrow.core.None
 import arrow.core.Option
 import arrow.core.getOrElse
+import arrow.core.none
 import arrow.core.some
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
@@ -39,7 +39,7 @@ class PostgresTagRepository : TagRepository {
     private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
 
     private fun dbToDistribution(value: String): Option<Distribution> =
-        if (value == NA_SENTINEL) None else Distribution.valueOf(value).some()
+        if (value == NA_SENTINEL) none() else Distribution.valueOf(value).some()
 
     private fun ResultRow.toVersionTag(): VersionTag =
         VersionTag(

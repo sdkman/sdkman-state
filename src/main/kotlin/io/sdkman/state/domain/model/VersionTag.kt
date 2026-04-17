@@ -1,7 +1,7 @@
 package io.sdkman.state.domain.model
 
-import arrow.core.None
 import arrow.core.Option
+import arrow.core.none
 
 data class VersionTag(
     val id: Int = 0,
@@ -21,6 +21,6 @@ data class VersionTag(
 data class UniqueTag(
     val candidate: String,
     val tag: String,
-    val distribution: Option<Distribution> = None,
+    val distribution: Option<Distribution> = none(),
     val platform: Platform,
 ) : Auditable

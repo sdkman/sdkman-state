@@ -1,6 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -170,7 +170,7 @@ class PostgresAuditRepositoryIntegrationSpec :
                             platform = Platform.UNIVERSAL,
                             url = "https://gradle-8.12",
                             visible = true.some(),
-                            distribution = None,
+                            distribution = none(),
                         )
 
                     // when: recording audit

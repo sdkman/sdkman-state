@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -159,7 +159,7 @@ class GetVersionTagsAcceptanceSpec :
                     platform = Platform.UNIVERSAL,
                     url = "https://gradle-8.10.zip",
                     visible = true.some(),
-                    distribution = None,
+                    distribution = none(),
                 )
 
             withCleanDatabase {

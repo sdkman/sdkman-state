@@ -106,7 +106,7 @@ Neither test needs a seeded database — the request never reaches the service. 
 
 ### Task 4: Use `none()` instead of `None` in tag-resolution code
 
-- [ ] Replace `arrow.core.None` with `arrow.core.none()` within files touched by the resolve-by-tag feature
+- [X] Replace `arrow.core.None` with `arrow.core.none()` within files touched by the resolve-by-tag feature
 
 **Prompt**: The code introduced for this feature uses `arrow.core.None` directly (the `Option<Nothing>` singleton). The more idiomatic Arrow style uses the `none<A>()` builder function, which carries a proper type parameter and reads as a verb alongside `some()`.
 

@@ -1,6 +1,6 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -56,7 +56,7 @@ class DeleteVersionAcceptanceSpec :
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
-                selectVersion(candidate, version, distribution.some(), platform) shouldBe None
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
 
@@ -69,7 +69,7 @@ class DeleteVersionAcceptanceSpec :
                 UniqueVersion(
                     candidate = candidate,
                     version = version,
-                    distribution = None,
+                    distribution = none(),
                     platform = platform,
                 ).toJsonString()
 
@@ -81,7 +81,7 @@ class DeleteVersionAcceptanceSpec :
                         platform = platform,
                         url = "https://scala-3.1.2-linux-x64",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     ),
                 )
                 withTestApplication {
@@ -93,7 +93,7 @@ class DeleteVersionAcceptanceSpec :
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
-                selectVersion(candidate, version, None, platform) shouldBe None
+                selectVersion(candidate, version, none(), platform) shouldBe none()
             }
         }
 
@@ -139,7 +139,7 @@ class DeleteVersionAcceptanceSpec :
                 UniqueVersion(
                     candidate = "",
                     version = "1.0.0",
-                    distribution = None,
+                    distribution = none(),
                     platform = Platform.UNIVERSAL,
                 ).toJsonString()
 
@@ -161,7 +161,7 @@ class DeleteVersionAcceptanceSpec :
                 UniqueVersion(
                     candidate = "java",
                     version = "",
-                    distribution = None,
+                    distribution = none(),
                     platform = Platform.UNIVERSAL,
                 ).toJsonString()
 
@@ -187,7 +187,7 @@ class DeleteVersionAcceptanceSpec :
                 UniqueVersion(
                     candidate = candidate,
                     version = version,
-                    distribution = None,
+                    distribution = none(),
                     platform = platform,
                 ).toJsonString()
 
@@ -199,7 +199,7 @@ class DeleteVersionAcceptanceSpec :
                         platform = platform,
                         url = "https://kotlin-1.9.0-linux-x64",
                         visible = true.some(),
-                        distribution = None,
+                        distribution = none(),
                     ),
                 )
                 withTestApplication {
@@ -211,7 +211,7 @@ class DeleteVersionAcceptanceSpec :
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
-                selectVersion(candidate, version, None, platform) shouldBe None
+                selectVersion(candidate, version, none(), platform) shouldBe none()
             }
         }
 
@@ -220,7 +220,7 @@ class DeleteVersionAcceptanceSpec :
                 UniqueVersion(
                     candidate = "nonexistent",
                     version = "1.0.0",
-                    distribution = None,
+                    distribution = none(),
                     platform = Platform.UNIVERSAL,
                 ).toJsonString()
 
@@ -288,7 +288,7 @@ class DeleteVersionAcceptanceSpec :
                         }
                     response.status shouldBe HttpStatusCode.NoContent
                 }
-                selectVersion(candidate, version, distribution.some(), platform) shouldBe None
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
 

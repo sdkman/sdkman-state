@@ -1,6 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -26,7 +26,7 @@ class PostgresVendorRepositoryIntegrationSpec :
                 vendor.email shouldBe "vendor@example.com"
                 vendor.hashedPassword shouldBe "hashed-pw"
                 vendor.candidates shouldContainExactlyInAnyOrder listOf("java", "kotlin")
-                vendor.deletedAt shouldBe None
+                vendor.deletedAt shouldBe none()
             }
         }
 
@@ -45,7 +45,7 @@ class PostgresVendorRepositoryIntegrationSpec :
             }
         }
 
-        should("return None for non-existent email") {
+        should("return none() for non-existent email") {
             withCleanDatabase {
                 // when
                 val result = repo.findByEmail("nonexistent@example.com")
@@ -131,7 +131,7 @@ class PostgresVendorRepositoryIntegrationSpec :
             }
         }
 
-        should("return None when soft deleting already-deleted vendor") {
+        should("return none() when soft deleting already-deleted vendor") {
             withCleanDatabase {
                 // given
                 val (created, _) = repo.upsert("alreadydel@example.com", "pw", listOf("java").some()).shouldBeRight()
@@ -175,7 +175,7 @@ class PostgresVendorRepositoryIntegrationSpec :
                 // then
                 val (vendor, wasCreated) = result.shouldBeRight()
                 wasCreated shouldBe false
-                vendor.deletedAt shouldBe None
+                vendor.deletedAt shouldBe none()
                 vendor.hashedPassword shouldBe "new-pw"
                 vendor.candidates shouldContainExactlyInAnyOrder listOf("kotlin")
             }
@@ -187,7 +187,7 @@ class PostgresVendorRepositoryIntegrationSpec :
                 repo.upsert("preserve@example.com", "pw", listOf("java", "kotlin").some())
 
                 // when
-                val result = repo.upsert("preserve@example.com", "new-pw", None)
+                val result = repo.upsert("preserve@example.com", "new-pw", none())
 
                 // then
                 val (vendor, _) = result.shouldBeRight()

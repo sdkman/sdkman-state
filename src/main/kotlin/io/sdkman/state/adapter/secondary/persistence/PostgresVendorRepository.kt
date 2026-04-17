@@ -1,9 +1,9 @@
 package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.Either
-import arrow.core.None
 import arrow.core.Option
 import arrow.core.getOrElse
+import arrow.core.none
 import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Vendor
@@ -175,7 +175,7 @@ class PostgresVendorRepository : VendorRepository {
                             .firstOrNull()
                             .toOption()
                     } else {
-                        None
+                        none()
                     }
                 }
             }.mapLeft { error ->

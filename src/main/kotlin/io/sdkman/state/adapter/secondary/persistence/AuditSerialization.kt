@@ -2,8 +2,8 @@
 
 package io.sdkman.state.adapter.secondary.persistence
 
-import arrow.core.None
 import arrow.core.Option
+import arrow.core.none
 import arrow.core.serialization.OptionSerializer
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
@@ -18,19 +18,19 @@ internal data class AuditVersionData(
     val version: String,
     val platform: Platform,
     val url: String,
-    val visible: Option<Boolean> = None,
-    val distribution: Option<Distribution> = None,
-    val md5sum: Option<String> = None,
-    val sha256sum: Option<String> = None,
-    val sha512sum: Option<String> = None,
-    val tags: Option<List<String>> = None,
+    val visible: Option<Boolean> = none(),
+    val distribution: Option<Distribution> = none(),
+    val md5sum: Option<String> = none(),
+    val sha256sum: Option<String> = none(),
+    val sha512sum: Option<String> = none(),
+    val tags: Option<List<String>> = none(),
 )
 
 @Serializable
 internal data class AuditTagData(
     val candidate: String,
     val tag: String,
-    val distribution: Option<Distribution> = None,
+    val distribution: Option<Distribution> = none(),
     val platform: Platform,
 )
 

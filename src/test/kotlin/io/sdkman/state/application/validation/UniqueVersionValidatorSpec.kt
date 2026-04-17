@@ -1,7 +1,7 @@
 package io.sdkman.state.application.validation
 
-import arrow.core.None
 import arrow.core.left
+import arrow.core.none
 import arrow.core.right
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
@@ -32,7 +32,7 @@ class UniqueVersionValidatorSpec :
                     UniqueVersion(
                         candidate = "maven",
                         version = "3.9.0",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.UNIVERSAL,
                     )
 
@@ -44,7 +44,7 @@ class UniqueVersionValidatorSpec :
                     UniqueVersion(
                         candidate = "kotlin",
                         version = "1.9.0-RC1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.UNIVERSAL,
                     )
 

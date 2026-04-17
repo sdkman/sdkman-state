@@ -1,8 +1,8 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
-import arrow.core.None
 import arrow.core.Option
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -54,7 +54,7 @@ class VersionServiceUnitSpec :
                 } returns Either.Right(versions)
 
                 // when: finding all versions for a candidate
-                val result = service.findByCandidate("java", None, None, None)
+                val result = service.findByCandidate("java", none(), none(), none())
 
                 // then: returns the list from the repository
                 result shouldBe Either.Right(versions)
@@ -66,7 +66,7 @@ class VersionServiceUnitSpec :
                     versionsRepo.findByCandidate(
                         "java",
                         Platform.LINUX_X64.some(),
-                        None,
+                        none(),
                         true.some(),
                     )
                 } returns Either.Right(emptyList())
@@ -76,7 +76,7 @@ class VersionServiceUnitSpec :
                     service.findByCandidate(
                         "java",
                         Platform.LINUX_X64.some(),
-                        None,
+                        none(),
                         true.some(),
                     )
 
@@ -86,7 +86,7 @@ class VersionServiceUnitSpec :
                     versionsRepo.findByCandidate(
                         "java",
                         Platform.LINUX_X64.some(),
-                        None,
+                        none(),
                         true.some(),
                     )
                 }
@@ -105,29 +105,29 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
 
                 // when: looking up a specific version
                 val result =
-                    service.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    service.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
 
                 // then: returns the version
                 result shouldBe Either.Right(version.some())
             }
 
-            should("return None when version not found") {
+            should("return none() when version not found") {
                 // given: repository does not find the version
                 coEvery {
-                    versionsRepo.findUnique("java", "99.0.0", Platform.LINUX_X64, None)
-                } returns Either.Right(None)
+                    versionsRepo.findUnique("java", "99.0.0", Platform.LINUX_X64, none())
+                } returns Either.Right(none())
 
                 // when: looking up a non-existent version
                 val result =
-                    service.findUnique("java", "99.0.0", Platform.LINUX_X64, None)
+                    service.findUnique("java", "99.0.0", Platform.LINUX_X64, none())
 
-                // then: returns None
-                result shouldBe Either.Right(None)
+                // then: returns none()
+                result shouldBe Either.Right(none())
             }
         }
 
@@ -148,7 +148,7 @@ class VersionServiceUnitSpec :
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
                 coEvery {
-                    tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts", "latest"))
+                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts", "latest"))
                 } returns Either.Right(Unit)
 
                 // when: creating a version
@@ -159,11 +159,11 @@ class VersionServiceUnitSpec :
                 coVerify { versionsRepo.createOrUpdate(version) }
                 coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version) }
                 coVerify {
-                    tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts", "latest"))
+                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts", "latest"))
                 }
             }
 
-            should("create version without tags when tags are None") {
+            should("create version without tags when tags are none()") {
                 // given: a version without tags
                 val version =
                     Version(
@@ -257,7 +257,7 @@ class VersionServiceUnitSpec :
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
                 coEvery {
-                    tagService.replaceTags(42, "java", None, Platform.LINUX_X64, listOf("lts"))
+                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
                 } returns
                     Either.Left(
                         DomainError.DatabaseError(
@@ -284,7 +284,7 @@ class VersionServiceUnitSpec :
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val version =
@@ -295,7 +295,7 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
@@ -310,7 +310,7 @@ class VersionServiceUnitSpec :
                 // then: succeeds
                 result.shouldBeRight()
                 coVerify(ordering = io.mockk.Ordering.ORDERED) {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                     versionsRepo.findVersionId(uniqueVersion)
                     tagService.findTagNamesByVersionId(42)
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
@@ -324,12 +324,12 @@ class VersionServiceUnitSpec :
                     UniqueVersion(
                         candidate = "java",
                         version = "99.0.0",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "99.0.0", Platform.LINUX_X64, None)
-                } returns Either.Right(None)
+                    versionsRepo.findUnique("java", "99.0.0", Platform.LINUX_X64, none())
+                } returns Either.Right(none())
 
                 // when: trying to delete a non-existent version
                 val result = service.delete(uniqueVersion, NIL_UUID, "admin")
@@ -345,12 +345,12 @@ class VersionServiceUnitSpec :
             }
 
             should("return VersionNotFound when version ID is not found") {
-                // given: version exists but ID lookup returns None
+                // given: version exists but ID lookup returns none()
                 val uniqueVersion =
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val version =
@@ -361,9 +361,9 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(None)
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(none())
 
                 // when: trying to delete with missing version ID
                 val result = service.delete(uniqueVersion, NIL_UUID, "admin")
@@ -382,7 +382,7 @@ class VersionServiceUnitSpec :
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val version =
@@ -393,7 +393,7 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery {
@@ -419,7 +419,7 @@ class VersionServiceUnitSpec :
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val version =
@@ -435,7 +435,7 @@ class VersionServiceUnitSpec :
                         RuntimeException("timeout"),
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery {
@@ -460,7 +460,7 @@ class VersionServiceUnitSpec :
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
-                        distribution = None,
+                        distribution = none(),
                         platform = Platform.LINUX_X64,
                     )
                 val version =
@@ -471,7 +471,7 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, None)
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
                 coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
                 coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
@@ -503,27 +503,27 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-25.tar.gz",
                     )
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
 
                 // when: resolving a tag
-                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, none())
 
                 // then: returns the version
                 result shouldBe Either.Right(version.some())
             }
 
-            should("return None when tag does not exist") {
-                // given: repository returns None
+            should("return none() when tag does not exist") {
+                // given: repository returns none()
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
-                } returns Either.Right(None)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, none())
+                } returns Either.Right(none())
 
                 // when: resolving a non-existent tag
-                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, none())
 
-                // then: returns None
-                result shouldBe Either.Right(None)
+                // then: returns none()
+                result shouldBe Either.Right(none())
             }
 
             should("return DatabaseError when repository fails") {
@@ -534,11 +534,11 @@ class VersionServiceUnitSpec :
                         RuntimeException("timeout"),
                     )
                 coEvery {
-                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, None)
+                    versionsRepo.findByTag("java", "lts", Platform.LINUX_X64, none())
                 } returns Either.Left(dbFailure)
 
                 // when: resolving a tag with DB failure
-                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, None)
+                val result = service.resolveByTag("java", "lts", Platform.LINUX_X64, none())
 
                 // then: returns DatabaseError
                 result.shouldBeLeft()
