@@ -60,7 +60,7 @@ dependencies {
     testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
     testImplementation("io.kotest:kotest-assertions-core:$kotest_version")
     testImplementation("io.kotest:kotest-runner-junit5:$kotest_version")
-    testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.4"))
+    testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
     testImplementation("org.testcontainers:testcontainers")
     testImplementation("org.testcontainers:testcontainers-postgresql")
     testImplementation("io.mockk:mockk:1.14.9")
