@@ -43,8 +43,12 @@ fun ApplicationCall.authenticatedRole(): String =
 fun ApplicationCall.authenticatedCandidates(): List<String> =
     principal<JWTPrincipal>()
         .toOption()
-        .map { it.payload.getClaim("candidates").asList(String::class.java) ?: emptyList() }
-        .getOrElse { emptyList() }
+        .flatMap {
+            it.payload
+                .getClaim("candidates")
+                .asList(String::class.java)
+                .toOption()
+        }.getOrElse { emptyList() }
 
 fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
     when (this.queryParameters["visible"].toOption()) {

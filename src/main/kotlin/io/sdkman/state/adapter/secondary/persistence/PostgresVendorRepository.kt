@@ -141,7 +141,7 @@ class PostgresVendorRepository : VendorRepository {
                                 candidates = (rs.getArray("candidates").array as Array<String>).toList(),
                                 createdAt = rs.getTimestamp("created_at").toInstant(),
                                 updatedAt = rs.getTimestamp("updated_at").toInstant(),
-                                deletedAt = rs.getTimestamp("deleted_at")?.toInstant().toOption(),
+                                deletedAt = rs.getTimestamp("deleted_at").toOption().map { it.toInstant() },
                             )
                         val isNew = rs.getBoolean("is_new")
 

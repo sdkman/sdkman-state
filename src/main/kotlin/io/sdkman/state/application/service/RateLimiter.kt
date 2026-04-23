@@ -1,5 +1,7 @@
 package io.sdkman.state.application.service
 
+import arrow.core.getOrElse
+import arrow.core.toOption
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,7 +16,7 @@ class RateLimiter {
         val windowStart = now.minusSeconds(WINDOW_SECONDS)
         var rateLimited = false
         attempts.compute(clientIp) { _, existing ->
-            val list = existing ?: mutableListOf()
+            val list = existing.toOption().getOrElse { mutableListOf() }
             list.removeAll { it.isBefore(windowStart) }
             rateLimited = list.size >= MAX_ATTEMPTS
             if (!rateLimited) {
