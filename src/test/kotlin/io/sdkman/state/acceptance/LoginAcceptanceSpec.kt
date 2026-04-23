@@ -29,7 +29,10 @@ class LoginAcceptanceSpec :
 
                     response.status shouldBe HttpStatusCode.OK
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["token"]!!.jsonPrimitive.content.shouldNotBeBlank()
+                    body
+                        .getValue("token")
+                        .jsonPrimitive.content
+                        .shouldNotBeBlank()
                 }
             }
         }
@@ -46,7 +49,7 @@ class LoginAcceptanceSpec :
                         }
                     createResponse.status shouldBe HttpStatusCode.Created
                     val vendorBody = Json.parseToJsonElement(createResponse.bodyAsText()).jsonObject
-                    val vendorPassword = vendorBody["password"]!!.jsonPrimitive.content
+                    val vendorPassword = vendorBody.getValue("password").jsonPrimitive.content
 
                     // when: login with vendor credentials
                     val loginResponse =
@@ -58,7 +61,10 @@ class LoginAcceptanceSpec :
                     // then
                     loginResponse.status shouldBe HttpStatusCode.OK
                     val loginBody = Json.parseToJsonElement(loginResponse.bodyAsText()).jsonObject
-                    loginBody["token"]!!.jsonPrimitive.content.shouldNotBeBlank()
+                    loginBody
+                        .getValue("token")
+                        .jsonPrimitive.content
+                        .shouldNotBeBlank()
                 }
             }
         }
@@ -102,8 +108,8 @@ class LoginAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
                     val vendorBody = Json.parseToJsonElement(createResponse.bodyAsText()).jsonObject
-                    val vendorId = vendorBody["id"]!!.jsonPrimitive.content
-                    val vendorPassword = vendorBody["password"]!!.jsonPrimitive.content
+                    val vendorId = vendorBody.getValue("id").jsonPrimitive.content
+                    val vendorPassword = vendorBody.getValue("password").jsonPrimitive.content
 
                     client.delete("/admin/vendors/$vendorId") {
                         bearerAuth(JwtTestSupport.adminToken())

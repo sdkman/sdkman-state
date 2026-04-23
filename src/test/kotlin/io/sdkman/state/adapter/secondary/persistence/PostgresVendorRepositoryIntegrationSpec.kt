@@ -8,6 +8,7 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.withCleanDatabase
 
 @Tags("integration")
@@ -40,8 +41,7 @@ class PostgresVendorRepositoryIntegrationSpec :
 
                 // then
                 val vendor = result.shouldBeRight()
-                vendor.isSome() shouldBe true
-                vendor.getOrNull()!!.email shouldBe "find@example.com"
+                vendor.shouldBeSome().email shouldBe "find@example.com"
             }
         }
 
@@ -66,8 +66,7 @@ class PostgresVendorRepositoryIntegrationSpec :
 
                 // then
                 val vendor = result.shouldBeRight()
-                vendor.isSome() shouldBe true
-                vendor.getOrNull()!!.email shouldBe "byid@example.com"
+                vendor.shouldBeSome().email shouldBe "byid@example.com"
             }
         }
 
@@ -80,7 +79,7 @@ class PostgresVendorRepositoryIntegrationSpec :
                     repo
                         .findByEmail("deleted@example.com")
                         .shouldBeRight()
-                        .getOrNull()!!
+                        .shouldBeSome()
                         .id,
                 )
 
@@ -103,7 +102,7 @@ class PostgresVendorRepositoryIntegrationSpec :
                     repo
                         .findByEmail("deleted2@example.com")
                         .shouldBeRight()
-                        .getOrNull()!!
+                        .shouldBeSome()
                         .id,
                 )
 
@@ -126,8 +125,7 @@ class PostgresVendorRepositoryIntegrationSpec :
 
                 // then
                 val deleted = result.shouldBeRight()
-                deleted.isSome() shouldBe true
-                deleted.getOrNull()!!.deletedAt.isSome() shouldBe true
+                deleted.shouldBeSome().deletedAt.shouldBeSome()
             }
         }
 

@@ -45,9 +45,12 @@ class AdminVendorManagementAcceptanceSpec :
 
                     response.status shouldBe HttpStatusCode.Created
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["email"]!!.jsonPrimitive.content shouldBe "vendor@test.com"
-                    body["password"]!!.jsonPrimitive.content.shouldNotBeBlank()
-                    body["candidates"]!!.jsonArray.map { it.jsonPrimitive.content } shouldBe listOf("java", "kotlin")
+                    body.getValue("email").jsonPrimitive.content shouldBe "vendor@test.com"
+                    body
+                        .getValue("password")
+                        .jsonPrimitive.content
+                        .shouldNotBeBlank()
+                    body.getValue("candidates").jsonArray.map { it.jsonPrimitive.content } shouldBe listOf("java", "kotlin")
                 }
             }
         }
@@ -73,7 +76,7 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendors = Json.parseToJsonElement(response.bodyAsText()).jsonArray
                     vendors.size shouldBe 1
                     val vendor = vendors[0].jsonObject
-                    vendor["email"]!!.jsonPrimitive.content shouldBe "list@test.com"
+                    vendor.getValue("email").jsonPrimitive.content shouldBe "list@test.com"
                     vendor.containsKey("password") shouldBe false
                 }
             }
@@ -100,9 +103,12 @@ class AdminVendorManagementAcceptanceSpec :
                     // then
                     response.status shouldBe HttpStatusCode.OK
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["candidates"]!!.jsonArray.map { it.jsonPrimitive.content } shouldBe
+                    body.getValue("candidates").jsonArray.map { it.jsonPrimitive.content } shouldBe
                         listOf("kotlin", "groovy")
-                    body["password"]!!.jsonPrimitive.content.shouldNotBeBlank()
+                    body
+                        .getValue("password")
+                        .jsonPrimitive.content
+                        .shouldNotBeBlank()
                 }
             }
         }
@@ -120,7 +126,8 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendorId =
                         Json
                             .parseToJsonElement(createResponse.bodyAsText())
-                            .jsonObject["id"]!!
+                            .jsonObject
+                            .getValue("id")
                             .jsonPrimitive.content
 
                     // when
@@ -150,7 +157,8 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendorId =
                         Json
                             .parseToJsonElement(createResponse.bodyAsText())
-                            .jsonObject["id"]!!
+                            .jsonObject
+                            .getValue("id")
                             .jsonPrimitive.content
                     client.delete("/admin/vendors/$vendorId") {
                         bearerAuth(JwtTestSupport.adminToken())
@@ -183,7 +191,8 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendorId =
                         Json
                             .parseToJsonElement(createResponse.bodyAsText())
-                            .jsonObject["id"]!!
+                            .jsonObject
+                            .getValue("id")
                             .jsonPrimitive.content
                     client.delete("/admin/vendors/$vendorId") {
                         bearerAuth(JwtTestSupport.adminToken())
@@ -215,7 +224,8 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendorId =
                         Json
                             .parseToJsonElement(createResponse.bodyAsText())
-                            .jsonObject["id"]!!
+                            .jsonObject
+                            .getValue("id")
                             .jsonPrimitive.content
                     client.delete("/admin/vendors/$vendorId") {
                         bearerAuth(JwtTestSupport.adminToken())
@@ -232,7 +242,10 @@ class AdminVendorManagementAcceptanceSpec :
                     // then
                     response.status shouldBe HttpStatusCode.OK
                     val body = Json.parseToJsonElement(response.bodyAsText()).jsonObject
-                    body["password"]!!.jsonPrimitive.content.shouldNotBeBlank()
+                    body
+                        .getValue("password")
+                        .jsonPrimitive.content
+                        .shouldNotBeBlank()
                 }
             }
         }
@@ -341,7 +354,8 @@ class AdminVendorManagementAcceptanceSpec :
                     val vendorId =
                         Json
                             .parseToJsonElement(createResponse.bodyAsText())
-                            .jsonObject["id"]!!
+                            .jsonObject
+                            .getValue("id")
                             .jsonPrimitive.content
                     client.delete("/admin/vendors/$vendorId") {
                         bearerAuth(JwtTestSupport.adminToken())
