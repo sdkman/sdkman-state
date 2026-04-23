@@ -66,8 +66,8 @@ dependencies {
     testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")
 
-    detektPlugins("com.github.marc0der:detekt-rules:1.0.1")
-    compileOnly("com.github.marc0der:detekt-rules:1.0.1")
+    detektPlugins("com.github.marc0der:detekt-rules:1.1.0")
+    compileOnly("com.github.marc0der:detekt-rules:1.1.0")
 }
 
 fun String.runCommand(): String =

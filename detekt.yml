@@ -23,6 +23,10 @@ style:
   UseCheckOrError:
     active: false
 
-SdkmanRuleSet:
+NullabilityRuleSet:
   NoNullableTypes:
+    active: true
+  NoElvisOperator:
+    active: true
+  NoNotNullAssertion:
     active: true
