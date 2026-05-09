@@ -14,6 +14,7 @@ import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
+import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureDatabase
 import io.sdkman.state.config.configureJwtAuthentication
@@ -52,6 +53,8 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val rateLimiter = RateLimiter()
             val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
+            val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates)
+
             configureRouting(
                 versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
                 tagService = tagService,
@@ -59,6 +62,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
                 authService = authService,
                 vendorRepository = vendorRepo,
                 appConfig = appConfig,
+                versionRequestValidator = versionRequestValidator,
             )
         }
         fn(this)
