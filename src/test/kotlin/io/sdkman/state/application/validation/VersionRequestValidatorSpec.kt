@@ -14,6 +14,8 @@ import io.sdkman.state.support.shouldBeRight
 class VersionRequestValidatorSpec :
     ShouldSpec({
 
+        val validator = VersionRequestValidator(semverishCandidates = emptySet())
+
         context("Happy path tests") {
 
             should("validate a request with all required fields and no optional fields") {
@@ -29,7 +31,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds
                 result.shouldBeRight()
@@ -62,7 +64,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds with hash fields as Some
                 result.shouldBeRight()
@@ -93,7 +95,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds with distribution as Some
                 result.shouldBeRight()
@@ -116,7 +118,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds with visible as Some
                 result.shouldBeRight()
@@ -138,7 +140,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds
                 result.shouldBeRight()
@@ -160,7 +162,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds
                 result.shouldBeRight()
@@ -183,7 +185,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds
                 result.shouldBeRight()
@@ -206,7 +208,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation succeeds
                 result.shouldBeRight()
@@ -230,7 +232,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -254,7 +256,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -277,7 +279,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -300,7 +302,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -324,7 +326,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -347,7 +349,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -370,7 +372,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -396,7 +398,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -420,7 +422,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -443,7 +445,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -465,7 +467,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -489,7 +491,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -513,7 +515,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -537,7 +539,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -560,7 +562,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -584,7 +586,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -608,7 +610,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: validation fails
                 result.shouldBeLeft()
@@ -631,7 +633,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: all errors are accumulated
                 result.shouldBeLeft()
@@ -655,7 +657,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: all errors are accumulated
                 result.shouldBeLeft()
@@ -685,7 +687,7 @@ class VersionRequestValidatorSpec :
                     """.trimIndent()
 
                 // when: validating the request
-                val result = VersionRequestValidator.validateRequest(json)
+                val result = validator.validateRequest(json)
 
                 // then: all hash errors are accumulated
                 result.shouldBeLeft()

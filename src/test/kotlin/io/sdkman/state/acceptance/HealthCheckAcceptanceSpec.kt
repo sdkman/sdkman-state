@@ -23,6 +23,7 @@ import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
+import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureDatabase
@@ -62,6 +63,7 @@ class HealthCheckAcceptanceSpec :
                             authService = authService,
                             vendorRepository = vendorRepo,
                             appConfig = appConfig,
+                            versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
                         )
                     }
 
@@ -110,6 +112,7 @@ class HealthCheckAcceptanceSpec :
                         authService = authService,
                         vendorRepository = vendorRepo,
                         appConfig = appConfig,
+                        versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
                     )
                 }
 
