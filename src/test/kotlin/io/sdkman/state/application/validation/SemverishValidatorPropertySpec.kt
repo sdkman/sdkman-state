@@ -10,7 +10,7 @@ import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.map
 import io.kotest.property.arbitrary.of
-import io.kotest.property.forAll
+import io.kotest.property.checkAll
 import io.sdkman.state.support.shouldBeRight
 
 class SemverishValidatorPropertySpec :
@@ -65,17 +65,14 @@ class SemverishValidatorPropertySpec :
         // -- Properties --
 
         should("accept any version composed from valid semverish parts") {
-            forAll(arbSemverishVersion) { version ->
+            checkAll(arbSemverishVersion) { version ->
                 SemverishValidator.validate(version).shouldBeRight()
-                true
             }
         }
 
         should("produce versions that round-trip through validation unchanged") {
-            forAll(arbSemverishVersion) { version ->
-                val result = SemverishValidator.validate(version).shouldBeRight()
-                result shouldBe version
-                true
+            checkAll(arbSemverishVersion) { version ->
+                SemverishValidator.validate(version).shouldBeRight() shouldBe version
             }
         }
     })
