@@ -67,6 +67,14 @@ data class DeserializationError(
     override val message: String,
 ) : ValidationError()
 
+data class InvalidVersionFormatError(
+    override val field: String = "version",
+    val version: String,
+) : ValidationError() {
+    override val message: String =
+        "Version '$version' does not conform to the semverish format: M.N.P[-variant][+build-metadata]"
+}
+
 data class InvalidRequestError(
     val details: String,
 ) : ValidationError() {
