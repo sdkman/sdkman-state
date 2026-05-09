@@ -17,5 +17,20 @@ fun ApplicationConfig.getIntOrDefault(
 
 fun ApplicationConfig.getOptionString(path: String): Option<String> = propertyOrNull(path).toOption().map { it.getString() }
 
+fun ApplicationConfig.getCommaSeparatedSetOrDefault(
+    path: String,
+    default: Set<String>,
+): Set<String> =
+    propertyOrNull(path)
+        .toOption()
+        .map { property ->
+            property
+                .getString()
+                .split(",")
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .toSet()
+        }.getOrElse { default }
+
 val AppConfig.jdbcUrl: String
     get() = "jdbc:postgresql://$databaseHost:$databasePort/$databaseName?sslMode=prefer&loglevel=2"

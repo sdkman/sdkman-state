@@ -29,6 +29,7 @@ fun testApplicationConfig(): MapApplicationConfig =
         "admin.password" to "testadminpassword",
         "jwt.secret" to JwtTestSupport.TEST_SECRET,
         "jwt.expiry" to "10",
+        "validation.semverish.candidates" to "java",
     )
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
