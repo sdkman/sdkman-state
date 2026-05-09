@@ -84,7 +84,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: ""
+      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P[-variant][+build-metadata]."
       security:
         - bearerAuth: []
       requestBody:
@@ -95,17 +95,26 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Validation failed. For opted-in candidates, this includes semverish format violations on the version field."
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ValidationErrorResponse"
               examples:
-                Example#1:
-                  description: ""
+                validation_error:
+                  summary: "Standard validation failure"
                   value:
                     error: "Validation failed"
-                    message: "null"
+                    failures:
+                      - field: "url"
+                        message: "URL 'http://example.com' must be a valid HTTPS URL"
+                semverish_error:
+                  summary: "Semverish format violation for opted-in candidate"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "version"
+                        message: "Version '25.0.2.fx' does not conform to the semverish format: M.N.P[-variant][+build-metadata]"
         "204":
           description: "No Content"
           content:
@@ -697,6 +706,7 @@ components:
           type: "string"
         version:
           type: "string"
+          description: "Version identifier. For candidates opted in to semverish validation, must conform to M.N.P[-variant][+build-metadata] where M, N, P are non-negative integers without leading zeros, variant is dash-separated dot-delimited identifiers [a-zA-Z0-9-]+, and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
         platform:
           type: "string"
           enum:
