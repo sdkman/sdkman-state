@@ -3,13 +3,14 @@ package io.sdkman.state.acceptance
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
+import kotlinx.serialization.json.Json
 
 @Tags("acceptance")
 class SemverishVersionValidationAcceptanceSpec :
@@ -67,9 +68,9 @@ class SemverishVersionValidationAcceptanceSpec :
 
                     // then: the version is rejected with a validation error
                     response.status shouldBe HttpStatusCode.BadRequest
-                    val responseBody = response.bodyAsText()
-                    responseBody shouldContain "version"
-                    responseBody shouldContain "semverish"
+                    val errorResponse =
+                        Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
+                    errorResponse.failures.any { it.field == "version" } shouldBe true
                 }
             }
         }
