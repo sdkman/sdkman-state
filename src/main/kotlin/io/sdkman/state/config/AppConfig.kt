@@ -32,5 +32,5 @@ class DefaultAppConfig(
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.getIntOrDefault("jwt.expiry", 10)
     override val semverishCandidates: Set<String> =
-        config.getCommaSeparatedSetOrDefault("validation.semverish.candidates", setOf("java"))
+        config.getCommaSeparatedSetOrDefault("validation.semverish.candidates", emptySet())
 }
