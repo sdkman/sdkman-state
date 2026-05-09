@@ -234,6 +234,8 @@ class VersionRequestValidator(
             else -> emptyList()
         }
 
+    // Returns Right(Unit) when upstream validation already failed, to avoid
+    // double-reporting errors that are already in the accumulated error list.
     private fun validateSemverish(
         candidateResult: Either<NonEmptyList<ValidationError>, String>,
         versionResult: Either<NonEmptyList<ValidationError>, String>,
@@ -241,16 +243,14 @@ class VersionRequestValidator(
         candidateResult.fold(
             { Unit.right() },
             { candidate ->
-                versionResult.fold(
-                    { Unit.right() },
-                    { version ->
-                        if (candidate in semverishCandidates) {
-                            SemverishValidator.validate(version).map { }.mapLeft { it.nel() }
-                        } else {
-                            Unit.right()
-                        }
-                    },
-                )
+                when {
+                    candidate !in semverishCandidates -> Unit.right()
+                    else ->
+                        versionResult.fold(
+                            { Unit.right() },
+                            { version -> SemverishValidator.validate(version).map { }.mapLeft { it.nel() } },
+                        )
+                }
             },
         )
 }
