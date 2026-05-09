@@ -137,7 +137,7 @@ Unchanged. The request body is the same as today.
 
 | Status | Body | When |
 |---|---|---|
-| `201 Created` | (existing) | Request body is valid and (for opted-in candidates) the version string conforms to the semverish grammar |
+| `204 No Content` | (existing) | Request body is valid and (for opted-in candidates) the version string conforms to the semverish grammar |
 | `400 Bad Request` | Validation error payload | The candidate is opted in **and** the version string does not conform to the semverish grammar |
 | Other existing statuses | (existing) | Unchanged |
 
