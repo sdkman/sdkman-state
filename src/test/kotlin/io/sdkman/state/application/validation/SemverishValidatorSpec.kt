@@ -248,5 +248,27 @@ class SemverishValidatorSpec :
                 // then: validation fails
                 result.shouldBeLeft()
             }
+
+            should("reject version with trailing hyphen in variant identifier") {
+                // given: a version with a trailing hyphen in variant
+                val version = "25.0.2-fx-"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject version with trailing hyphen in build metadata identifier") {
+                // given: a version with a trailing hyphen in build metadata
+                val version = "25.0.2+ea-"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
         }
     })
