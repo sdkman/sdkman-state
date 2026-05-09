@@ -17,15 +17,18 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import kotlinx.serialization.json.Json
 
-object VersionRequestValidator {
-    private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
-    private val HTTPS_URL_PATTERN = Regex("^https://[a-zA-Z0-9.-]+(/.*)?$")
-    private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
-    private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
-    private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
-    private val TAG_NAME_PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")
-
-    private val json = Json { explicitNulls = false }
+class VersionRequestValidator(
+    private val semverishCandidates: Set<String>,
+) {
+    companion object {
+        private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
+        private val HTTPS_URL_PATTERN = Regex("^https://[a-zA-Z0-9.-]+(/.*)?$")
+        private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
+        private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
+        private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
+        private val TAG_NAME_PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")
+        private val json = Json { explicitNulls = false }
+    }
 
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
@@ -51,6 +54,8 @@ object VersionRequestValidator {
         val sha512sumResult = validateHash("sha512sum", request.sha512sum, 128, HEX_PATTERN_128)
         val tagsResult = validateTags(request.tags)
 
+        val semverishResult = validateSemverish(candidateResult, versionResult)
+
         val errors =
             listOf<Either<NonEmptyList<ValidationError>, *>>(
                 candidateResult,
@@ -62,6 +67,7 @@ object VersionRequestValidator {
                 sha256sumResult,
                 sha512sumResult,
                 tagsResult,
+                semverishResult,
             ).flatMap { it.fold({ errs -> errs }, { emptyList() }) }
 
         return errors.toNonEmptyListOrNone().fold(
@@ -227,4 +233,24 @@ object VersionRequestValidator {
 
             else -> emptyList()
         }
+
+    private fun validateSemverish(
+        candidateResult: Either<NonEmptyList<ValidationError>, String>,
+        versionResult: Either<NonEmptyList<ValidationError>, String>,
+    ): Either<NonEmptyList<ValidationError>, Unit> =
+        candidateResult.fold(
+            { Unit.right() },
+            { candidate ->
+                versionResult.fold(
+                    { Unit.right() },
+                    { version ->
+                        if (candidate in semverishCandidates) {
+                            SemverishValidator.validate(version).map { }.mapLeft { it.nel() }
+                        } else {
+                            Unit.right()
+                        }
+                    },
+                )
+            },
+        )
 }
