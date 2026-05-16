@@ -1,19 +1,9 @@
-
-
-val ktor_version: String by project
-val logback_version: String by project
-val postgres_version: String by project
-val flyway_version: String by project
-val exposed_version: String by project
-val arrow_version: String by project
-val kotest_version: String by project
-
 plugins {
-    kotlin("jvm") version "2.3.21"
-    id("io.ktor.plugin") version "3.4.3"
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.3.20"
-    id("org.jlleitschuh.gradle.ktlint") version "14.2.0"
-    id("io.gitlab.arturbosch.detekt") version "1.23.8"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 group = "io.sdkman"
@@ -32,42 +22,42 @@ repositories {
 }
 
 dependencies {
-    implementation("io.ktor:ktor-server-core-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-compression-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-swagger-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-metrics-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-content-negotiation-jvm:$ktor_version")
-    implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-netty-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-auth-jvm:$ktor_version")
-    implementation("io.ktor:ktor-server-auth-jwt:$ktor_version")
-    implementation("io.ktor:ktor-server-caching-headers:$ktor_version")
-    implementation("io.ktor:ktor-server-forwarded-header:$ktor_version")
-    implementation("com.auth0:java-jwt:4.5.2")
-    implementation("at.favre.lib:bcrypt:0.10.2")
-    implementation("io.arrow-kt:arrow-core:$arrow_version")
-    implementation("io.arrow-kt:arrow-core-serialization:$arrow_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.7.1-0.6.x-compat")
-    implementation("org.jetbrains.exposed:exposed-core:$exposed_version")
-    implementation("org.jetbrains.exposed:exposed-jdbc:$exposed_version")
-    implementation("org.jetbrains.exposed:exposed-java-time:$exposed_version")
-    implementation("org.jetbrains.exposed:exposed-json:$exposed_version")
-    implementation("ch.qos.logback:logback-classic:$logback_version")
-    implementation("org.postgresql:postgresql:$postgres_version")
-    implementation("org.flywaydb:flyway-core:$flyway_version")
-    implementation("org.flywaydb:flyway-database-postgresql:$flyway_version")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.compression)
+    implementation(libs.ktor.server.swagger)
+    implementation(libs.ktor.server.metrics)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.ktor.server.caching.headers)
+    implementation(libs.ktor.server.forwarded.header)
+    implementation(libs.java.jwt)
+    implementation(libs.bcrypt)
+    implementation(libs.arrow.core)
+    implementation(libs.arrow.core.serialization)
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.java.time)
+    implementation(libs.exposed.json)
+    implementation(libs.logback.classic)
+    implementation(libs.postgresql)
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
 
-    testImplementation("io.ktor:ktor-server-test-host:$ktor_version")
-    testImplementation("io.kotest:kotest-assertions-core:$kotest_version")
-    testImplementation("io.kotest:kotest-runner-junit5:$kotest_version")
-    testImplementation(platform("org.testcontainers:testcontainers-bom:2.0.5"))
-    testImplementation("org.testcontainers:testcontainers")
-    testImplementation("org.testcontainers:testcontainers-postgresql")
-    testImplementation("io.mockk:mockk:1.14.9")
-    testImplementation("io.kotest.extensions:kotest-extensions-testcontainers:2.0.2")
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.runner.junit5)
+    testImplementation(platform(libs.testcontainers.bom))
+    testImplementation(libs.testcontainers)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotest.extensions.testcontainers)
 
-    detektPlugins("com.github.marc0der:detekt-rules:1.1.0")
-    compileOnly("com.github.marc0der:detekt-rules:1.1.0")
+    detektPlugins(libs.detekt.rules)
+    compileOnly(libs.detekt.rules)
 }
 
 fun String.runCommand(): String =
