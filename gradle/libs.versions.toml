@@ -1,12 +1,12 @@
 [versions]
 # Plugins
 kotlin = "2.3.21"
-ktor-plugin = "3.4.3"
+ktor-plugin = "3.5.0"
 ktlint-plugin = "14.2.0"
 detekt-plugin = "1.23.8"
 
 # Libraries
-ktor = "3.3.3"
+ktor = "3.5.0"
 logback = "1.5.32"
 exposed = "0.57.0"
 flyway = "12.6.1"
