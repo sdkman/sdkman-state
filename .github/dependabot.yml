@@ -6,7 +6,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "tuesday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     groups:
       kotlin:
         patterns:
