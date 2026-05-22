@@ -2,6 +2,7 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
@@ -107,18 +108,7 @@ class VersionServiceImpl(
                     .toEither {
                         DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version)
                     }.bind()
-            val versionId =
-                versionsRepo
-                    .findVersionId(uniqueVersion)
-                    .mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
-                    .toEither {
-                        DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version)
-                    }.bind()
-            val tagNames =
-                tagService
-                    .findTagNamesByVersionId(versionId)
-                    .bind()
+            val tagNames = versionToDelete.tags.getOrElse { emptyList() }
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
             logAudit(vendorId, email, AuditOperation.DELETE, versionToDelete)
             val deleted =

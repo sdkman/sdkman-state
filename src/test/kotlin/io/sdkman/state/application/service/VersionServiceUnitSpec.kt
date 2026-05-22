@@ -328,7 +328,47 @@ class VersionServiceUnitSpec :
         context("delete") {
 
             should("delete version when it exists and has no tags") {
-                // given: version exists and has no tags
+                // given: version exists with an empty tag list (as findUnique populates after fetch)
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "17.0.1",
+                        distribution = none(),
+                        platform = Platform.LINUX_X64,
+                    )
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "17.0.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-17.tar.gz",
+                        tags = emptyList<String>().some(),
+                    )
+                coEvery {
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
+                } returns Either.Right(version.some())
+                coEvery {
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
+                } returns Either.Right(Unit)
+                coEvery { versionsRepo.delete(uniqueVersion) } returns Either.Right(1)
+
+                // when: deleting the version
+                val result = service.delete(uniqueVersion, NIL_UUID, "admin")
+
+                // then: succeeds via a single findUnique + delete pair (no redundant id/tag lookups)
+                result.shouldBeRight()
+                coVerify(ordering = io.mockk.Ordering.ORDERED) {
+                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
+                    versionsRepo.delete(uniqueVersion)
+                }
+                coVerify(exactly = 0) { versionsRepo.findVersionId(any()) }
+                coVerify(exactly = 0) { tagService.findTagNamesByVersionId(any()) }
+            }
+
+            should("treat findUnique's None tags as no-tag for the conflict check") {
+                // given: findUnique returns a version whose tags is None (defensive — production path
+                // always populates Some(list), but the domain model default is none())
                 val uniqueVersion =
                     UniqueVersion(
                         candidate = "java",
@@ -346,25 +386,16 @@ class VersionServiceUnitSpec :
                 coEvery {
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
-                coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
                 coEvery {
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
                 } returns Either.Right(Unit)
                 coEvery { versionsRepo.delete(uniqueVersion) } returns Either.Right(1)
 
-                // when: deleting the version
+                // when
                 val result = service.delete(uniqueVersion, NIL_UUID, "admin")
 
-                // then: succeeds
+                // then: succeeds — getOrElse { emptyList() } collapses None to no conflict
                 result.shouldBeRight()
-                coVerify(ordering = io.mockk.Ordering.ORDERED) {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
-                    versionsRepo.findVersionId(uniqueVersion)
-                    tagService.findTagNamesByVersionId(42)
-                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
-                    versionsRepo.delete(uniqueVersion)
-                }
             }
 
             should("return VersionNotFound when version does not exist") {
@@ -393,40 +424,9 @@ class VersionServiceUnitSpec :
                 coVerify(exactly = 0) { versionsRepo.delete(any()) }
             }
 
-            should("return VersionNotFound when version ID is not found") {
-                // given: version exists but ID lookup returns none()
-                val uniqueVersion =
-                    UniqueVersion(
-                        candidate = "java",
-                        version = "17.0.1",
-                        distribution = none(),
-                        platform = Platform.LINUX_X64,
-                    )
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
-                    )
-                coEvery {
-                    versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
-                } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(none())
-
-                // when: trying to delete with missing version ID
-                val result = service.delete(uniqueVersion, NIL_UUID, "admin")
-
-                // then: returns VersionNotFound
-                result.shouldBeLeft()
-                result.onLeft { error ->
-                    error.shouldBeInstanceOf<DomainError.VersionNotFound>()
-                }
-                coVerify(exactly = 0) { versionsRepo.delete(any()) }
-            }
-
             should("return TagConflict when version has active tags") {
-                // given: version has active tags
+                // given: findUnique returns a version whose tags are already populated (mirrors
+                // production — PostgresVersionRepository.findUnique applies withTags(fetchTagNames(id)))
                 val uniqueVersion =
                     UniqueVersion(
                         candidate = "java",
@@ -440,19 +440,17 @@ class VersionServiceUnitSpec :
                         version = "17.0.1",
                         platform = Platform.LINUX_X64,
                         url = "https://example.com/java-17.tar.gz",
+                        tags = listOf("lts", "latest").some(),
                     )
                 coEvery {
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
-                coEvery {
-                    tagService.findTagNamesByVersionId(42)
-                } returns Either.Right(listOf("lts", "latest"))
 
                 // when: trying to delete a version with active tags
                 val result = service.delete(uniqueVersion, NIL_UUID, "admin")
 
-                // then: returns TagConflict with the tag names
+                // then: returns TagConflict with the tag names — taken directly from the fetched
+                // version, no extra DB lookup required
                 result.shouldBeLeft()
                 result.onLeft { error ->
                     error.shouldBeInstanceOf<DomainError.TagConflict>()
@@ -460,23 +458,17 @@ class VersionServiceUnitSpec :
                 }
                 coVerify(exactly = 0) { versionsRepo.delete(any()) }
                 coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+                coVerify(exactly = 0) { tagService.findTagNamesByVersionId(any()) }
             }
 
-            should("return DatabaseError when tag lookup fails") {
-                // given: tag lookup fails with a database error
+            should("return DatabaseError when findUnique fails") {
+                // given: findUnique fails with a database error
                 val uniqueVersion =
                     UniqueVersion(
                         candidate = "java",
                         version = "17.0.1",
                         distribution = none(),
                         platform = Platform.LINUX_X64,
-                    )
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
                     )
                 val dbFailure =
                     DatabaseFailure.QueryExecutionFailure(
@@ -485,13 +477,9 @@ class VersionServiceUnitSpec :
                     )
                 coEvery {
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
-                } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
-                coEvery {
-                    tagService.findTagNamesByVersionId(42)
-                } returns Either.Left(DomainError.DatabaseError(dbFailure))
+                } returns Either.Left(dbFailure)
 
-                // when: deleting a version when tag lookup fails
+                // when: deleting a version when the lookup fails
                 val result = service.delete(uniqueVersion, NIL_UUID, "admin")
 
                 // then: returns DatabaseError
@@ -518,12 +506,11 @@ class VersionServiceUnitSpec :
                         version = "17.0.1",
                         platform = Platform.LINUX_X64,
                         url = "https://example.com/java-17.tar.gz",
+                        tags = emptyList<String>().some(),
                     )
                 coEvery {
                     versionsRepo.findUnique("java", "17.0.1", Platform.LINUX_X64, none())
                 } returns Either.Right(version.some())
-                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
-                coEvery { tagService.findTagNamesByVersionId(42) } returns Either.Right(emptyList())
                 coEvery {
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, version)
                 } returns Either.Right(Unit)
