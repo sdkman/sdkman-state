@@ -3,6 +3,8 @@ package io.sdkman.state.support
 import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
+import arrow.core.none
+import arrow.core.some
 import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
@@ -45,7 +47,7 @@ fun insertVersions(vararg cvs: Version) =
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[platform] = cv.platform.name
-                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrNull()
+                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrElse { NA_SENTINEL }
                 it[url] = cv.url
                 it[visible] = cv.visible.getOrElse { true }
                 it[md5sum] = cv.md5sum.getOrNull()
@@ -62,7 +64,7 @@ fun insertVersionWithId(cv: Version): Int =
                 it[candidate] = cv.candidate
                 it[version] = cv.version
                 it[platform] = cv.platform.name
-                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrNull()
+                it[distribution] = cv.distribution.map { dist -> dist.name }.getOrElse { NA_SENTINEL }
                 it[url] = cv.url
                 it[visible] = cv.visible.getOrElse { true }
                 it[md5sum] = cv.md5sum.getOrNull()
@@ -123,13 +125,16 @@ fun selectVersion(
             .where {
                 (VersionsTable.candidate eq candidate) and
                     (VersionsTable.version eq version) and
-                    distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name }) and
+                    (VersionsTable.distribution eq distribution.map { it.name }.getOrElse { NA_SENTINEL }) and
                     (VersionsTable.platform eq platform.name)
             }.map {
                 Version(
                     candidate = it[VersionsTable.candidate],
                     version = it[VersionsTable.version],
-                    distribution = it[VersionsTable.distribution].toOption().map { dist -> Distribution.valueOf(dist) },
+                    distribution =
+                        it[VersionsTable.distribution].let { d ->
+                            if (d == NA_SENTINEL) none() else Distribution.valueOf(d).some()
+                        },
                     platform = Platform.valueOf(it[VersionsTable.platform]),
                     url = it[VersionsTable.url],
                     visible = it[VersionsTable.visible].toOption(),
@@ -152,7 +157,7 @@ fun selectLastUpdatedAt(
             .where {
                 (VersionsTable.candidate eq candidate) and
                     (VersionsTable.version eq version) and
-                    distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name }) and
+                    (VersionsTable.distribution eq distribution.map { it.name }.getOrElse { NA_SENTINEL }) and
                     (VersionsTable.platform eq platform.name)
             }.map {
                 val javaInstant = it[VersionsTable.lastUpdatedAt]
