@@ -20,6 +20,7 @@ testcontainers-bom = "2.0.5"
 mockk = "1.14.9"
 kotest-extensions-testcontainers = "2.0.2"
 detekt-rules = "1.1.0"
+hikari = "5.1.0"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
@@ -50,6 +51,7 @@ exposed-json = { module = "org.jetbrains.exposed:exposed-json", version.ref = "e
 
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres" }
+hikaricp = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
 
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
