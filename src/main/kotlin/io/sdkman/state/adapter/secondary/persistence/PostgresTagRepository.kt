@@ -14,11 +14,12 @@ import io.sdkman.state.domain.repository.TagRepository
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.notInList
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
-import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.javatime.timestamp
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.upsert
 import java.time.Instant
 
 internal object VersionTagsTable : IntIdTable("version_tags") {
@@ -90,6 +91,16 @@ class PostgresTagRepository : TagRepository {
                 )
             }
 
+    // R5: replaceTags must be race-safe under concurrent same-payload writers. The previous
+    // "delete this version's tags then insert each" had two race windows: (1) the per-tag delete
+    // before insert, (2) the up-front delete-all before any insert. Both let a concurrent writer
+    // observe an empty/partial state and either re-insert (duplicate key) or wipe a sibling
+    // writer's just-inserted row. The replacement is:
+    //   1. Delete only this version's tags that are *not* in the incoming list (so removal still
+    //      works without touching tags we are about to keep).
+    //   2. UPSERT each incoming tag on the `(candidate, tag, distribution, platform)` unique
+    //      index — idempotent on same-payload re-inserts, and atomically re-points the row's
+    //      `version_id` when the tag is being moved from another version in scope.
     override suspend fun replaceTags(
         versionId: Int,
         candidate: String,
@@ -103,24 +114,35 @@ class PostgresTagRepository : TagRepository {
                     val distDb = distributionToDb(distribution)
                     val platformDb = platform.name
 
-                    // Remove all existing tags for this version in this scope
                     VersionTagsTable.deleteWhere {
-                        (VersionTagsTable.versionId eq versionId) and
-                            (VersionTagsTable.candidate eq candidate) and
-                            (VersionTagsTable.distribution eq distDb) and
-                            (VersionTagsTable.platform eq platformDb)
-                    }
-
-                    // For each tag, remove from other versions in the same scope and insert
-                    tags.forEach { tagName ->
-                        VersionTagsTable.deleteWhere {
-                            (VersionTagsTable.candidate eq candidate) and
-                                (VersionTagsTable.tag eq tagName) and
+                        val sameVersionScope =
+                            (VersionTagsTable.versionId eq versionId) and
+                                (VersionTagsTable.candidate eq candidate) and
                                 (VersionTagsTable.distribution eq distDb) and
                                 (VersionTagsTable.platform eq platformDb)
+                        if (tags.isEmpty()) {
+                            sameVersionScope
+                        } else {
+                            sameVersionScope and (VersionTagsTable.tag notInList tags)
                         }
+                    }
 
-                        VersionTagsTable.insert {
+                    tags.forEach { tagName ->
+                        VersionTagsTable.upsert(
+                            VersionTagsTable.candidate,
+                            VersionTagsTable.tag,
+                            VersionTagsTable.distribution,
+                            VersionTagsTable.platform,
+                            onUpdateExclude =
+                                listOf(
+                                    VersionTagsTable.id,
+                                    VersionTagsTable.candidate,
+                                    VersionTagsTable.tag,
+                                    VersionTagsTable.distribution,
+                                    VersionTagsTable.platform,
+                                    VersionTagsTable.createdAt,
+                                ),
+                        ) {
                             it[this.candidate] = candidate
                             it[this.tag] = tagName
                             it[this.distribution] = distDb

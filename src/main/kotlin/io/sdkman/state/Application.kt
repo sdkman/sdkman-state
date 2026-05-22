@@ -2,6 +2,7 @@ package io.sdkman.state
 
 import io.ktor.server.application.*
 import io.sdkman.state.adapter.primary.rest.*
+import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
@@ -37,6 +38,7 @@ fun Application.module() {
     val auditRepo = PostgresAuditRepository()
     val vendorRepo = PostgresVendorRepository()
     val tagService = TagServiceImpl(tagsRepo, auditRepo)
+    val transactional = ExposedTransactional()
     val rateLimiter = RateLimiter()
     launch {
         while (true) {
@@ -49,7 +51,7 @@ fun Application.module() {
     val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates)
 
     configureRouting(
-        versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
+        versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
         tagService = tagService,
         healthRepo = PostgresHealthRepository(),
         authService = authService,

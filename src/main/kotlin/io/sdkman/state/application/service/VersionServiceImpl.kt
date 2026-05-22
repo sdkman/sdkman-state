@@ -13,6 +13,7 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
+import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.domain.service.VersionService
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -21,6 +22,7 @@ class VersionServiceImpl(
     private val versionsRepo: VersionRepository,
     private val tagService: TagService,
     private val auditRepo: AuditRepository,
+    private val transactional: Transactional,
 ) : VersionService {
     private val logger = LoggerFactory.getLogger(VersionServiceImpl::class.java)
 
@@ -54,17 +56,37 @@ class VersionServiceImpl(
             .findByTag(candidate, tag, platform, distribution)
             .mapLeft { DomainError.DatabaseError(it) }
 
+    // R3/R5: the version write and tag replacement run inside a single Transactional block so a
+    // tag-replacement failure rolls back the version write (today they were in separate
+    // transactions, leaving orphan version rows on partial failure). R6: audit logging stays
+    // outside the transaction so an audit failure cannot roll back a successful version write.
     override suspend fun createOrUpdate(
         version: Version,
         vendorId: UUID,
         email: String,
     ): Either<DomainError, Unit> =
-        versionsRepo
-            .createOrUpdate(version)
-            .mapLeft { DomainError.DatabaseError(it) }
-            .map { versionId ->
-                logAudit(vendorId, email, AuditOperation.CREATE, version)
-                processTags(versionId, version)
+        transactional
+            .inTransaction {
+                either {
+                    val versionId =
+                        versionsRepo
+                            .createOrUpdate(version)
+                            .mapLeft { DomainError.DatabaseError(it) }
+                            .bind()
+                    version.tags.onSome { tagList ->
+                        tagService
+                            .replaceTags(
+                                versionId = versionId,
+                                candidate = version.candidate,
+                                distribution = version.distribution,
+                                platform = version.platform,
+                                tags = tagList,
+                            ).bind()
+                    }
+                    Unit
+                }
+            }.also { result ->
+                result.onRight { logAudit(vendorId, email, AuditOperation.CREATE, version) }
             }
 
     override suspend fun delete(
@@ -117,24 +139,6 @@ class VersionServiceImpl(
     ) {
         auditRepo.recordAudit(vendorId, email, operation, data).onLeft { error ->
             logger.warn("Audit logging failed: ${error.message}", error)
-        }
-    }
-
-    private suspend fun processTags(
-        versionId: Int,
-        version: Version,
-    ) {
-        version.tags.onSome { tagList ->
-            tagService
-                .replaceTags(
-                    versionId = versionId,
-                    candidate = version.candidate,
-                    distribution = version.distribution,
-                    platform = version.platform,
-                    tags = tagList,
-                ).onLeft { error ->
-                    logger.warn("Tag processing failed: $error")
-                }
         }
     }
 }
