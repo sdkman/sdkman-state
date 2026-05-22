@@ -23,8 +23,10 @@ fun main(args: Array<String>) =
 fun Application.module() {
     val appConfig = DefaultAppConfig(environment.config)
 
-    configureDatabaseMigration(appConfig)
-    configureDatabase(appConfig)
+    val dataSource = createHikariDataSource(appConfig)
+    monitor.subscribe(ApplicationStopped) { dataSource.close() }
+    configureDatabaseMigration(dataSource)
+    configureDatabase(dataSource)
 
     configureHTTP()
     configureSerialization()

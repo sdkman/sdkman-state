@@ -11,8 +11,6 @@ import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.toDomain
-import io.sdkman.state.config.DefaultAppConfig
-import io.sdkman.state.config.jdbcUrl
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
@@ -162,25 +160,19 @@ fun selectLastUpdatedAt(
             }.firstOrNone()
     }
 
-private val testAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }
+private val migrationsApplied: Boolean by lazy {
+    Flyway
+        .configure()
+        .dataSource(sharedTestDataSource)
+        .load()
+        .migrate()
+    sharedTestDatabase
+    true
+}
 
-private fun initialisePostgres() =
-    Database
-        .connect(
-            url = testAppConfig.jdbcUrl,
-            user = DB_USERNAME,
-            password = DB_PASSWORD,
-            driver = "org.postgresql.Driver",
-        ).also {
-            Flyway
-                .configure()
-                .dataSource(
-                    testAppConfig.jdbcUrl,
-                    DB_USERNAME,
-                    DB_PASSWORD,
-                ).load()
-                .migrate()
-        }
+private fun initialisePostgres() {
+    migrationsApplied
+}
 
 fun selectAuditRecords(): List<VendorAuditRecord> =
     dbQuery {

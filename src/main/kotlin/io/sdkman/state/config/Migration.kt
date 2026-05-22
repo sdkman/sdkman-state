@@ -1,16 +1,13 @@
 package io.sdkman.state.config
 
-import arrow.core.getOrElse
 import io.ktor.server.application.*
 import org.flywaydb.core.Flyway
+import javax.sql.DataSource
 
-fun Application.configureDatabaseMigration(config: AppConfig) {
+fun Application.configureDatabaseMigration(dataSource: DataSource) {
     Flyway
         .configure()
-        .dataSource(
-            config.jdbcUrl,
-            config.databaseUsername.getOrElse { "" },
-            config.databasePassword.getOrElse { "" },
-        ).load()
+        .dataSource(dataSource)
+        .load()
         .migrate()
 }

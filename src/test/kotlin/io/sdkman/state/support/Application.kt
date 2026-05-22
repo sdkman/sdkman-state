@@ -16,8 +16,11 @@ import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.DefaultAppConfig
-import io.sdkman.state.config.configureDatabase
 import io.sdkman.state.config.configureJwtAuthentication
+import io.sdkman.state.config.createHikariDataSource
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.DatabaseConfig
+import java.sql.Connection
 
 fun testApplicationConfig(): MapApplicationConfig =
     MapApplicationConfig(
@@ -25,6 +28,11 @@ fun testApplicationConfig(): MapApplicationConfig =
         "database.port" to PostgresTestContainer.port.toString(),
         "database.username" to PostgresTestContainer.username,
         "database.password" to PostgresTestContainer.password,
+        "database.pool.maxSize" to "4",
+        "database.pool.minIdle" to "0",
+        "database.pool.connectionTimeoutMs" to "5000",
+        "database.pool.maxLifetimeMs" to "60000",
+        "database.pool.idleTimeoutMs" to "10000",
         "api.cache.control" to "600",
         "admin.email" to JwtTestSupport.ADMIN_EMAIL,
         "admin.password" to "testadminpassword",
@@ -33,17 +41,34 @@ fun testApplicationConfig(): MapApplicationConfig =
         "validation.semverish.candidates" to "java",
     )
 
+private val sharedTestAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }
+
+val sharedTestDataSource by lazy {
+    val dataSource = createHikariDataSource(sharedTestAppConfig)
+    Runtime.getRuntime().addShutdownHook(Thread { dataSource.close() })
+    dataSource
+}
+
+val sharedTestDatabase: Database by lazy {
+    Database.connect(
+        datasource = sharedTestDataSource,
+        databaseConfig =
+            DatabaseConfig {
+                defaultIsolationLevel = Connection.TRANSACTION_READ_COMMITTED
+            },
+    )
+}
+
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
+    sharedTestDatabase
     testApplication {
         environment {
             config = testApplicationConfig()
         }
         application {
-            val appConfig = DefaultAppConfig(environment.config)
-            configureDatabase(appConfig)
             configureHTTP()
             configureSerialization()
-            configureJwtAuthentication(appConfig)
+            configureJwtAuthentication(sharedTestAppConfig)
 
             val versionsRepo = PostgresVersionRepository()
             val tagsRepo = PostgresTagRepository()
@@ -51,9 +76,9 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val vendorRepo = PostgresVendorRepository()
             val tagService = TagServiceImpl(tagsRepo, auditRepo)
             val rateLimiter = RateLimiter()
-            val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
+            val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
 
-            val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates)
+            val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)
 
             configureRouting(
                 versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
@@ -61,7 +86,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
                 healthRepo = PostgresHealthRepository(),
                 authService = authService,
                 vendorRepository = vendorRepo,
-                appConfig = appConfig,
+                appConfig = sharedTestAppConfig,
                 versionRequestValidator = versionRequestValidator,
             )
         }

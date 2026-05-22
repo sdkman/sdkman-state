@@ -15,6 +15,11 @@ fun ApplicationConfig.getIntOrDefault(
     default: Int,
 ): Int = propertyOrNull(path).toOption().map { it.getString().toInt() }.getOrElse { default }
 
+fun ApplicationConfig.getLongOrDefault(
+    path: String,
+    default: Long,
+): Long = propertyOrNull(path).toOption().map { it.getString().toLong() }.getOrElse { default }
+
 fun ApplicationConfig.getOptionString(path: String): Option<String> = propertyOrNull(path).toOption().map { it.getString() }
 
 fun ApplicationConfig.getCommaSeparatedSetOrDefault(
