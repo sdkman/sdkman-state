@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
+import arrow.core.none
 import arrow.core.some
 import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
@@ -21,7 +22,7 @@ import java.time.Instant
 internal object VersionsTable : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
     val version = varchar("version", length = 25)
-    val distribution = varchar("distribution", length = 20).nullable()
+    val distribution = text("distribution")
     val platform = varchar("platform", length = 15)
     val url = varchar("url", length = 500)
     val visible = bool("visible")
@@ -32,6 +33,11 @@ internal object VersionsTable : IntIdTable(name = "versions") {
 }
 
 class PostgresVersionRepository : VersionRepository {
+    private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
+
+    private fun dbToDistribution(value: String): Option<Distribution> =
+        if (value == NA_SENTINEL) none() else Distribution.valueOf(value).some()
+
     private fun ResultRow.toVersion(): Version =
         Version(
             candidate = this[VersionsTable.candidate],
@@ -39,7 +45,7 @@ class PostgresVersionRepository : VersionRepository {
             platform = Platform.valueOf(this[VersionsTable.platform]),
             url = this[VersionsTable.url],
             visible = this[VersionsTable.visible].toOption(),
-            distribution = this[VersionsTable.distribution].toOption().map { Distribution.valueOf(it) },
+            distribution = dbToDistribution(this[VersionsTable.distribution]),
             md5sum = this[VersionsTable.md5sum].toOption(),
             sha256sum = this[VersionsTable.sha256sum].toOption(),
             sha512sum = this[VersionsTable.sha512sum].toOption(),
@@ -63,12 +69,6 @@ class PostgresVersionRepository : VersionRepository {
                 .groupBy { it[VersionTagsTable.versionId] }
                 .mapValues { (_, rows) -> rows.map { it[VersionTagsTable.tag] } }
         }
-
-    private fun matchesVersion(cv: Version): Op<Boolean> =
-        (VersionsTable.candidate eq cv.candidate) and
-            (VersionsTable.version eq cv.version) and
-            (cv.distribution.fold({ VersionsTable.distribution eq null }, { VersionsTable.distribution eq it.name })) and
-            (VersionsTable.platform eq cv.platform.name)
 
     override suspend fun findByCandidate(
         candidate: String,
@@ -124,10 +124,7 @@ class PostgresVersionRepository : VersionRepository {
                             (VersionsTable.candidate eq candidate) and
                                 (VersionsTable.version eq version) and
                                 (VersionsTable.platform eq platform.name) and
-                                distribution.fold(
-                                    { VersionsTable.distribution eq null },
-                                    { VersionsTable.distribution eq it.name },
-                                )
+                                (VersionsTable.distribution eq distributionToDb(distribution))
                         }.map { it[VersionsTable.id].value to it.toVersion() }
                         .firstOrNone()
                         .map { (id, v) -> v.withTags(fetchTagNames(id)) }
@@ -139,14 +136,42 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
+    // V15 made versions.distribution NOT NULL with an 'NA' sentinel (mirroring V12's
+    // version_tags shape), so `INSERT … ON CONFLICT (candidate, version, distribution,
+    // platform) DO UPDATE` now applies to every row — Postgres' default NULLS DISTINCT
+    // semantics no longer carve out a deduplication-blind hole for the null-distribution
+    // case. One UPSERT path covers both Some(d) and None inputs.
     override suspend fun createOrUpdate(version: Version): Either<DatabaseFailure, Int> =
         Either
             .catch {
                 dbQuery {
-                    version.distribution.fold(
-                        { createOrUpdateWithoutDistribution(version) },
-                        { dist -> upsertWithDistribution(version, dist) },
-                    )
+                    VersionsTable
+                        .upsert(
+                            VersionsTable.candidate,
+                            VersionsTable.version,
+                            VersionsTable.distribution,
+                            VersionsTable.platform,
+                            onUpdateExclude =
+                                listOf(
+                                    VersionsTable.id,
+                                    VersionsTable.candidate,
+                                    VersionsTable.version,
+                                    VersionsTable.distribution,
+                                    VersionsTable.platform,
+                                ),
+                        ) {
+                            it[candidate] = version.candidate
+                            it[this.version] = version.version
+                            it[distribution] = distributionToDb(version.distribution)
+                            it[platform] = version.platform.name
+                            it[url] = version.url
+                            it[visible] = version.visible.getOrElse { true }
+                            it[md5sum] = version.md5sum.getOrNull()
+                            it[sha256sum] = version.sha256sum.getOrNull()
+                            it[sha512sum] = version.sha512sum.getOrNull()
+                            it[lastUpdatedAt] = Instant.now()
+                        }[VersionsTable.id]
+                        .value
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
@@ -155,83 +180,6 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // Postgres `UNIQUE (candidate, version, distribution, platform)` with the distribution column
-    // nullable defaults to NULLS DISTINCT, so `INSERT … ON CONFLICT` cannot deduplicate rows when
-    // distribution is NULL. Keep the check-then-act path for that narrow case; it preserves the
-    // single-writer idempotency the existing acceptance suite relies on. The concurrent race the
-    // spec targets only matters for distribution-bearing payloads, which take the upsert branch.
-    private fun createOrUpdateWithoutDistribution(cv: Version): Int {
-        val exists =
-            VersionsTable
-                .selectAll()
-                .where { matchesVersion(cv) }
-                .empty()
-                .not()
-        return if (exists) updateVersion(cv) else insertVersion(cv)
-    }
-
-    private fun upsertWithDistribution(
-        cv: Version,
-        dist: Distribution,
-    ): Int =
-        VersionsTable
-            .upsert(
-                VersionsTable.candidate,
-                VersionsTable.version,
-                VersionsTable.distribution,
-                VersionsTable.platform,
-                onUpdateExclude =
-                    listOf(
-                        VersionsTable.id,
-                        VersionsTable.candidate,
-                        VersionsTable.version,
-                        VersionsTable.distribution,
-                        VersionsTable.platform,
-                    ),
-            ) {
-                it[candidate] = cv.candidate
-                it[version] = cv.version
-                it[distribution] = dist.name
-                it[platform] = cv.platform.name
-                it[url] = cv.url
-                it[visible] = cv.visible.getOrElse { true }
-                it[md5sum] = cv.md5sum.getOrNull()
-                it[sha256sum] = cv.sha256sum.getOrNull()
-                it[sha512sum] = cv.sha512sum.getOrNull()
-                it[lastUpdatedAt] = Instant.now()
-            }[VersionsTable.id]
-            .value
-
-    private fun updateVersion(cv: Version): Int {
-        VersionsTable.update({ matchesVersion(cv) }) {
-            it[url] = cv.url
-            it[visible] = cv.visible.getOrElse { true }
-            it[md5sum] = cv.md5sum.getOrNull()
-            it[sha256sum] = cv.sha256sum.getOrNull()
-            it[sha512sum] = cv.sha512sum.getOrNull()
-            it[lastUpdatedAt] = Instant.now()
-        }
-        return VersionsTable
-            .select(VersionsTable.id)
-            .where { matchesVersion(cv) }
-            .single()[VersionsTable.id]
-            .value
-    }
-
-    private fun insertVersion(cv: Version): Int =
-        VersionsTable
-            .insertAndGetId {
-                it[candidate] = cv.candidate
-                it[version] = cv.version
-                it[distribution] = cv.distribution.map { d -> d.name }.getOrNull()
-                it[platform] = cv.platform.name
-                it[url] = cv.url
-                it[visible] = cv.visible.getOrElse { true }
-                it[md5sum] = cv.md5sum.getOrNull()
-                it[sha256sum] = cv.sha256sum.getOrNull()
-                it[sha512sum] = cv.sha512sum.getOrNull()
-            }.value
-
     override suspend fun findVersionId(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Option<Int>> =
         Either
             .catch {
@@ -239,16 +187,10 @@ class PostgresVersionRepository : VersionRepository {
                     VersionsTable
                         .select(VersionsTable.id)
                         .where {
-                            val baseCondition =
-                                (VersionsTable.candidate eq uniqueVersion.candidate) and
-                                    (VersionsTable.version eq uniqueVersion.version) and
-                                    (VersionsTable.platform eq uniqueVersion.platform.name)
-                            uniqueVersion.distribution.fold(
-                                { baseCondition and (VersionsTable.distribution eq null) },
-                                { distributionValue ->
-                                    baseCondition and (VersionsTable.distribution eq distributionValue.name)
-                                },
-                            )
+                            (VersionsTable.candidate eq uniqueVersion.candidate) and
+                                (VersionsTable.version eq uniqueVersion.version) and
+                                (VersionsTable.platform eq uniqueVersion.platform.name) and
+                                (VersionsTable.distribution eq distributionToDb(uniqueVersion.distribution))
                         }.map { it[VersionsTable.id].value }
                         .firstOrNone()
                 }
@@ -268,7 +210,7 @@ class PostgresVersionRepository : VersionRepository {
         Either
             .catch {
                 dbQuery {
-                    val distDb = distribution.map { it.name }.getOrElse { NA_SENTINEL }
+                    val distDb = distributionToDb(distribution)
                     VersionTagsTable
                         .join(
                             VersionsTable,
@@ -296,15 +238,10 @@ class PostgresVersionRepository : VersionRepository {
             .catch {
                 dbQuery {
                     VersionsTable.deleteWhere {
-                        val baseCondition =
-                            (candidate eq uniqueVersion.candidate) and
-                                (this.version eq uniqueVersion.version) and
-                                (platform eq uniqueVersion.platform.name)
-
-                        uniqueVersion.distribution.fold(
-                            { baseCondition and (distribution eq null) },
-                            { distributionValue -> baseCondition and (distribution eq distributionValue.name) },
-                        )
+                        (candidate eq uniqueVersion.candidate) and
+                            (this.version eq uniqueVersion.version) and
+                            (platform eq uniqueVersion.platform.name) and
+                            (distribution eq distributionToDb(uniqueVersion.distribution))
                     }
                 }
             }.mapLeft { error ->
