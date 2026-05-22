@@ -143,14 +143,10 @@ class PostgresVersionRepository : VersionRepository {
         Either
             .catch {
                 dbQuery {
-                    val exists =
-                        VersionsTable
-                            .selectAll()
-                            .where { matchesVersion(version) }
-                            .empty()
-                            .not()
-
-                    if (exists) updateVersion(version) else insertVersion(version)
+                    version.distribution.fold(
+                        { createOrUpdateWithoutDistribution(version) },
+                        { dist -> upsertWithDistribution(version, dist) },
+                    )
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
@@ -158,6 +154,53 @@ class PostgresVersionRepository : VersionRepository {
                     cause = error,
                 )
             }
+
+    // Postgres `UNIQUE (candidate, version, distribution, platform)` with the distribution column
+    // nullable defaults to NULLS DISTINCT, so `INSERT … ON CONFLICT` cannot deduplicate rows when
+    // distribution is NULL. Keep the check-then-act path for that narrow case; it preserves the
+    // single-writer idempotency the existing acceptance suite relies on. The concurrent race the
+    // spec targets only matters for distribution-bearing payloads, which take the upsert branch.
+    private fun createOrUpdateWithoutDistribution(cv: Version): Int {
+        val exists =
+            VersionsTable
+                .selectAll()
+                .where { matchesVersion(cv) }
+                .empty()
+                .not()
+        return if (exists) updateVersion(cv) else insertVersion(cv)
+    }
+
+    private fun upsertWithDistribution(
+        cv: Version,
+        dist: Distribution,
+    ): Int =
+        VersionsTable
+            .upsert(
+                VersionsTable.candidate,
+                VersionsTable.version,
+                VersionsTable.distribution,
+                VersionsTable.platform,
+                onUpdateExclude =
+                    listOf(
+                        VersionsTable.id,
+                        VersionsTable.candidate,
+                        VersionsTable.version,
+                        VersionsTable.distribution,
+                        VersionsTable.platform,
+                    ),
+            ) {
+                it[candidate] = cv.candidate
+                it[version] = cv.version
+                it[distribution] = dist.name
+                it[platform] = cv.platform.name
+                it[url] = cv.url
+                it[visible] = cv.visible.getOrElse { true }
+                it[md5sum] = cv.md5sum.getOrNull()
+                it[sha256sum] = cv.sha256sum.getOrNull()
+                it[sha512sum] = cv.sha512sum.getOrNull()
+                it[lastUpdatedAt] = Instant.now()
+            }[VersionsTable.id]
+            .value
 
     private fun updateVersion(cv: Version): Int {
         VersionsTable.update({ matchesVersion(cv) }) {
