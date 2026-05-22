@@ -5,6 +5,7 @@ import io.ktor.server.testing.*
 import io.sdkman.state.adapter.primary.rest.configureHTTP
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
+import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
@@ -75,13 +76,14 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val auditRepo = PostgresAuditRepository()
             val vendorRepo = PostgresVendorRepository()
             val tagService = TagServiceImpl(tagsRepo, auditRepo)
+            val transactional = ExposedTransactional()
             val rateLimiter = RateLimiter()
             val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
 
             val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)
 
             configureRouting(
-                versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
+                versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
                 tagService = tagService,
                 healthRepo = PostgresHealthRepository(),
                 authService = authService,

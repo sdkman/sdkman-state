@@ -21,18 +21,29 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
+import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
 
+/**
+ * Passthrough used so unit tests can exercise [VersionServiceImpl.createOrUpdate] without a
+ * registered Exposed `Database`. Production uses `ExposedTransactional`; verifying the wrapping
+ * call count from the service is covered by [transactional] being a mockk spy below.
+ */
+private fun passthroughTransactional(): Transactional =
+    object : Transactional {
+        override suspend fun <E, A> inTransaction(block: suspend () -> Either<E, A>): Either<E, A> = block()
+    }
+
 class VersionServiceUnitSpec :
     ShouldSpec({
         val versionsRepo = mockk<VersionRepository>()
         val tagService = mockk<TagService>()
         val auditRepo = mockk<AuditRepository>()
-        val service = VersionServiceImpl(versionsRepo, tagService, auditRepo)
+        val service = VersionServiceImpl(versionsRepo, tagService, auditRepo, passthroughTransactional())
 
         beforeEach { clearAllMocks() }
 
@@ -242,8 +253,11 @@ class VersionServiceUnitSpec :
                 result.shouldBeRight()
             }
 
-            should("still succeed when tag processing fails") {
-                // given: tag processing fails but create succeeds
+            should("return DatabaseError and skip audit when tag processing fails") {
+                // R5: tag replacement is atomic with the version write — if tags fail, the
+                // version write rolls back and the request must surface the failure (no more
+                // silent swallow). Audit must also be skipped because the version write was
+                // rolled back, so there is no successful operation to record.
                 val version =
                     Version(
                         candidate = "java",
@@ -252,27 +266,62 @@ class VersionServiceUnitSpec :
                         url = "https://example.com/java-17.tar.gz",
                         tags = listOf("lts").some(),
                     )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version)
-                } returns Either.Right(Unit)
-                coEvery {
-                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
-                } returns
-                    Either.Left(
-                        DomainError.DatabaseError(
-                            DatabaseFailure.QueryExecutionFailure(
-                                "tag error",
-                                RuntimeException("tag failure"),
-                            ),
+                val tagFailure =
+                    DomainError.DatabaseError(
+                        DatabaseFailure.QueryExecutionFailure(
+                            "tag error",
+                            RuntimeException("tag failure"),
                         ),
                     )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery {
+                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
+                } returns Either.Left(tagFailure)
 
                 // when: creating a version with failing tag processing
                 val result = service.createOrUpdate(version, NIL_UUID, "admin")
 
-                // then: still succeeds (tag failure is logged but non-fatal)
-                result.shouldBeRight()
+                // then: surfaces the tag failure and never touches audit
+                result.shouldBeLeft()
+                result.onLeft { it shouldBe tagFailure }
+                coVerify(exactly = 0) {
+                    auditRepo.recordAudit(any(), any(), any(), any())
+                }
+            }
+
+            should("roll back the outer transaction when tag processing fails") {
+                // R5: the version+tag write must run in one transaction. Verify by spying on the
+                // Transactional port — it should be called exactly once, and a Left bubbled out
+                // of its block must reach the caller unchanged.
+                val transactional = mockk<Transactional>()
+                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "17.0.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-17.tar.gz",
+                        tags = listOf("lts").some(),
+                    )
+                val tagFailure =
+                    DomainError.DatabaseError(
+                        DatabaseFailure.QueryExecutionFailure("tag error", RuntimeException("x")),
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery {
+                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
+                } returns Either.Left(tagFailure)
+                coEvery { transactional.inTransaction<DomainError, Unit>(any()) } coAnswers {
+                    val block = firstArg<suspend () -> Either<DomainError, Unit>>()
+                    block()
+                }
+
+                // when: the version write succeeds but tag replacement fails
+                val result = txService.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: the failure is returned and inTransaction was invoked exactly once
+                result.shouldBeLeft()
+                coVerify(exactly = 1) { transactional.inTransaction<DomainError, Unit>(any()) }
             }
         }
 

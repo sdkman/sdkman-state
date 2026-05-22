@@ -14,6 +14,7 @@ import io.ktor.server.testing.*
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
 import io.sdkman.state.adapter.primary.rest.dto.HealthCheckResponse
+import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
@@ -92,11 +93,12 @@ class HealthCheckAcceptanceSpec :
                         val auditRepo = PostgresAuditRepository()
                         val vendorRepo = PostgresVendorRepository()
                         val tagService = TagServiceImpl(tagsRepo, auditRepo)
+                        val transactional = ExposedTransactional()
                         val rateLimiter = RateLimiter()
                         val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
                         configureRouting(
-                            versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo),
+                            versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
                             tagService = tagService,
                             healthRepo = PostgresHealthRepository(),
                             authService = authService,
