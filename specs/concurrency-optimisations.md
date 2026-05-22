@@ -14,6 +14,7 @@ This spec addresses the backend issues. It does **not** change the public API, t
 - Make `POST /versions` write atomically in **one** transaction for version + tags (today it opens three independent transactions).
 - Replace the racy check-then-act in `createOrUpdate` with a Postgres UPSERT (`INSERT … ON CONFLICT DO UPDATE`) against the existing `UNIQUE (candidate, version, distribution, platform)` index.
 - Keep audit-log writes as best-effort and out of the main transaction (today's behaviour, intentionally preserved).
+- Configure Exposed with an explicit `defaultIsolationLevel` so coroutine context setup never probes the database — otherwise an unavailable Postgres deadlocks the request coroutine instead of returning a clean error.
 
 ## Context: HTTP/2 Stream Limit (Non-Goal)
 
@@ -36,6 +37,7 @@ The `too many concurrent streams` error is raised by the **client's** HTTP/2 sta
 - **R6.** Audit logging remains best-effort, in its own transaction. An audit insert failure must not roll back the version write and must surface only as a `WARN` log (preserves current behaviour).
 - **R7.** The JDBC URL no longer enables verbose pgjdbc logging (`loglevel=2` removed).
 - **R8.** `./gradlew check` passes. Existing acceptance, integration, and unit tests continue to pass without modifying their assertions. New tests cover the concurrency race and the pool wiring.
+- **R9.** Exposed is configured with an explicit `defaultIsolationLevel`. When the database is unavailable, `/meta/health` (and any other transactional request path) must fail fast with the expected error response rather than deadlock the request coroutine.
 
 ## Rules
 
@@ -128,6 +130,7 @@ implementation(libs.hikaricp)
 - **Returning the version id.** Use the upsert's `RETURNING id` rather than issuing a follow-up `SELECT id`. The post-upsert flow needs the id for tag replacement.
 - **Flyway shares the pool.** Flyway runs once at startup and must be configured with the **same** `HikariDataSource` (`Flyway.configure().dataSource(ds)`), not a separate `DriverManager` URL.
 - **Health repository uses the pool.** `PostgresHealthRepository` must execute against the pool (otherwise the health check is unrepresentative of the data path). The single `Database.connect(dataSource)` wiring in `configureDatabase` should cover this transparently — verify when implementing.
+- **Explicit isolation level avoids a coroutine deadlock when the pool can't serve a connection.** Without `DatabaseConfig { defaultIsolationLevel = Connection.TRANSACTION_READ_COMMITTED }`, Exposed lazily probes the database via `db.metadata { defaultTransactionIsolation }` inside `TransactionCoroutineElement.updateThreadContext`. If the pool throws `SQLTransientConnectionException` there (e.g. Postgres unreachable), kotlinx-coroutines wraps it as `CoroutinesInternalError` — a "fatal exception in coroutines machinery" — and the suspended continuation is never resumed, so the request hangs indefinitely. Setting the level explicitly on `Database.connect` moves any connection-acquisition failure into the transaction body where `Either.catch {}` handles it cleanly and the health check returns `503` as designed.
 - **No schema migrations.** The UPSERT relies on the existing unique constraints from `V2` (versions) and `V12` (version_tags). No new Flyway migration files.
 - **No public API or OpenAPI changes.** Request/response contracts for all endpoints are untouched; `src/main/resources/openapi/documentation.yaml` does **not** need updating.
 - **Detekt / ktlint.** New configuration helpers must follow existing patterns in `ConfigExtensions.kt` (Arrow `Option`, no nullables, expression bodies where natural). No suppressions.
@@ -156,7 +159,7 @@ implementation(libs.hikaricp)
 Independently committable, in dependency order. Each slice is a single Conventional Commit.
 
 1. **`chore: drop verbose pgjdbc loglevel from JDBC URL`** — one-line change in `ConfigExtensions.kt`. No test changes. Smallest, safest slice; lands first so subsequent slice verification isn't polluted with driver-level noise.
-2. **`feat: introduce HikariCP connection pool`** — add Hikari dependency in `libs.versions.toml` and `build.gradle.kts`; add `database.pool.*` to `application.conf`; extend `AppConfig`/`DefaultAppConfig`; change `configureDatabase` to build a `HikariDataSource` and pass it to both `Database.connect(dataSource)` and `Flyway.configure().dataSource(ds)`. New unit test for `AppConfig` parsing; new integration test for pool starvation behaviour.
+2. **`feat: introduce HikariCP connection pool`** — add Hikari dependency in `libs.versions.toml` and `build.gradle.kts`; add `database.pool.*` to `application.conf`; extend `AppConfig`/`DefaultAppConfig`; change `configureDatabase` to build a `HikariDataSource` and pass it to both `Database.connect(dataSource, databaseConfig = DatabaseConfig { defaultIsolationLevel = Connection.TRANSACTION_READ_COMMITTED })` and `Flyway.configure().dataSource(ds)`. The explicit isolation level is mandatory (see R9) — without it, an unavailable database deadlocks the request coroutine instead of returning a clean error. New unit test for `AppConfig` parsing; new integration test for pool starvation behaviour.
 3. **`refactor: upsert versions to remove create-or-update race`** — replace check-then-act in `PostgresVersionRepository.createOrUpdate` with Exposed `upsert {}` targeting `(candidate, version, distribution, platform)`. New acceptance test for concurrent same-version POSTs (R4). Existing `IdempotentPostVersionAcceptanceSpec` continues to pass.
 4. **`refactor: write version and tags in a single transaction`** — wrap the version+tags work in `VersionServiceImpl.createOrUpdate` in one outer `newSuspendedTransaction`. Keep `logAudit` outside it. New focused test for audit-failure isolation (R6) and single-transaction boundary (R5).
 
@@ -167,6 +170,7 @@ After all slices are merged:
 - [ ] `./gradlew check` passes cleanly (compile + detekt + ktlint + tests).
 - [ ] `grep -RIn "loglevel" src/main` returns no hits.
 - [ ] HikariCP is the only `DataSource` wired into Exposed and Flyway.
+- [ ] `HealthCheckAcceptanceSpec` "return FAILURE status when database is unavailable" completes within seconds (Hikari's `connectionTimeout`), not the 60s `runTest` ceiling — proves R9 holds.
 - [ ] New concurrent-POST acceptance test passes consistently across at least 10 local runs.
 - [ ] Manual smoke: boot against a local Postgres, send 50 concurrent `POST /versions` for the same version, observe all `204` responses and exactly one row in `versions`.
 - [ ] OpenAPI spec confirmed **unchanged** (no endpoint contract changes).
