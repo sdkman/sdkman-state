@@ -25,25 +25,25 @@ interface AppConfig {
 class DefaultAppConfig(
     private val config: ApplicationConfig,
 ) : AppConfig {
-    override val databaseHost: String = config.getStringOrDefault("database.host", "localhost")
-    override val databasePort: Int = config.getIntOrDefault("database.port", 5432)
-    override val databaseName: String = config.getStringOrDefault("database.name", "sdkman")
+    override val databaseHost: String = config.property("database.host").getString()
+    override val databasePort: Int = config.property("database.port").getString().toInt()
+    override val databaseName: String = config.property("database.name").getString()
     override val databaseUsername: Option<String> = config.getOptionString("database.username")
     override val databasePassword: Option<String> = config.getOptionString("database.password")
-    override val databasePoolMaxSize: Int = config.getIntOrDefault("database.pool.maxSize", 20)
-    override val databasePoolMinIdle: Int = config.getIntOrDefault("database.pool.minIdle", 2)
+    override val databasePoolMaxSize: Int = config.property("database.pool.maxSize").getString().toInt()
+    override val databasePoolMinIdle: Int = config.property("database.pool.minIdle").getString().toInt()
     override val databasePoolConnectionTimeoutMs: Long =
-        config.getLongOrDefault("database.pool.connectionTimeoutMs", 5_000L)
+        config.property("database.pool.connectionTimeoutMs").getString().toLong()
     override val databasePoolMaxLifetimeMs: Long =
-        config.getLongOrDefault("database.pool.maxLifetimeMs", 1_800_000L)
+        config.property("database.pool.maxLifetimeMs").getString().toLong()
     override val databasePoolIdleTimeoutMs: Long =
-        config.getLongOrDefault("database.pool.idleTimeoutMs", 600_000L)
-    override val cacheMaxAge: Int = config.getIntOrDefault("api.cache.control", 600)
-    override val adminEmail: String = config.getStringOrDefault("admin.email", "admin@sdkman.io")
-    override val adminPassword: String = config.getStringOrDefault("admin.password", "changeme")
+        config.property("database.pool.idleTimeoutMs").getString().toLong()
+    override val cacheMaxAge: Int = config.property("api.cache.control").getString().toInt()
+    override val adminEmail: String = config.property("admin.email").getString()
+    override val adminPassword: String = config.property("admin.password").getString()
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
-    override val jwtExpiry: Int = config.getIntOrDefault("jwt.expiry", 10)
+    override val jwtExpiry: Int = config.property("jwt.expiry").getString().toInt()
     override val semverishCandidates: Set<String> =
-        config.getCommaSeparatedSetOrDefault("validation.semverish.candidates", emptySet())
+        config.getCommaSeparatedSet("validation.semverish.candidates")
 }
