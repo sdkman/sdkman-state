@@ -56,7 +56,6 @@ dependencies {
     testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.mockk)
-    testImplementation(libs.kotest.extensions.testcontainers)
 
     detektPlugins(libs.detekt.rules)
     compileOnly(libs.detekt.rules)
