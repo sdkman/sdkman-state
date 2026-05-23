@@ -38,4 +38,4 @@ fun ApplicationConfig.getCommaSeparatedSetOrDefault(
         }.getOrElse { default }
 
 val AppConfig.jdbcUrl: String
-    get() = "jdbc:postgresql://$databaseHost:$databasePort/$databaseName?sslMode=prefer"
+    get() = "jdbc:postgresql://$databaseHost:$databasePort/$databaseName?sslmode=prefer"
