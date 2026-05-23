@@ -18,7 +18,6 @@ bcrypt = "0.10.2"
 kotlinx-datetime = "0.8.0-0.6.x-compat"
 testcontainers-bom = "2.0.5"
 mockk = "1.14.9"
-kotest-extensions-testcontainers = "2.0.2"
 detekt-rules = "1.1.0"
 hikari = "5.1.0"
 
@@ -59,7 +58,6 @@ flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 kotest-property = { module = "io.kotest:kotest-property", version.ref = "kotest" }
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
-kotest-extensions-testcontainers = { module = "io.kotest.extensions:kotest-extensions-testcontainers", version.ref = "kotest-extensions-testcontainers" }
 
 testcontainers-bom = { module = "org.testcontainers:testcontainers-bom", version.ref = "testcontainers-bom" }
 testcontainers = { module = "org.testcontainers:testcontainers" }
