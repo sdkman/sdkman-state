@@ -10,16 +10,17 @@ import io.sdkman.state.domain.repository.AuditRepository
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.encodeToJsonElement
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.javatime.timestamp
-import org.jetbrains.exposed.sql.json.json
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.java.javaUUID
+import org.jetbrains.exposed.v1.javatime.timestamp
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.json.json
 import java.time.Instant
 import java.util.UUID
 
 internal object AuditTable : Table(name = "vendor_audit") {
     val id = long("id").autoIncrement()
-    val vendorId = uuid("vendor_id")
+    val vendorId = javaUUID("vendor_id")
     val email = text("email")
     val timestamp = timestamp("timestamp")
     val operation = text("operation")

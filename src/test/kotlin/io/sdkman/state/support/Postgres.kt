@@ -21,9 +21,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.v1.core.*
+import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.transactions.suspendTransaction
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Instant
 
 val DB_HOST: String get() = PostgresTestContainer.host
@@ -110,7 +111,7 @@ fun selectAllTags(): List<Pair<Int, String>> =
 @Suppress("InjectDispatcher")
 private fun <T> dbQuery(block: suspend () -> T): T =
     runBlocking(Dispatchers.IO) {
-        newSuspendedTransaction(Dispatchers.IO) { block() }
+        suspendTransaction { block() }
     }
 
 fun selectVersion(
