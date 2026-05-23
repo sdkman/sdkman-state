@@ -34,9 +34,9 @@ import io.sdkman.state.support.testApplicationConfig
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.DatabaseConfig
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.v1.core.DatabaseConfig
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import java.sql.Connection
 
 @Tags("acceptance")

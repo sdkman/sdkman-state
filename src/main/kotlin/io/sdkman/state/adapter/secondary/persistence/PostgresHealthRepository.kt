@@ -4,7 +4,7 @@ import arrow.core.Either
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.HealthCheckSuccess
 import io.sdkman.state.domain.repository.HealthRepository
-import org.jetbrains.exposed.sql.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 
 class PostgresHealthRepository : HealthRepository {
     override suspend fun checkDatabaseConnection(): Either<DatabaseFailure, HealthCheckSuccess> =

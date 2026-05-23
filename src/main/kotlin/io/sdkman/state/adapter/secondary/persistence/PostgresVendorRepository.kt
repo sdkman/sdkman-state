@@ -8,16 +8,17 @@ import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.ColumnType
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.javatime.timestamp
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.TransactionManager
-import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.ColumnType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.java.javaUUID
+import org.jetbrains.exposed.v1.javatime.timestamp
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import org.jetbrains.exposed.v1.jdbc.update
 import java.time.Instant
 import java.util.UUID
 
@@ -40,7 +41,7 @@ internal class TextArrayColumnType : ColumnType<List<String>>() {
 internal fun Table.textArray(name: String): Column<List<String>> = registerColumn(name, TextArrayColumnType())
 
 internal object VendorsTable : Table(name = "vendors") {
-    val id = uuid("id").autoGenerate()
+    val id = javaUUID("id").autoGenerate()
     val email = text("email")
     val password = text("password")
     val candidates = textArray("candidates")

@@ -19,8 +19,8 @@ import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.createHikariDataSource
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.DatabaseConfig
+import org.jetbrains.exposed.v1.core.DatabaseConfig
+import org.jetbrains.exposed.v1.jdbc.Database
 import java.sql.Connection
 
 fun testApplicationConfig(): MapApplicationConfig =
