@@ -27,6 +27,7 @@ fun testApplicationConfig(): MapApplicationConfig =
     MapApplicationConfig(
         "database.host" to PostgresTestContainer.host,
         "database.port" to PostgresTestContainer.port.toString(),
+        "database.name" to "sdkman",
         "database.username" to PostgresTestContainer.username,
         "database.password" to PostgresTestContainer.password,
         "database.pool.maxSize" to "4",
