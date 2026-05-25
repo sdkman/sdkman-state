@@ -1,0 +1,336 @@
+name: ralph-wiggum
+description: |
+  Use when: User wants to run the Ralph Wiggum autonomous plan/build loop
+            (a port of marc0der/ralph) on this project.
+  Triggers: "ralph wiggum", "run ralph", "ralph loop", "ralph plan/build".
+  Does: Seeds loop artifacts (like `ralph init`), runs a PLAN loop (up to 3
+        passes) that writes IMPLEMENTATION_PLAN.md from specs/ + the codebase,
+        sizes a BUILD budget (incomplete items + 20% headroom, like ralph),
+        then runs BUILD iterations with a FRESH context each — implementing one
+        plan item, testing, committing, pushing — until the plan is exhausted
+        or the budget is spent. Reports, then archives the artifacts to
+        .ralph/<timestamp>/ (like `ralph archive`).
+  NOT for: PR reviews, one-off fixes, or PRD/story-driven work (use archon-ralph-dag).
+
+# The {{GOAL}} from `ralph -g` maps to $ARGUMENTS.
+#
+# IMPORTANT — model is set at the WORKFLOW level on purpose: loop nodes ignore a
+# per-node `model:` and always use the workflow-level model. Drop to `sonnet`
+# for faster/cheaper iterations; the prompts already delegate heavy reasoning to
+# Opus subagents.
+#
+# IMPORTANT — isolation: `archon workflow run` creates a worktree off the base
+# branch (main) by DEFAULT. To run on your CURRENT checkout (e.g. a feature
+# branch under test), invoke with `--no-worktree`, or `--from <branch>` to base
+# the worktree elsewhere.
+provider: claude
+model: opus
+
+nodes:
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 1: SEED — scaffold the loop artifacts from templates (mirrors
+  # `ralph init`). Templates live in .archon/ralph/templates/ (auto-copied
+  # into worktrees) and are user-editable, exactly like ralph's templates/.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: seed
+    bash: |
+      set -e
+      mkdir -p specs
+      TPL=".archon/ralph/templates"
+      if [ ! -f IMPLEMENTATION_PLAN.md ]; then
+        if [ -f "$TPL/IMPLEMENTATION_PLAN.md" ]; then
+          cp "$TPL/IMPLEMENTATION_PLAN.md" IMPLEMENTATION_PLAN.md
+          echo "Created IMPLEMENTATION_PLAN.md from template"
+        else
+          printf '# Implementation Plan\n\n## Items\n\n' > IMPLEMENTATION_PLAN.md
+          echo "Created IMPLEMENTATION_PLAN.md (minimal fallback — template not found at $TPL)"
+        fi
+      fi
+      if [ ! -f PROGRESS.md ]; then
+        if [ -f "$TPL/PROGRESS.md" ]; then
+          cp "$TPL/PROGRESS.md" PROGRESS.md
+          echo "Created PROGRESS.md from template"
+        else
+          printf '# Progress Log\n\n' > PROGRESS.md
+          echo "Created PROGRESS.md (minimal fallback — template not found at $TPL)"
+        fi
+      fi
+      echo "BRANCH=$(git branch --show-current 2>/dev/null || echo '(no branch)')"
+      echo "SPECS:"
+      ls -1 specs/ 2>/dev/null || echo "(none)"
+      echo "PLAN_ITEMS_OUTSTANDING=$(grep -c '^- \[ \]' IMPLEMENTATION_PLAN.md 2>/dev/null || echo 0)"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 2: PLAN LOOP — analyse specs + code, write IMPLEMENTATION_PLAN.md.
+  # Up to 3 fresh passes (ralph PLAN_DEFAULT_CAP=3). Exits early when stable.
+  # The counter in until_bash makes the 3rd pass a graceful stop (not a
+  # max_iterations failure). Plan only — implements nothing.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: plan
+    depends_on: [seed]
+    idle_timeout: 600000
+    loop:
+      prompt: |
+        # Planning Agent
+
+        You are a planning agent in an autonomous loop, running in a FRESH session with no memory of previous passes. Read the current `IMPLEMENTATION_PLAN.md` from disk to see prior progress. Your job is to understand the current state of the codebase, compare it against specifications, and produce a prioritised implementation plan. **You do not implement anything.**
+
+        ## Goal
+
+        $ARGUMENTS
+
+        (If the goal above is blank, infer the objectives from `specs/` and the existing `IMPLEMENTATION_PLAN.md`.)
+
+        ---
+
+        ## Phase 1: Understand
+
+        Gather context by reading these sources. Use up to 50 parallel **Sonnet** subagents to read specs, source, and tests concurrently.
+
+        - **Operational guardrails** — read `AGENTS.md` or `CLAUDE.md` (if present) for build commands, conventions, and project rules
+        - **Specifications** — read everything in `specs/`
+        - **Existing plan** — read `IMPLEMENTATION_PLAN.md` (if present) to understand progress so far
+        - **Application source** — read build files and source code to understand structure, dependencies, and architecture
+        - **Tests** — read test sources to understand existing coverage and test patterns
+
+        ## Phase 2: Analyse
+
+        Use an **Opus** reasoning subagent to analyse and synthesise findings. Compare the source code and tests against the specifications.
+
+        Look for:
+        - Gaps between specs and implementation
+        - TODOs, placeholders, and minimal/stub implementations
+        - Skipped or flaky tests
+        - Inconsistent patterns across the codebase
+        - Missing elements needed to achieve the goal
+
+        **Never assume something is missing.** Confirm with a code search before flagging it. If an element is genuinely missing, author its specification at `specs/FILENAME.md`.
+
+        ## Phase 3: Output
+
+        Create or update `IMPLEMENTATION_PLAN.md`, following the entry format documented in its `## Entry Format` header:
+
+        - Prioritised bullet list of items yet to be implemented
+        - Mark items as complete or incomplete
+        - Clean out stale completed items
+        - If you authored new specs, include tasks to implement them
+
+        ---
+
+        ## Constraints
+
+        - **Plan only. Do NOT implement anything.**
+        - Never assume functionality is missing — confirm with code search first
+        - If you create a new spec, document the plan to implement it in `IMPLEMENTATION_PLAN.md`
+
+        ---
+
+        ## Loop control (Archon)
+
+        When `IMPLEMENTATION_PLAN.md` is complete and stable — it accurately reflects the gap between specs and code and needs no further refinement — output exactly `<promise>PLAN_STABLE</promise>`. In most cases the plan settles in a single pass, so emit it as soon as you are confident. Only withhold it (ending the iteration normally) if you made substantive changes this pass and a further review pass would materially improve the plan.
+      until: PLAN_STABLE
+      max_iterations: 3
+      fresh_context: true
+      until_bash: |
+        # Hard cap at 3 passes (ralph PLAN_DEFAULT_CAP); a graceful stop, not a failure.
+        ITER_FILE="$ARTIFACTS_DIR/plan-iter.txt"
+        n=$(( $(cat "$ITER_FILE" 2>/dev/null || echo 0) + 1 ))
+        echo "$n" > "$ITER_FILE"
+        [ "$n" -ge 3 ] && exit 0
+        exit 1
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 3: SIZE BUILD BUDGET — count incomplete items + 20% headroom,
+  # exactly like ralph's calculate_build_iterations: ceil(count * 1.2).
+  # Written to the artifacts dir for the build loop's until_bash to read.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: plan-count
+    depends_on: [plan]
+    bash: |
+      set -e
+      count=$(grep -c '^- \[ \]' IMPLEMENTATION_PLAN.md 2>/dev/null || echo 0)
+      count=${count:-0}
+      if [ "$count" -lt 1 ]; then
+        budget=1   # nothing to do; build will no-op once and complete
+      else
+        budget=$(( (count * 6 + 4) / 5 ))   # ceil(count * 1.2)
+      fi
+      echo "$budget" > "$ARTIFACTS_DIR/build-budget.txt"
+      echo 0 > "$ARTIFACTS_DIR/build-iter.txt"
+      echo "PLAN_ITEMS=$count"
+      echo "BUILD_BUDGET=$budget"
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 4: BUILD LOOP — the Ralph loop. One plan item per FRESH iteration.
+  # Completes when no incomplete items remain OR the budget is spent
+  # (until_bash). max_iterations is only a hard safety ceiling above any
+  # realistic budget — the budget is the real bound.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: build
+    depends_on: [plan-count]
+    idle_timeout: 600000
+    loop:
+      prompt: |
+        # Build Agent
+
+        You are a build agent in an autonomous loop. Your job is to pick the highest-priority item from the implementation plan, implement it fully, verify it passes tests, and commit. **One item per iteration.**
+
+        ## Goal
+
+        $ARGUMENTS
+
+        (If the goal above is blank, work from `specs/` and `IMPLEMENTATION_PLAN.md`.)
+
+        ---
+
+        ## Phase 1: Understand
+
+        Gather context by reading these sources. Use up to 50 parallel **Sonnet** subagents for search and read operations.
+
+        - **Operational guardrails** — read `AGENTS.md` or `CLAUDE.md` (if present) for build commands, conventions, and project rules
+        - **Specifications** — read everything in `specs/`
+        - **Implementation plan** — read `IMPLEMENTATION_PLAN.md` to find the highest-priority incomplete item
+        - **Application source** — read build files and source code to understand structure, dependencies, and architecture
+        - **Tests** — read test sources to understand existing coverage and patterns
+
+        **Never assume something is missing.** Confirm with a code search before flagging it.
+
+        ## Phase 2: Implement
+
+        Pick the most important incomplete item from `IMPLEMENTATION_PLAN.md` and implement it fully.
+
+        - No placeholders, no stubs — implement completely or don't start
+        - Search the codebase before writing new code; the functionality may already exist
+        - If specs are inconsistent, use an **Opus** reasoning subagent with ultrathink to update the specs before implementing
+        - You may add logging to debug issues
+
+        ## Phase 3: Verify
+
+        Run the project's test suite to validate your changes.
+
+        - If tests fail, use an **Opus** reasoning subagent to reason about the root cause before attempting fixes
+        - If tests unrelated to your work fail, resolve them as part of this increment
+        - If functionality is missing, add it per the specifications
+        - **Blocking Backpressure**: If the item involves frontend user interaction or workflows, verify with `dev-browser --headless` against `http://localhost:3000`.
+
+        ## Phase 4: Finalise
+
+        Once tests pass:
+
+        1. Update `IMPLEMENTATION_PLAN.md` — mark the item complete, clean out stale completed items, add any new findings
+        2. Append an entry to `PROGRESS.md` following the template defined in its `## Entry Template` header (append-only — never edit previous entries)
+        3. Commit the changes — **do NOT stage or commit `IMPLEMENTATION_PLAN.md`, `PROGRESS.md`, `PROMPT_plan.md`, `PROMPT_build.md`, or the `.ralph/` directory**; these are local-only loop artifacts
+        4. `git push`
+
+        ---
+
+        ## Constraints
+
+        - **Subagent discipline:** Use **Sonnet** subagents for search/read, **Opus** subagents for complex reasoning (debugging, architectural decisions), and only **1 Opus** subagent for build/test execution.
+        - **Implement completely.** Placeholders and stubs waste effort redoing the same work.
+        - **Single sources of truth.** Don't duplicate information across files.
+        - **Document the why** — in tests, commits, and documentation, capture importance and reasoning.
+        - **Keep `IMPLEMENTATION_PLAN.md` current** — future iterations depend on it to avoid duplicating effort.
+        - For any bugs you notice, resolve them or document them in `IMPLEMENTATION_PLAN.md`, even if unrelated to the current item.
+
+        ---
+
+        ## Loop control (Archon)
+
+        You run inside an Archon `loop` node — one FRESH iteration per plan item, with no memory of previous iterations. `IMPLEMENTATION_PLAN.md` and `PROGRESS.md` on disk are your only handoff.
+
+        After **Phase 4**, re-read `IMPLEMENTATION_PLAN.md`:
+
+        - If **no** incomplete items (`- [ ]`) remain, output exactly `<promise>PLAN_COMPLETE</promise>` to end the loop.
+        - Otherwise end the iteration normally; the next fresh iteration picks up the next item.
+
+        If you could make no safe code changes this iteration AND the previous PROGRESS.md entry also reported no changes (two consecutive no-op iterations), output `<promise>PLAN_COMPLETE</promise>` and record the blockers in `PROGRESS.md`.
+      until: PLAN_COMPLETE
+      max_iterations: 100
+      fresh_context: true
+      until_bash: |
+        # Complete when the plan is exhausted OR the budget (items + 20% headroom)
+        # is spent — mirroring ralph's fixed-iteration build loop.
+        BUDGET=$(cat "$ARTIFACTS_DIR/build-budget.txt" 2>/dev/null || echo 1)
+        ITER_FILE="$ARTIFACTS_DIR/build-iter.txt"
+        n=$(( $(cat "$ITER_FILE" 2>/dev/null || echo 0) + 1 ))
+        echo "$n" > "$ITER_FILE"
+        remaining=$(grep -c '^- \[ \]' IMPLEMENTATION_PLAN.md 2>/dev/null || echo 0)
+        remaining=${remaining:-0}
+        echo "build iteration=$n budget=$BUDGET remaining=$remaining" >&2
+        if [ "$remaining" -le 0 ] || [ "$n" -ge "$BUDGET" ]; then exit 0; fi
+        exit 1
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 5: REPORT — factual summary of the run (read-only). Runs BEFORE
+  # archive so the artifacts are still in place.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: report
+    depends_on: [build]
+    model: sonnet
+    prompt: |
+      # Ralph run — completion report
+
+      The Ralph build loop has finished. Produce a concise, factual report.
+
+      **Goal:** $ARGUMENTS
+
+      **Build budget vs items:**
+
+      $plan-count.output
+
+      **Last build iteration output:**
+
+      $build.output
+
+      ## Steps
+
+      1. `cat IMPLEMENTATION_PLAN.md` — note which items are complete vs still `- [ ]`.
+      2. `git log --oneline -20` — commits produced during this run.
+      3. `tail -n 60 PROGRESS.md` — latest learnings and gotchas.
+
+      ## Output format
+
+      ```
+      ═══════════════════════════════════════════════
+      RALPH WIGGUM — RUN REPORT
+      ═══════════════════════════════════════════════
+      Goal:    {goal or "none given"}
+      Branch:  {current branch}
+
+      Plan:    {N complete} / {M total} items   (budget was {budget})
+      Remaining items:
+      - {each still-incomplete item, or "none"}
+
+      Commits this run:
+      {git log output}
+
+      Learnings (from PROGRESS.md):
+      - {key patterns / gotchas}
+      ═══════════════════════════════════════════════
+      ```
+
+      Keep it factual — just the data, no commentary. Do NOT modify any files.
+
+  # ═══════════════════════════════════════════════════════════════════════
+  # NODE 6: ARCHIVE — move the loop artifacts to .ralph/<timestamp>/,
+  # exactly like `ralph archive`. Runs last.
+  # ═══════════════════════════════════════════════════════════════════════
+  - id: archive
+    depends_on: [report]
+    bash: |
+      set -e
+      TS=$(date +%Y%m%d-%H%M%S)
+      DEST=".ralph/$TS"
+      moved=0
+      for f in IMPLEMENTATION_PLAN.md PROGRESS.md; do
+        if [ -f "$f" ]; then
+          mkdir -p "$DEST"
+          mv "$f" "$DEST/"
+          echo "Archived: $f -> $DEST/$f"
+          moved=1
+        fi
+      done
+      if [ "$moved" -eq 0 ]; then
+        echo "Nothing to archive."
+      fi
