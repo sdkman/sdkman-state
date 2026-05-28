@@ -2,6 +2,7 @@ package io.sdkman.state.application.validation
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.shouldBeInstanceOf
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 
@@ -72,11 +73,32 @@ class SemverishVersionValidatorSpec :
                     val result = SemverishVersionValidator.validate(input)
 
                     // then: validator surfaces a validation error on the
-                    // `version` field — the specific error subtype is asserted
-                    // by the next plan item once the dedicated error exists.
+                    // `version` field. The specific subtype is asserted in a
+                    // dedicated test below to keep these grammar cases focused
+                    // on coverage rather than type contract.
                     val error = result.shouldBeLeft()
                     error.field shouldBe "version"
                 }
+            }
+        }
+
+        context("error type contract") {
+            // Lock the public error type so that downstream wiring
+            // (VersionRequestValidator, ValidationFailure mapping) can
+            // pattern-match on it without depending on the placeholder
+            // `InvalidOptionalFieldError` it previously borrowed.
+            should("return InvalidSemverishVersionError carrying the offending input") {
+                // when: validating a non-conforming version
+                val result = SemverishVersionValidator.validate("26")
+
+                // then: the error is the dedicated semverish subtype, the
+                // offending input is echoed back, and the message indicates
+                // a semverish format violation.
+                val error = result.shouldBeLeft()
+                val semverishError = error.shouldBeInstanceOf<InvalidSemverishVersionError>()
+                semverishError.field shouldBe "version"
+                semverishError.version shouldBe "26"
+                semverishError.message shouldBe "Version '26' does not conform to the semverish format"
             }
         }
 
