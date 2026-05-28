@@ -14,6 +14,14 @@ interface AppConfig {
     val adminPassword: String
     val jwtSecret: String
     val jwtExpiry: Int
+
+    /**
+     * Candidates that opt in to strict semverish version validation on `POST /versions`.
+     * Membership is checked per request; the set itself is read once at startup. See
+     * `specs/semverish-version-validation.md` and the future-direction note about migrating
+     * this flag onto a per-row column of a `candidates` table.
+     */
+    val strictSemverishCandidates: Set<String>
 }
 
 class DefaultAppConfig(
@@ -30,4 +38,6 @@ class DefaultAppConfig(
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.getIntOrDefault("jwt.expiry", 10)
+    override val strictSemverishCandidates: Set<String> =
+        config.getStringListOrDefault("validation.semverish.candidates", listOf("java")).toSet()
 }
