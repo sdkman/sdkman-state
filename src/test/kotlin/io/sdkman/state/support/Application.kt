@@ -18,23 +18,43 @@ import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureDatabase
 import io.sdkman.state.config.configureJwtAuthentication
 
-fun testApplicationConfig(): MapApplicationConfig =
-    MapApplicationConfig(
-        "database.host" to PostgresTestContainer.host,
-        "database.port" to PostgresTestContainer.port.toString(),
-        "database.username" to PostgresTestContainer.username,
-        "database.password" to PostgresTestContainer.password,
-        "api.cache.control" to "600",
-        "admin.email" to JwtTestSupport.ADMIN_EMAIL,
-        "admin.password" to "testadminpassword",
-        "jwt.secret" to JwtTestSupport.TEST_SECRET,
-        "jwt.expiry" to "10",
-    )
+/**
+ * Builds the default test `ApplicationConfig`, intentionally mirroring production-relevant settings
+ * (notably `validation.semverish.candidates = "java"`) so acceptance tests run against the same
+ * enforcement rules as the deployed service. Callers can pass `overrides` to replace any default
+ * entry — e.g. an empty opt-in set, or a different candidate — without having to rebuild the whole
+ * map. Overrides win on key collision; unknown keys are simply added.
+ */
+fun testApplicationConfig(overrides: Map<String, String> = emptyMap()): MapApplicationConfig {
+    val defaults =
+        mapOf(
+            "database.host" to PostgresTestContainer.host,
+            "database.port" to PostgresTestContainer.port.toString(),
+            "database.username" to PostgresTestContainer.username,
+            "database.password" to PostgresTestContainer.password,
+            "api.cache.control" to "600",
+            "admin.email" to JwtTestSupport.ADMIN_EMAIL,
+            "admin.password" to "testadminpassword",
+            "jwt.secret" to JwtTestSupport.TEST_SECRET,
+            "jwt.expiry" to "10",
+            "validation.semverish.candidates" to "java",
+        )
+    return MapApplicationConfig((defaults + overrides).toList())
+}
 
-fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
+/**
+ * Spins up a `testApplication` wired with the project's full DI graph. `configOverrides` is merged
+ * into [testApplicationConfig] so individual specs can opt different candidates in or out of strict
+ * semverish validation without forking the harness. Existing call sites — `withTestApplication { ... }`
+ * — continue to work unchanged because the trailing lambda still binds to [fn].
+ */
+fun withTestApplication(
+    configOverrides: Map<String, String> = emptyMap(),
+    fn: suspend (ApplicationTestBuilder.() -> Unit),
+) {
     testApplication {
         environment {
-            config = testApplicationConfig()
+            config = testApplicationConfig(configOverrides)
         }
         application {
             val appConfig = DefaultAppConfig(environment.config)
