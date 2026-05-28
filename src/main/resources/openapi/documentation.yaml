@@ -95,17 +95,29 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Validation errors or malformed JSON"
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ValidationErrorResponse"
               examples:
-                Example#1:
-                  description: ""
+                validation_error:
+                  summary: "Accumulated validation failures"
                   value:
                     error: "Validation failed"
-                    message: "null"
+                    failures:
+                      - field: "candidate"
+                        message: "candidate cannot be empty"
+                      - field: "url"
+                        message: "URL 'http://example.com' must be a valid HTTPS URL"
+                semverish_violation:
+                  summary: "Semverish format violation (opted-in candidate)"
+                  description: "Returned when the candidate is in the strict semverish opt-in set (default: java) and the version string does not conform to the semverish grammar."
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "version"
+                        message: "Version '25.0.2.fx' does not conform to the semverish format"
         "204":
           description: "No Content"
           content:
@@ -697,6 +709,7 @@ components:
           type: "string"
         version:
           type: "string"
+          description: "Version identifier. For candidates in the strict semverish opt-in set (configured server-side; default: `java`), the value must conform to the semverish grammar `<major>.<minor>.<patch>[-<variant>][+<build-metadata>]` (e.g. `25.0.2`, `26.0.0-fx`, `27.0.0+ea.16`); non-conforming values are rejected on POST with `400 Bad Request`. For candidates outside that set, any non-empty string is accepted."
         platform:
           type: "string"
           enum:
