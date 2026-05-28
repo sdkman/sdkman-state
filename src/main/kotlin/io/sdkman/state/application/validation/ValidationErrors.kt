@@ -57,6 +57,13 @@ data class InvalidOptionalFieldError(
     override val message: String = "$field is invalid: $reason"
 }
 
+data class InvalidSemverishVersionError(
+    override val field: String = "version",
+    val version: String,
+) : ValidationError() {
+    override val message: String = "Version '$version' does not conform to the semverish format"
+}
+
 data class InvalidTagError(
     override val field: String,
     override val message: String,
