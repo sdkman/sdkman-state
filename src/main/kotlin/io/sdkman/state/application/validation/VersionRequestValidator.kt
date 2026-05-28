@@ -27,7 +27,10 @@ object VersionRequestValidator {
 
     private val json = Json { explicitNulls = false }
 
-    fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
+    fun validateRequest(
+        jsonString: String,
+        strictSemverishCandidates: Set<String> = emptySet(),
+    ): Either<NonEmptyList<ValidationError>, Version> =
         either {
             val request =
                 Either
@@ -37,10 +40,13 @@ object VersionRequestValidator {
                             .nel()
                     }.bind()
 
-            validate(request).bind()
+            validate(request, strictSemverishCandidates).bind()
         }
 
-    fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> {
+    fun validate(
+        request: VersionRequest,
+        strictSemverishCandidates: Set<String> = emptySet(),
+    ): Either<NonEmptyList<ValidationError>, Version> {
         val candidateResult = validateCandidate(request.candidate)
         val versionResult = validateVersion(request.version)
         val platformResult = validatePlatform(request.platform)
@@ -50,6 +56,8 @@ object VersionRequestValidator {
         val sha256sumResult = validateHash("sha256sum", request.sha256sum, 64, HEX_PATTERN_64)
         val sha512sumResult = validateHash("sha512sum", request.sha512sum, 128, HEX_PATTERN_128)
         val tagsResult = validateTags(request.tags)
+        val semverishResult =
+            validateSemverishIfOptedIn(candidateResult, versionResult, strictSemverishCandidates)
 
         val errors =
             listOf<Either<NonEmptyList<ValidationError>, *>>(
@@ -62,6 +70,7 @@ object VersionRequestValidator {
                 sha256sumResult,
                 sha512sumResult,
                 tagsResult,
+                semverishResult,
             ).flatMap { it.fold({ errs -> errs }, { emptyList() }) }
 
         return errors.toNonEmptyListOrNone().fold(
@@ -228,3 +237,38 @@ object VersionRequestValidator {
             else -> emptyList()
         }
 }
+
+/**
+ * Runs [SemverishVersionValidator] only when the candidate is opted in and both the
+ * candidate and version fields passed their own non-blank/format checks. Returning
+ * [Unit].right() when a prerequisite already failed prevents double-counting that
+ * error in the aggregation — the candidate/version failure is reported once on its
+ * own field, not echoed under `version` a second time.
+ *
+ * Lifted to a file-level private function (rather than a member of
+ * `VersionRequestValidator`) so the object stays under detekt's `TooManyFunctions`
+ * threshold for objects without weakening the rule.
+ */
+private fun validateSemverishIfOptedIn(
+    candidateResult: Either<NonEmptyList<ValidationError>, String>,
+    versionResult: Either<NonEmptyList<ValidationError>, String>,
+    strictSemverishCandidates: Set<String>,
+): Either<NonEmptyList<ValidationError>, Unit> =
+    candidateResult.fold(
+        ifLeft = { Unit.right() },
+        ifRight = { candidate ->
+            if (candidate !in strictSemverishCandidates) {
+                Unit.right()
+            } else {
+                versionResult.fold(
+                    ifLeft = { Unit.right() },
+                    ifRight = { version ->
+                        SemverishVersionValidator
+                            .validate(version)
+                            .map { }
+                            .mapLeft { it.nel() }
+                    },
+                )
+            }
+        },
+    )
