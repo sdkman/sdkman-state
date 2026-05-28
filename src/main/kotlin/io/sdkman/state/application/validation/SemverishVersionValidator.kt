@@ -51,18 +51,14 @@ object SemverishVersionValidator {
      *
      * Returns the input string unchanged on success so callers can use the
      * result in `either { }` blocks without re-binding the original value.
+     * On failure returns [InvalidSemverishVersionError] on the `version` field;
+     * the offending input is carried on the error so the validation-error
+     * payload can quote it back to the client.
      */
     fun validate(version: String): Either<ValidationError, String> =
         if (SEMVERISH_PATTERN.matches(version)) {
             version.right()
         } else {
-            // Placeholder error type — the dedicated `InvalidSemverishVersionError`
-            // is introduced in the next plan item and will replace this. The
-            // `field` and the human-readable reason are stable across that
-            // swap, so callers and tests asserting on those remain valid.
-            InvalidOptionalFieldError(
-                field = "version",
-                reason = "does not conform to the semverish format",
-            ).left()
+            InvalidSemverishVersionError(version = version).left()
         }
 }
