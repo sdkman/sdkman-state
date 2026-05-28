@@ -145,12 +145,18 @@ private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
     }
 }
 
-fun Route.versionWriteRoutes(versionService: VersionService) {
-    versionCreateRoute(versionService)
+fun Route.versionWriteRoutes(
+    versionService: VersionService,
+    appConfig: AppConfig,
+) {
+    versionCreateRoute(versionService, appConfig)
     versionDeleteRoute(versionService)
 }
 
-private fun Route.versionCreateRoute(versionService: VersionService) {
+private fun Route.versionCreateRoute(
+    versionService: VersionService,
+    appConfig: AppConfig,
+) {
     post("/versions") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
@@ -158,7 +164,7 @@ private fun Route.versionCreateRoute(versionService: VersionService) {
         val role = call.authenticatedRole()
         val candidates = call.authenticatedCandidates()
         val requestBody = call.receiveText()
-        VersionRequestValidator.validateRequest(requestBody).fold(
+        VersionRequestValidator.validateRequest(requestBody, appConfig.strictSemverishCandidates).fold(
             ifLeft = { errors ->
                 val failures = errors.map { ValidationFailure(it.field, it.message) }
                 call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
