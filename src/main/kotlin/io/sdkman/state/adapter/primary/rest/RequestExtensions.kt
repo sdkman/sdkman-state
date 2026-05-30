@@ -67,6 +67,7 @@ fun String.toDistribution(): Option<Distribution> = Distribution.entries.firstOr
 
 private val platformVocabulary: String = Platform.entries.joinToString(", ") { it.name }
 private val distributionVocabulary: String = Distribution.entries.joinToString(", ") { it.name }
+private const val VISIBLE_VOCABULARY: String = "true, false, all"
 
 fun ApplicationRequest.platformQueryParam(): Either<ErrorResponse, Option<Platform>> =
     queryParameters["platform"].toOption().fold(
@@ -100,6 +101,19 @@ fun ApplicationRequest.distributionQueryParam(): Either<ErrorResponse, Option<Di
         },
     )
 
+fun ApplicationRequest.strictVisibleQueryParam(): Either<ErrorResponse, Option<Boolean>> =
+    queryParameters["visible"].toOption().fold(
+        { true.some().right() },
+        { value ->
+            when (value) {
+                "true" -> true.some().right()
+                "false" -> false.some().right()
+                "all" -> none<Boolean>().right()
+                else -> invalidVisibleError(value).left()
+            }
+        },
+    )
+
 private fun invalidPlatformError(value: String): ErrorResponse =
     ErrorResponse(
         "Bad Request",
@@ -116,6 +130,12 @@ private fun invalidDistributionError(value: String): ErrorResponse =
     ErrorResponse(
         "Bad Request",
         "Invalid distribution '$value'. Expected one of: $distributionVocabulary.",
+    )
+
+private fun invalidVisibleError(value: String): ErrorResponse =
+    ErrorResponse(
+        "Bad Request",
+        "Invalid visible '$value'. Expected one of: $VISIBLE_VOCABULARY.",
     )
 
 suspend fun ApplicationCall.respondDomainError(error: DomainError) {
