@@ -66,6 +66,7 @@ fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
 fun String.toDistribution(): Option<Distribution> = Distribution.entries.firstOrNone { it.name == this }
 
 private val platformVocabulary: String = Platform.entries.joinToString(", ") { it.name }
+private val distributionVocabulary: String = Distribution.entries.joinToString(", ") { it.name }
 
 fun ApplicationRequest.platformQueryParam(): Either<ErrorResponse, Option<Platform>> =
     queryParameters["platform"].toOption().fold(
@@ -88,6 +89,17 @@ fun ApplicationRequest.requiredPlatformQueryParam(): Either<ErrorResponse, Platf
         },
     )
 
+fun ApplicationRequest.distributionQueryParam(): Either<ErrorResponse, Option<Distribution>> =
+    queryParameters["distribution"].toOption().fold(
+        { none<Distribution>().right() },
+        { value ->
+            Distribution.entries
+                .firstOrNone { it.name == value }
+                .toEither { invalidDistributionError(value) }
+                .map { it.some() }
+        },
+    )
+
 private fun invalidPlatformError(value: String): ErrorResponse =
     ErrorResponse(
         "Bad Request",
@@ -98,6 +110,12 @@ private fun missingPlatformError(): ErrorResponse =
     ErrorResponse(
         "Bad Request",
         "Missing required parameter: platform. Expected one of: $platformVocabulary.",
+    )
+
+private fun invalidDistributionError(value: String): ErrorResponse =
+    ErrorResponse(
+        "Bad Request",
+        "Invalid distribution '$value'. Expected one of: $distributionVocabulary.",
     )
 
 suspend fun ApplicationCall.respondDomainError(error: DomainError) {
