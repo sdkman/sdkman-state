@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
@@ -195,23 +196,27 @@ class ResolveVersionByTagAcceptanceSpec :
             }
         }
 
-        should("return 400 when candidate is blank") {
+        should("return 400 with ErrorResponse body when candidate is blank") {
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/%20/tags/lts").apply {
-                        // then: blank candidate fails the isNotBlank guard
+                        // then: blank candidate names the offending path parameter
                         status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse("Bad Request", "Missing required path parameter: candidate")
                     }
                 }
             }
         }
 
-        should("return 400 when tag is blank") {
+        should("return 400 with ErrorResponse body when tag is blank") {
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java/tags/%20").apply {
-                        // then: blank tag fails the isNotBlank guard
+                        // then: blank tag names the offending path parameter
                         status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse("Bad Request", "Missing required path parameter: tag")
                     }
                 }
             }

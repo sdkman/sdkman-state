@@ -8,6 +8,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
@@ -111,11 +112,13 @@ class GetVersionAcceptanceSpec :
             }
         }
 
-        should("return BAD_REQUEST when candidate parameter is empty string") {
+        should("return BAD_REQUEST with ErrorResponse body when candidate parameter is blank") {
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/%20/1.0.0").apply {
                         status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse("Bad Request", "Missing required path parameter: candidate")
                     }
                 }
             }

@@ -56,6 +56,11 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
 
 fun String.toDistribution(): Option<Distribution> = Distribution.entries.firstOrNone { it.name == this }
 
+fun Parameters.requiredPathParam(name: String): Either<ErrorResponse, String> =
+    this[name].toOption().filter { it.isNotBlank() }.toEither {
+        ErrorResponse("Bad Request", "Missing required path parameter: $name")
+    }
+
 private val platformVocabulary: String = Platform.entries.joinToString(", ") { it.name }
 private val distributionVocabulary: String = Distribution.entries.joinToString(", ") { it.name }
 private const val VISIBLE_VOCABULARY: String = "true, false, all"

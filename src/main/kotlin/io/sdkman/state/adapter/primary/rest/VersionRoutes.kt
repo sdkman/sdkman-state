@@ -3,7 +3,6 @@ package io.sdkman.state.adapter.primary.rest
 import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.raise.either
-import arrow.core.raise.option
 import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -50,48 +49,37 @@ fun Route.versionReadRoutes(
 
 private fun Route.versionsByCandidateRoute(versionService: VersionService) {
     get("/versions/{candidate}") {
-        call.parameters["candidate"]
-            .toOption()
-            .filter { it.isNotBlank() }
-            .fold(
-                { call.respond(HttpStatusCode.BadRequest) },
-                { candidateId ->
-                    either {
-                        val platform = call.request.platformQueryParam().bind()
-                        val distribution = call.request.distributionQueryParam().bind()
-                        val visible = call.request.visibleQueryParam().bind()
-                        Triple(platform, distribution, visible)
-                    }.fold(
-                        ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
-                        ifRight = { (platform, distribution, visible) ->
-                            versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
-                                ifLeft = { domainError -> call.respondDomainError(domainError) },
-                                ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
-                            )
-                        },
-                    )
-                },
-            )
+        call.parameters.requiredPathParam("candidate").fold(
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { candidateId ->
+                either {
+                    val platform = call.request.platformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    val visible = call.request.visibleQueryParam().bind()
+                    Triple(platform, distribution, visible)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution, visible) ->
+                        versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
+                            ifLeft = { domainError -> call.respondDomainError(domainError) },
+                            ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 
 private fun Route.uniqueVersionRoute(versionService: VersionService) {
     get("/versions/{candidate}/{version}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val versionId =
-                call.parameters["version"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
+        either {
+            val candidateId = call.parameters.requiredPathParam("candidate").bind()
+            val versionId = call.parameters.requiredPathParam("version").bind()
             Pair(candidateId, versionId)
         }.fold(
-            { call.respond(HttpStatusCode.BadRequest) },
-            { (candidateId, versionId) ->
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { (candidateId, versionId) ->
                 either {
                     val platform = call.request.requiredPlatformQueryParam().bind()
                     val distribution = call.request.distributionQueryParam().bind()
@@ -116,21 +104,13 @@ private fun Route.uniqueVersionRoute(versionService: VersionService) {
 
 private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
     get("/versions/{candidate}/tags/{tag}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val tag =
-                call.parameters["tag"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
+        either {
+            val candidateId = call.parameters.requiredPathParam("candidate").bind()
+            val tag = call.parameters.requiredPathParam("tag").bind()
             Pair(candidateId, tag)
         }.fold(
-            { call.respond(HttpStatusCode.BadRequest) },
-            { (candidateId, tag) ->
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { (candidateId, tag) ->
                 either {
                     val platform = call.request.requiredPlatformQueryParam().bind()
                     val distribution = call.request.distributionQueryParam().bind()
