@@ -37,7 +37,7 @@ class GetVersionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(kotlin210Universal)
                 withTestApplication {
-                    client.get("/versions/kotlin/2.1.0").apply {
+                    client.get("/versions/kotlin/2.1.0?platform=UNIVERSAL").apply {
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe kotlin210Universal.toJson()
                     }
@@ -60,7 +60,7 @@ class GetVersionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(java21MacX64)
                 withTestApplication {
-                    client.get("/versions/java/21.0.1?platform=darwinx64&distribution=TEMURIN").apply {
+                    client.get("/versions/java/21.0.1?platform=MAC_X64&distribution=TEMURIN").apply {
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe java21MacX64.toJson()
                     }
@@ -83,7 +83,7 @@ class GetVersionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(scala312Universal)
                 withTestApplication {
-                    client.get("/versions/scala/3.1.2").apply {
+                    client.get("/versions/scala/3.1.2?platform=UNIVERSAL").apply {
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe scala312Universal.toJson()
                     }
@@ -94,7 +94,7 @@ class GetVersionAcceptanceSpec :
         should("return NOT_FOUND when platform-specific version does not exist") {
             withCleanDatabase {
                 withTestApplication {
-                    client.get("/versions/java/21.0.1?platform=darwinx64&distribution=TEMURIN").apply {
+                    client.get("/versions/java/21.0.1?platform=MAC_X64&distribution=TEMURIN").apply {
                         status shouldBe HttpStatusCode.NotFound
                     }
                 }
@@ -104,7 +104,7 @@ class GetVersionAcceptanceSpec :
         should("return NOT_FOUND when version with NO distribution does not exist") {
             withCleanDatabase {
                 withTestApplication {
-                    client.get("/versions/scala/3.1.2").apply {
+                    client.get("/versions/scala/3.1.2?platform=UNIVERSAL").apply {
                         status shouldBe HttpStatusCode.NotFound
                     }
                 }

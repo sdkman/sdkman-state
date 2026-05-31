@@ -90,24 +90,29 @@ private fun Route.uniqueVersionRoute(versionService: VersionService) {
                     .toOption()
                     .filter { it.isNotBlank() }
                     .bind()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-                    .getOrElse { Platform.UNIVERSAL }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.findUnique(candidateId, versionId, platform, distribution).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { maybeVersion ->
-                    maybeVersion
-                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
-                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
-                },
-            )
-        }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
+            Pair(candidateId, versionId)
+        }.fold(
+            { call.respond(HttpStatusCode.BadRequest) },
+            { (candidateId, versionId) ->
+                either {
+                    val platform = call.request.requiredPlatformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    Pair(platform, distribution)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution) ->
+                        versionService.findUnique(candidateId, versionId, platform, distribution).fold(
+                            ifLeft = { domainError -> call.respondDomainError(domainError) },
+                            ifRight = { maybeVersion ->
+                                maybeVersion
+                                    .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                                    .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 

@@ -140,7 +140,7 @@ class GetVersionTagsAcceptanceSpec :
 
                 withTestApplication {
                     // when: GET single version
-                    client.get("/versions/java/27.0.2?platform=linuxx64&distribution=TEMURIN").apply {
+                    client.get("/versions/java/27.0.2?platform=LINUX_X64&distribution=TEMURIN").apply {
                         // then: response includes all tags
                         status shouldBe HttpStatusCode.OK
                         val expected = java2702.copy(tags = listOf("latest", "27", "27.0").some()).toJson()
@@ -167,7 +167,7 @@ class GetVersionTagsAcceptanceSpec :
 
                 withTestApplication {
                     // when: GET single version
-                    client.get("/versions/gradle/8.10").apply {
+                    client.get("/versions/gradle/8.10?platform=UNIVERSAL").apply {
                         // then: response includes empty tags array
                         status shouldBe HttpStatusCode.OK
                         val expected = gradle810.copy(tags = emptyList<String>().some()).toJson()
@@ -197,7 +197,7 @@ class GetVersionTagsAcceptanceSpec :
 
                 withTestApplication {
                     // when: GET single version
-                    client.get("/versions/java/27.0.2?platform=linuxx64&distribution=TEMURIN").apply {
+                    client.get("/versions/java/27.0.2?platform=LINUX_X64&distribution=TEMURIN").apply {
                         // then: all three tags appear
                         status shouldBe HttpStatusCode.OK
                         val body = Json.decodeFromString<JsonObject>(bodyAsText())
