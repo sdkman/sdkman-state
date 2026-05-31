@@ -112,6 +112,66 @@ class GetVersionAcceptanceSpec :
             }
         }
 
+        should("return 400 with ErrorResponse body when platform parameter is missing") {
+            // Rule 4: platform is required on single-version resolution — the previous implicit
+            // UNIVERSAL fallback is gone, and absence must surface with a message naming the
+            // missing parameter and the canonical vocabulary.
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/21.0.3").apply {
+                        status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse(
+                                "Bad Request",
+                                "Missing required parameter: platform. Expected one of: " +
+                                    "LINUX_X32, LINUX_X64, LINUX_ARM32HF, LINUX_ARM32SF, LINUX_ARM64, " +
+                                    "MAC_X64, MAC_ARM64, WINDOWS_X64, UNIVERSAL.",
+                            )
+                    }
+                }
+            }
+        }
+
+        should("return 400 with ErrorResponse body when platform is a retired legacy identifier") {
+            // Rule 3: unknown platform — including legacy lowercase identifiers like `linuxx64` —
+            // is a client error, never silently coerced to UNIVERSAL.
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/21.0.3?platform=linuxx64").apply {
+                        status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse(
+                                "Bad Request",
+                                "Invalid platform 'linuxx64'. Expected one of: " +
+                                    "LINUX_X32, LINUX_X64, LINUX_ARM32HF, LINUX_ARM32SF, LINUX_ARM64, " +
+                                    "MAC_X64, MAC_ARM64, WINDOWS_X64, UNIVERSAL.",
+                            )
+                    }
+                }
+            }
+        }
+
+        should("return 400 with ErrorResponse body when distribution is a vendor shortcode") {
+            // Rule 10: vendor shortcodes such as `open` are no longer silently dropped — that
+            // discarded the filter and broadened the match. They must now be rejected with a
+            // descriptive message naming the offending value and the canonical vocabulary.
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/21.0.3?platform=LINUX_X64&distribution=open").apply {
+                        status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse(
+                                "Bad Request",
+                                "Invalid distribution 'open'. Expected one of: " +
+                                    "BISHENG, CORRETTO, GRAALCE, GRAALVM, JETBRAINS, KONA, LIBERICA, " +
+                                    "LIBERICA_NIK, MANDREL, MICROSOFT, OPENJDK, ORACLE, SAP_MACHINE, " +
+                                    "SEMERU, TEMURIN, ZULU.",
+                            )
+                    }
+                }
+            }
+        }
+
         should("return BAD_REQUEST with ErrorResponse body when candidate parameter is blank") {
             withCleanDatabase {
                 withTestApplication {

@@ -85,9 +85,10 @@ class ResolveVersionByTagAcceptanceSpec :
             }
         }
 
-        should("return 400 when platform parameter is missing") {
-            // The previous implicit UNIVERSAL fall-back is gone (spec Rule 5):
-            // platform is required, and absence is a client error rather than a silent default.
+        should("return 400 with ErrorResponse body when platform parameter is missing") {
+            // Rule 5: the previous implicit UNIVERSAL fall-back is gone — platform is required,
+            // and absence is a client error that must name the missing parameter and the
+            // canonical vocabulary in the body, never coerced silently to UNIVERSAL.
             val version =
                 Version(
                     candidate = "gradle",
@@ -104,8 +105,33 @@ class ResolveVersionByTagAcceptanceSpec :
                 insertTag("gradle", "latest", none(), Platform.UNIVERSAL, versionId)
                 withTestApplication {
                     client.get("/versions/gradle/tags/latest").apply {
-                        // then: missing platform is rejected, never coerced to UNIVERSAL
                         status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse(
+                                "Bad Request",
+                                "Missing required parameter: platform. Expected one of: " +
+                                    "LINUX_X32, LINUX_X64, LINUX_ARM32HF, LINUX_ARM32SF, LINUX_ARM64, " +
+                                    "MAC_X64, MAC_ARM64, WINDOWS_X64, UNIVERSAL.",
+                            )
+                    }
+                }
+            }
+        }
+
+        should("return 400 with ErrorResponse body when platform is a retired legacy identifier") {
+            // Rule 3: unknown platform — including legacy lowercase identifiers like `linuxx64` —
+            // is a client error on tag resolution, never silently coerced to UNIVERSAL.
+            withCleanDatabase {
+                withTestApplication {
+                    client.get("/versions/java/tags/lts?platform=linuxx64").apply {
+                        status shouldBe HttpStatusCode.BadRequest
+                        Json.decodeFromString<ErrorResponse>(bodyAsText()) shouldBe
+                            ErrorResponse(
+                                "Bad Request",
+                                "Invalid platform 'linuxx64'. Expected one of: " +
+                                    "LINUX_X32, LINUX_X64, LINUX_ARM32HF, LINUX_ARM32SF, LINUX_ARM64, " +
+                                    "MAC_X64, MAC_ARM64, WINDOWS_X64, UNIVERSAL.",
+                            )
                     }
                 }
             }
