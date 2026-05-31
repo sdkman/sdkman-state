@@ -2,7 +2,6 @@ package io.sdkman.state.adapter.primary.rest
 
 import arrow.core.Either
 import arrow.core.Option
-import arrow.core.Some
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.left
@@ -55,14 +54,6 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
                 .toOption()
         }.getOrElse { emptyList() }
 
-fun ApplicationRequest.visibleQueryParam(): Option<Boolean> =
-    when (this.queryParameters["visible"].toOption()) {
-        Some("all") -> none()
-        Some("false") -> Some(false)
-        Some("true") -> Some(true)
-        else -> Some(true)
-    }
-
 fun String.toDistribution(): Option<Distribution> = Distribution.entries.firstOrNone { it.name == this }
 
 private val platformVocabulary: String = Platform.entries.joinToString(", ") { it.name }
@@ -101,7 +92,7 @@ fun ApplicationRequest.distributionQueryParam(): Either<ErrorResponse, Option<Di
         },
     )
 
-fun ApplicationRequest.strictVisibleQueryParam(): Either<ErrorResponse, Option<Boolean>> =
+fun ApplicationRequest.visibleQueryParam(): Either<ErrorResponse, Option<Boolean>> =
     queryParameters["visible"].toOption().fold(
         { true.some().right() },
         { value ->

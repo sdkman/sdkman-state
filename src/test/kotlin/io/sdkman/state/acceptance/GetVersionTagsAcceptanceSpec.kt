@@ -56,7 +56,7 @@ class GetVersionTagsAcceptanceSpec :
                     // when: GET all versions
                     client
                         .get("/versions/java") {
-                            url { parameters.append("platform", "linuxx64") }
+                            url { parameters.append("platform", "LINUX_X64") }
                         }.apply {
                             // then: each version includes correct tags
                             status shouldBe HttpStatusCode.OK
@@ -103,7 +103,7 @@ class GetVersionTagsAcceptanceSpec :
                     // when: GET all versions
                     client
                         .get("/versions/java") {
-                            url { parameters.append("platform", "linuxx64") }
+                            url { parameters.append("platform", "LINUX_X64") }
                         }.apply {
                             // then: tagged version has tags, untagged has empty array
                             status shouldBe HttpStatusCode.OK

@@ -153,7 +153,7 @@ class GetVersionsAcceptanceSpec :
                 withTestApplication {
                     client
                         .get("/versions/java") {
-                            url { parameters.append("platform", "universal") }
+                            url { parameters.append("platform", "UNIVERSAL") }
                         }.apply {
                             status shouldBe HttpStatusCode.OK
                             Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe
@@ -215,7 +215,7 @@ class GetVersionsAcceptanceSpec :
                 withTestApplication {
                     client
                         .get("/versions/java") {
-                            url { parameters.append("platform", "linuxarm64") }
+                            url { parameters.append("platform", "LINUX_ARM64") }
                         }.apply {
                             status shouldBe HttpStatusCode.OK
                             Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe
@@ -228,7 +228,7 @@ class GetVersionsAcceptanceSpec :
                         }
                     client
                         .get("/versions/java") {
-                            url { parameters.append("platform", "linuxx64") }
+                            url { parameters.append("platform", "LINUX_X64") }
                         }.apply {
                             status shouldBe HttpStatusCode.OK
                             Json.decodeFromString<JsonArray>(bodyAsText()) shouldBe
@@ -276,7 +276,7 @@ class GetVersionsAcceptanceSpec :
                         client
                             .get("/versions/java") {
                                 url {
-                                    parameters.append("platform", "universal")
+                                    parameters.append("platform", "UNIVERSAL")
                                     parameters.append("visible", visible)
                                 }
                             }.apply {

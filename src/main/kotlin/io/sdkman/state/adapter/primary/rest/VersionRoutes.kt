@@ -52,28 +52,28 @@ fun Route.versionReadRoutes(
 
 private fun Route.versionsByCandidateRoute(versionService: VersionService) {
     get("/versions/{candidate}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val visible = call.request.visibleQueryParam()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
+        call.parameters["candidate"]
+            .toOption()
+            .filter { it.isNotBlank() }
+            .fold(
+                { call.respond(HttpStatusCode.BadRequest) },
+                { candidateId ->
+                    either {
+                        val platform = call.request.platformQueryParam().bind()
+                        val distribution = call.request.distributionQueryParam().bind()
+                        val visible = call.request.visibleQueryParam().bind()
+                        Triple(platform, distribution, visible)
+                    }.fold(
+                        ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                        ifRight = { (platform, distribution, visible) ->
+                            versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
+                                ifLeft = { domainError -> call.respondDomainError(domainError) },
+                                ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
+                            )
+                        },
+                    )
+                },
             )
-        }.getOrElse {
-            call.respond(HttpStatusCode.BadRequest)
-        }
     }
 }
 
