@@ -339,7 +339,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /versions/{candidate}:
     get:
-      description: ""
+      description: "List versions for a candidate, optionally filtered by platform, distribution, and visibility."
       parameters:
         - name: "candidate"
           in: "path"
@@ -351,11 +351,51 @@ paths:
           required: false
           schema:
             type: "string"
+            enum:
+              - "LINUX_X32"
+              - "LINUX_X64"
+              - "LINUX_ARM32HF"
+              - "LINUX_ARM32SF"
+              - "LINUX_ARM64"
+              - "MAC_X64"
+              - "MAC_ARM64"
+              - "WINDOWS_X64"
+              - "UNIVERSAL"
+          description: "Canonical platform enum value. Absent means no platform filter (all platforms)."
         - name: "distribution"
           in: "query"
           required: false
           schema:
             type: "string"
+            enum:
+              - "BISHENG"
+              - "CORRETTO"
+              - "GRAALCE"
+              - "GRAALVM"
+              - "JETBRAINS"
+              - "KONA"
+              - "LIBERICA"
+              - "LIBERICA_NIK"
+              - "MANDREL"
+              - "MICROSOFT"
+              - "OPENJDK"
+              - "ORACLE"
+              - "SAP_MACHINE"
+              - "SEMERU"
+              - "TEMURIN"
+              - "ZULU"
+          description: "Canonical distribution enum value. Absent means no distribution filter."
+        - name: "visible"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            enum:
+              - "true"
+              - "false"
+              - "all"
+            default: "true"
+          description: "Visibility filter. 'true' returns visible versions only (default), 'false' returns hidden versions only, 'all' applies no visibility filter."
       responses:
         "200":
           description: "OK"
@@ -366,11 +406,11 @@ paths:
                 items:
                   $ref: "#/components/schemas/Version"
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Invalid query parameter value, or missing/blank candidate path parameter"
           content:
-            '*/*':
+            'application/json':
               schema:
-                type: "object"
+                $ref: "#/components/schemas/ErrorResponse"
   /versions/{candidate}/tags/{tag}:
     get:
       description: "Resolve a tag to the single version it points to within the given candidate, distribution, and platform scope"
@@ -387,19 +427,45 @@ paths:
           schema:
             type: "string"
           description: "The tag to resolve (e.g. lts, latest)"
+        - name: "platform"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            enum:
+              - "LINUX_X32"
+              - "LINUX_X64"
+              - "LINUX_ARM32HF"
+              - "LINUX_ARM32SF"
+              - "LINUX_ARM64"
+              - "MAC_X64"
+              - "MAC_ARM64"
+              - "WINDOWS_X64"
+              - "UNIVERSAL"
+          description: "Canonical platform enum value. Required — UNIVERSAL must be requested explicitly."
         - name: "distribution"
           in: "query"
           required: false
           schema:
             type: "string"
-          description: "Distribution name (e.g. TEMURIN, CORRETTO)"
-        - name: "platform"
-          in: "query"
-          required: false
-          schema:
-            type: "string"
-            default: "UNIVERSAL"
-          description: "Platform ID (e.g. linuxx64, darwinarm64). Defaults to UNIVERSAL"
+            enum:
+              - "BISHENG"
+              - "CORRETTO"
+              - "GRAALCE"
+              - "GRAALVM"
+              - "JETBRAINS"
+              - "KONA"
+              - "LIBERICA"
+              - "LIBERICA_NIK"
+              - "MANDREL"
+              - "MICROSOFT"
+              - "OPENJDK"
+              - "ORACLE"
+              - "SAP_MACHINE"
+              - "SEMERU"
+              - "TEMURIN"
+              - "ZULU"
+          description: "Canonical distribution enum value. Absent resolves the version tagged for the candidate with no distribution."
       responses:
         "200":
           description: "OK - Tag resolved successfully"
@@ -408,11 +474,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Version"
         "400":
-          description: "Bad Request - Missing or blank candidate or tag"
+          description: "Bad Request - Missing or invalid required parameter (platform), invalid distribution, or missing/blank candidate or tag"
           content:
-            '*/*':
+            'application/json':
               schema:
-                type: "object"
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: "Not Found - No version carries this tag in the given scope"
           content:
@@ -421,7 +487,7 @@ paths:
                 type: "object"
   /versions/{candidate}/{version}:
     get:
-      description: ""
+      description: "Fetch a single version uniquely identified by candidate, version, platform, and optional distribution."
       parameters:
         - name: "candidate"
           in: "path"
@@ -435,14 +501,43 @@ paths:
             type: "string"
         - name: "platform"
           in: "query"
-          required: false
+          required: true
           schema:
             type: "string"
+            enum:
+              - "LINUX_X32"
+              - "LINUX_X64"
+              - "LINUX_ARM32HF"
+              - "LINUX_ARM32SF"
+              - "LINUX_ARM64"
+              - "MAC_X64"
+              - "MAC_ARM64"
+              - "WINDOWS_X64"
+              - "UNIVERSAL"
+          description: "Canonical platform enum value. Required — UNIVERSAL must be requested explicitly."
         - name: "distribution"
           in: "query"
           required: false
           schema:
             type: "string"
+            enum:
+              - "BISHENG"
+              - "CORRETTO"
+              - "GRAALCE"
+              - "GRAALVM"
+              - "JETBRAINS"
+              - "KONA"
+              - "LIBERICA"
+              - "LIBERICA_NIK"
+              - "MANDREL"
+              - "MICROSOFT"
+              - "OPENJDK"
+              - "ORACLE"
+              - "SAP_MACHINE"
+              - "SEMERU"
+              - "TEMURIN"
+              - "ZULU"
+          description: "Canonical distribution enum value. Absent applies no distribution filter."
       responses:
         "404":
           description: "Not Found"
@@ -457,11 +552,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Version"
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Missing or invalid required parameter (platform), invalid distribution, or missing/blank candidate or version"
           content:
-            '*/*':
+            'application/json':
               schema:
-                type: "object"
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   securitySchemes:
     bearerAuth:
