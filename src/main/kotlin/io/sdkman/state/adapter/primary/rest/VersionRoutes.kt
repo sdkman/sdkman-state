@@ -1,7 +1,6 @@
 package io.sdkman.state.adapter.primary.rest
 
 import arrow.core.Either
-import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.raise.option
@@ -23,7 +22,6 @@ import io.sdkman.state.application.validation.UniqueVersionValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.DomainError
-import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.service.VersionService
 import java.time.Instant
 
@@ -129,24 +127,29 @@ private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
                     .toOption()
                     .filter { it.isNotBlank() }
                     .bind()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-                    .getOrElse { Platform.UNIVERSAL }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.resolveByTag(candidateId, tag, platform, distribution).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { maybeVersion ->
-                    maybeVersion
-                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
-                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
-                },
-            )
-        }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
+            Pair(candidateId, tag)
+        }.fold(
+            { call.respond(HttpStatusCode.BadRequest) },
+            { (candidateId, tag) ->
+                either {
+                    val platform = call.request.requiredPlatformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    Pair(platform, distribution)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution) ->
+                        versionService.resolveByTag(candidateId, tag, platform, distribution).fold(
+                            ifLeft = { error -> call.respondDomainError(error) },
+                            ifRight = { maybeVersion ->
+                                maybeVersion
+                                    .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                                    .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 

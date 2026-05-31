@@ -39,7 +39,7 @@ class ResolveVersionByTagAcceptanceSpec :
                 val versionId = insertVersionWithId(version)
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, versionId)
                 withTestApplication {
-                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=linuxx64").apply {
+                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=LINUX_X64").apply {
                         // then: resolves to the tagged version
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe version.toJson()
@@ -51,7 +51,7 @@ class ResolveVersionByTagAcceptanceSpec :
         should("return 404 when tag does not exist in the given scope") {
             withCleanDatabase {
                 withTestApplication {
-                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=linuxx64").apply {
+                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=LINUX_X64").apply {
                         // then: tag not found
                         status shouldBe HttpStatusCode.NotFound
                     }
@@ -75,8 +75,8 @@ class ResolveVersionByTagAcceptanceSpec :
                 val versionId = insertVersionWithId(version)
                 insertTag("scala", "latest", none(), Platform.UNIVERSAL, versionId)
                 withTestApplication {
-                    client.get("/versions/scala/tags/latest").apply {
-                        // then: resolves without distribution, platform defaults to UNIVERSAL
+                    client.get("/versions/scala/tags/latest?platform=UNIVERSAL").apply {
+                        // then: resolves without distribution at the explicitly requested UNIVERSAL platform
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe version.toJson()
                     }
@@ -84,7 +84,9 @@ class ResolveVersionByTagAcceptanceSpec :
             }
         }
 
-        should("default platform to UNIVERSAL when omitted") {
+        should("return 400 when platform parameter is missing") {
+            // The previous implicit UNIVERSAL fall-back is gone (spec Rule 5):
+            // platform is required, and absence is a client error rather than a silent default.
             val version =
                 Version(
                     candidate = "gradle",
@@ -101,7 +103,31 @@ class ResolveVersionByTagAcceptanceSpec :
                 insertTag("gradle", "latest", none(), Platform.UNIVERSAL, versionId)
                 withTestApplication {
                     client.get("/versions/gradle/tags/latest").apply {
-                        // then: resolves with UNIVERSAL default
+                        // then: missing platform is rejected, never coerced to UNIVERSAL
+                        status shouldBe HttpStatusCode.BadRequest
+                    }
+                }
+            }
+        }
+
+        should("resolve a universal-tagged version when platform=UNIVERSAL is supplied explicitly") {
+            val version =
+                Version(
+                    candidate = "gradle",
+                    version = "8.12",
+                    platform = Platform.UNIVERSAL,
+                    url = "https://gradle-8.12.tar.gz",
+                    visible = true.some(),
+                    distribution = none(),
+                    tags = listOf("latest").some(),
+                )
+
+            withCleanDatabase {
+                val versionId = insertVersionWithId(version)
+                insertTag("gradle", "latest", none(), Platform.UNIVERSAL, versionId)
+                withTestApplication {
+                    client.get("/versions/gradle/tags/latest?platform=UNIVERSAL").apply {
+                        // then: UNIVERSAL is now reachable only when explicitly requested
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe version.toJson()
                     }
@@ -137,7 +163,7 @@ class ResolveVersionByTagAcceptanceSpec :
                 val correttoId = insertVersionWithId(correttoVersion)
                 insertTag("java", "lts", Distribution.CORRETTO.some(), Platform.LINUX_X64, correttoId)
                 withTestApplication {
-                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=linuxx64").apply {
+                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=LINUX_X64").apply {
                         // then: resolves to the TEMURIN version
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe temurinVersion.toJson()
@@ -161,7 +187,7 @@ class ResolveVersionByTagAcceptanceSpec :
                 val versionId = insertVersionWithId(version)
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, versionId)
                 withTestApplication {
-                    client.get("/versions/java/tags/LTS?distribution=TEMURIN&platform=linuxx64").apply {
+                    client.get("/versions/java/tags/LTS?distribution=TEMURIN&platform=LINUX_X64").apply {
                         // then: LTS != lts, so 404
                         status shouldBe HttpStatusCode.NotFound
                     }
@@ -207,7 +233,7 @@ class ResolveVersionByTagAcceptanceSpec :
                 val versionId = insertVersionWithId(version)
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, versionId)
                 withTestApplication {
-                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=linuxx64").apply {
+                    client.get("/versions/java/tags/lts?distribution=TEMURIN&platform=LINUX_X64").apply {
                         // then: invisible version is still returned
                         status shouldBe HttpStatusCode.OK
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe version.toJson()
