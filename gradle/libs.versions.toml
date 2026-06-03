@@ -1,6 +1,6 @@
 [versions]
 # Plugins
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 ktor-plugin = "3.5.0"
 ktlint-plugin = "14.2.0"
 detekt-plugin = "1.23.8"
