@@ -1,4 +1,4 @@
-name: Triage on Fork PR Completion
+name: "Triage: Fork PR"
 
 on:
   workflow_run:
