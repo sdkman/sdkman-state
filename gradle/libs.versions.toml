@@ -19,7 +19,7 @@ kotlinx-datetime = "0.8.0-0.6.x-compat"
 testcontainers-bom = "2.0.5"
 mockk = "1.14.11"
 detekt-rules = "1.1.0"
-hikari = "5.1.0"
+hikari = "7.0.2"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
