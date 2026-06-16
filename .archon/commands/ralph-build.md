@@ -49,7 +49,7 @@ Run the project's test suite to validate your changes.
 
 Once tests pass:
 
-1. Update `IMPLEMENTATION_PLAN.md` — mark the item complete, clean out stale completed items, add any new findings
+1. Update `IMPLEMENTATION_PLAN.md` — mark the completed item as done (`- [x]`); **never delete it**. The plan is an append-only ledger: completed items stay as a record of what shipped. You may **append** new items if this iteration surfaced follow-up work, but do not remove or rewrite existing ones.
 2. Append an entry to `PROGRESS.md` following the template defined in its `## Entry Template` header (append-only — never edit previous entries)
 3. Commit the changes — **do NOT stage or commit `IMPLEMENTATION_PLAN.md`, `PROGRESS.md`, `PROMPT_plan.md`, `PROMPT_build.md`, or the `.ralph/` directory**; these are local-only loop artifacts
 4. `git push`
@@ -62,7 +62,7 @@ Once tests pass:
 - **Implement completely.** Placeholders and stubs waste effort redoing the same work.
 - **Single sources of truth.** Don't duplicate information across files.
 - **Document the why** — in tests, commits, and documentation, capture importance and reasoning.
-- **Keep `IMPLEMENTATION_PLAN.md` current** — future iterations depend on it to avoid duplicating effort.
+- **Keep `IMPLEMENTATION_PLAN.md` current** — mark items done and append new ones, but **never delete**; future iterations depend on it to avoid duplicating effort.
 - For any bugs you notice, resolve them or document them in `IMPLEMENTATION_PLAN.md`, even if unrelated to the current item.
 
 ---
