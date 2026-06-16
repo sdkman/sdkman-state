@@ -41,7 +41,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
@@ -93,7 +93,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
@@ -146,7 +146,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
@@ -199,7 +199,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
@@ -252,7 +252,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getA =
                         client.get("/versions/java/27.0.1") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getA.status shouldBe HttpStatusCode.OK
@@ -260,7 +260,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getB =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getB.status shouldBe HttpStatusCode.OK
@@ -312,7 +312,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getA =
                         client.get("/versions/java/27.0.1") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getA.status shouldBe HttpStatusCode.OK
@@ -320,7 +320,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getB =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getB.status shouldBe HttpStatusCode.OK
@@ -353,7 +353,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
@@ -386,7 +386,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/gradle/8.12") {
-                            parameter("platform", "universal")
+                            parameter("platform", "UNIVERSAL")
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
@@ -575,7 +575,7 @@ class PostVersionTagsAcceptanceSpec :
 
                     val getResponse =
                         client.get("/versions/java/27.0.2") {
-                            parameter("platform", "linuxx64")
+                            parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
                     getResponse.status shouldBe HttpStatusCode.NotFound

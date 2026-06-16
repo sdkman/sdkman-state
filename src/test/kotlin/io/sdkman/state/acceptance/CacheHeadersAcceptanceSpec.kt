@@ -48,7 +48,7 @@ class CacheHeadersAcceptanceSpec :
                     val response =
                         client.get("/versions/java/17.0.1") {
                             url {
-                                parameters.append("platform", "linuxx64")
+                                parameters.append("platform", "LINUX_X64")
                                 parameters.append("distribution", "TEMURIN")
                             }
                         }

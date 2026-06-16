@@ -1,10 +1,8 @@
 package io.sdkman.state.adapter.primary.rest
 
 import arrow.core.Either
-import arrow.core.flatMap
 import arrow.core.getOrElse
 import arrow.core.raise.either
-import arrow.core.raise.option
 import arrow.core.toOption
 import io.ktor.http.*
 import io.ktor.http.content.*
@@ -23,7 +21,6 @@ import io.sdkman.state.application.validation.UniqueVersionValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.DomainError
-import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.service.VersionService
 import java.time.Instant
 
@@ -52,96 +49,87 @@ fun Route.versionReadRoutes(
 
 private fun Route.versionsByCandidateRoute(versionService: VersionService) {
     get("/versions/{candidate}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val visible = call.request.visibleQueryParam()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
-            )
-        }.getOrElse {
-            call.respond(HttpStatusCode.BadRequest)
-        }
+        call.parameters.requiredPathParam("candidate").fold(
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { candidateId ->
+                either {
+                    val platform = call.request.platformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    val visible = call.request.visibleQueryParam().bind()
+                    Triple(platform, distribution, visible)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution, visible) ->
+                        versionService.findByCandidate(candidateId, platform, distribution, visible).fold(
+                            ifLeft = { domainError -> call.respondDomainError(domainError) },
+                            ifRight = { versions -> call.respond(HttpStatusCode.OK, versions.map { it.toDto() }) },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 
 private fun Route.uniqueVersionRoute(versionService: VersionService) {
     get("/versions/{candidate}/{version}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val versionId =
-                call.parameters["version"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-                    .getOrElse { Platform.UNIVERSAL }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.findUnique(candidateId, versionId, platform, distribution).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { maybeVersion ->
-                    maybeVersion
-                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
-                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
-                },
-            )
-        }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
+        either {
+            val candidateId = call.parameters.requiredPathParam("candidate").bind()
+            val versionId = call.parameters.requiredPathParam("version").bind()
+            Pair(candidateId, versionId)
+        }.fold(
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { (candidateId, versionId) ->
+                either {
+                    val platform = call.request.requiredPlatformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    Pair(platform, distribution)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution) ->
+                        versionService.findUnique(candidateId, versionId, platform, distribution).fold(
+                            ifLeft = { domainError -> call.respondDomainError(domainError) },
+                            ifRight = { maybeVersion ->
+                                maybeVersion
+                                    .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                                    .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 
 private fun Route.resolveVersionByTagRoute(versionService: VersionService) {
     get("/versions/{candidate}/tags/{tag}") {
-        option {
-            val candidateId =
-                call.parameters["candidate"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val tag =
-                call.parameters["tag"]
-                    .toOption()
-                    .filter { it.isNotBlank() }
-                    .bind()
-            val platform =
-                call.request.queryParameters["platform"]
-                    .toOption()
-                    .map { Platform.findByPlatformId(it) }
-                    .getOrElse { Platform.UNIVERSAL }
-            val distribution =
-                call.request.queryParameters["distribution"]
-                    .toOption()
-                    .flatMap { it.toDistribution() }
-            versionService.resolveByTag(candidateId, tag, platform, distribution).fold(
-                ifLeft = { error -> call.respondDomainError(error) },
-                ifRight = { maybeVersion ->
-                    maybeVersion
-                        .map { call.respond(HttpStatusCode.OK, it.toDto()) }
-                        .getOrElse { call.respond(HttpStatusCode.NotFound) }
-                },
-            )
-        }.getOrElse { call.respond(HttpStatusCode.BadRequest) }
+        either {
+            val candidateId = call.parameters.requiredPathParam("candidate").bind()
+            val tag = call.parameters.requiredPathParam("tag").bind()
+            Pair(candidateId, tag)
+        }.fold(
+            ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+            ifRight = { (candidateId, tag) ->
+                either {
+                    val platform = call.request.requiredPlatformQueryParam().bind()
+                    val distribution = call.request.distributionQueryParam().bind()
+                    Pair(platform, distribution)
+                }.fold(
+                    ifLeft = { error -> call.respond(HttpStatusCode.BadRequest, error) },
+                    ifRight = { (platform, distribution) ->
+                        versionService.resolveByTag(candidateId, tag, platform, distribution).fold(
+                            ifLeft = { error -> call.respondDomainError(error) },
+                            ifRight = { maybeVersion ->
+                                maybeVersion
+                                    .map { call.respond(HttpStatusCode.OK, it.toDto()) }
+                                    .getOrElse { call.respond(HttpStatusCode.NotFound) }
+                            },
+                        )
+                    },
+                )
+            },
+        )
     }
 }
 
