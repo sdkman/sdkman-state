@@ -50,6 +50,14 @@ data class InvalidHashFormatError(
         "$field must be a valid hexadecimal hash of $expectedLength characters, got: '$value'"
 }
 
+data class InvalidVersionFormatError(
+    override val field: String = "version",
+    val version: String,
+) : ValidationError() {
+    override val message: String =
+        "Version '$version' does not conform to the semverish format (<major>.<minor>.<patch>[-variant][+build-metadata])"
+}
+
 data class InvalidOptionalFieldError(
     override val field: String,
     val reason: String,
