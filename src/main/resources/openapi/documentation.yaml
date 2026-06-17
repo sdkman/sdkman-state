@@ -95,17 +95,29 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Request validation failed. For candidates opted in to\
+            \ strict semverish version validation (configured via\
+            \ version.validation.strict-candidates, default { java }), the version string\
+            \ must conform to the semverish grammar\
+            \ <major>.<minor>.<patch>[-<variant>][+<build-metadata>] where the core is three\
+            \ mandatory non-negative integers with no leading zeros, and the optional variant\
+            \ and build-metadata sections are dot-separated identifiers of ASCII alphanumerics\
+            \ and '-'. A non-conforming version (e.g. 26, 25.0.2.fx, 27.ea.16, 01.0.0) is\
+            \ rejected with a failure on the 'version' field. Candidates not opted in are\
+            \ unaffected."
           content:
-            '*/*':
+            'application/json':
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/ValidationErrorResponse"
               examples:
-                Example#1:
-                  description: ""
+                SemverishViolation:
+                  description: "Opted-in candidate submitted a non-semverish version"
                   value:
                     error: "Validation failed"
-                    message: "null"
+                    failures:
+                      - field: "version"
+                        message: "Version '26' does not conform to the semverish format\
+                          \ (<major>.<minor>.<patch>[-variant][+build-metadata])"
         "204":
           description: "No Content"
           content:
