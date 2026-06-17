@@ -696,4 +696,97 @@ class VersionRequestValidatorSpec :
                 }
             }
         }
+
+        context("Semverish enforcement for opted-in candidates") {
+
+            should("reject a non-conforming version for an opted-in candidate") {
+                // given: an opted-in candidate with a version that breaks the semverish grammar
+                val json =
+                    """
+                    {
+                        "candidate": "java",
+                        "version": "25.0.2.fx",
+                        "platform": "LINUX_X64",
+                        "url": "https://example.com/java.tar.gz"
+                    }
+                    """.trimIndent()
+
+                // when: validating with java opted in
+                val result = VersionRequestValidator.validateRequest(json, setOf("java"))
+
+                // then: an InvalidVersionFormatError on the version field is produced
+                result.shouldBeLeft()
+                result.onLeft { errors ->
+                    errors.any { it is InvalidVersionFormatError && it.field == "version" } shouldBe true
+                }
+            }
+
+            should("accept a conforming version for an opted-in candidate") {
+                // given: an opted-in candidate with a semverish-conforming version
+                val json =
+                    """
+                    {
+                        "candidate": "java",
+                        "version": "25.0.2-fx",
+                        "platform": "LINUX_X64",
+                        "url": "https://example.com/java.tar.gz"
+                    }
+                    """.trimIndent()
+
+                // when: validating with java opted in
+                val result = VersionRequestValidator.validateRequest(json, setOf("java"))
+
+                // then: validation succeeds
+                result.shouldBeRight()
+                result.onRight { version ->
+                    version.version shouldBe "25.0.2-fx"
+                }
+            }
+
+            should("not enforce semverish for a candidate that has not opted in") {
+                // given: a non-opted-in candidate with a version that would fail semverish
+                val json =
+                    """
+                    {
+                        "candidate": "scala",
+                        "version": "25.0.2.fx",
+                        "platform": "UNIVERSAL",
+                        "url": "https://example.com/scala.tar.gz"
+                    }
+                    """.trimIndent()
+
+                // when: validating with only java opted in
+                val result = VersionRequestValidator.validateRequest(json, setOf("java"))
+
+                // then: validation succeeds — semverish is not enforced for scala
+                result.shouldBeRight()
+                result.onRight { version ->
+                    version.version shouldBe "25.0.2.fx"
+                }
+            }
+
+            should("not add a semverish error when the version is blank for an opted-in candidate") {
+                // given: an opted-in candidate with a blank version
+                val json =
+                    """
+                    {
+                        "candidate": "java",
+                        "version": "",
+                        "platform": "LINUX_X64",
+                        "url": "https://example.com/java.tar.gz"
+                    }
+                    """.trimIndent()
+
+                // when: validating with java opted in
+                val result = VersionRequestValidator.validateRequest(json, setOf("java"))
+
+                // then: only the EmptyFieldError is produced, no duplicate semverish error
+                result.shouldBeLeft()
+                result.onLeft { errors ->
+                    errors.size shouldBe 1
+                    errors.head.shouldBeInstanceOf<EmptyFieldError>()
+                    errors.head.field shouldBe "version"
+                }
+            }
+        }
     })

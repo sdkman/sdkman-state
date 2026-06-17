@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.None
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.nel
 import arrow.core.raise.either
@@ -27,7 +28,10 @@ object VersionRequestValidator {
 
     private val json = Json { explicitNulls = false }
 
-    fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
+    fun validateRequest(
+        jsonString: String,
+        strictCandidates: Set<String> = emptySet(),
+    ): Either<NonEmptyList<ValidationError>, Version> =
         either {
             val request =
                 Either
@@ -37,12 +41,16 @@ object VersionRequestValidator {
                             .nel()
                     }.bind()
 
-            validate(request).bind()
+            validate(request, strictCandidates).bind()
         }
 
-    fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> {
+    fun validate(
+        request: VersionRequest,
+        strictCandidates: Set<String> = emptySet(),
+    ): Either<NonEmptyList<ValidationError>, Version> {
         val candidateResult = validateCandidate(request.candidate)
         val versionResult = validateVersion(request.version)
+        val semverishResult = validateSemverish(request.candidate, request.version, strictCandidates)
         val platformResult = validatePlatform(request.platform)
         val urlResult = validateUrl(request.url)
         val distributionResult = validateDistribution(request.distribution)
@@ -55,6 +63,7 @@ object VersionRequestValidator {
             listOf<Either<NonEmptyList<ValidationError>, *>>(
                 candidateResult,
                 versionResult,
+                semverishResult,
                 platformResult,
                 urlResult,
                 distributionResult,
@@ -113,6 +122,32 @@ object VersionRequestValidator {
                 }
             },
         )
+
+    /**
+     * Enforces the semverish grammar only for candidates that have opted in to strict validation.
+     *
+     * The version shape is checked when the candidate is a recognised, opted-in candidate and the
+     * version is present and non-blank. A blank/absent version is left to [validateVersion]'s
+     * [EmptyFieldError] so no duplicate semverish error is produced. Candidates outside the
+     * opted-in set are unaffected — their versions are accepted as before.
+     */
+    private fun validateSemverish(
+        candidate: Option<String>,
+        version: Option<String>,
+        strictCandidates: Set<String>,
+    ): Either<NonEmptyList<ValidationError>, Unit> {
+        val candidateValue = candidate.getOrElse { "" }
+        val versionValue = version.getOrElse { "" }
+        val enforced =
+            candidateValue in ALLOWED_CANDIDATES &&
+                candidateValue in strictCandidates &&
+                versionValue.isNotBlank()
+        return if (enforced) {
+            SemverishValidator.validate(versionValue).mapLeft { it.nel() }
+        } else {
+            Unit.right()
+        }
+    }
 
     private fun validatePlatform(platform: Option<String>): Either<NonEmptyList<ValidationError>, Platform> =
         platform.fold(
@@ -196,7 +231,24 @@ object VersionRequestValidator {
             { tags ->
                 val tagErrors =
                     tags.flatMapIndexed { index, tag ->
-                        validateTag(index, tag)
+                        when {
+                            tag.isBlank() ->
+                                listOf(InvalidTagError("tags[$index]", "Tag must not be blank"))
+
+                            tag.length > 50 ->
+                                listOf(InvalidTagError("tags[$index]", "Tag must not exceed 50 characters"))
+
+                            !TAG_NAME_PATTERN.matches(tag) ->
+                                listOf(
+                                    InvalidTagError(
+                                        "tags[$index]",
+                                        "Tag must contain only alphanumeric characters, dots, hyphens, and underscores, " +
+                                            "and must start and end with an alphanumeric character",
+                                    ),
+                                )
+
+                            else -> emptyList()
+                        }
                     }
                 tagErrors.toNonEmptyListOrNone().fold(
                     { tags.some().right() },
@@ -204,27 +256,4 @@ object VersionRequestValidator {
                 )
             },
         )
-
-    private fun validateTag(
-        index: Int,
-        tag: String,
-    ): List<ValidationError> =
-        when {
-            tag.isBlank() ->
-                listOf(InvalidTagError("tags[$index]", "Tag must not be blank"))
-
-            tag.length > 50 ->
-                listOf(InvalidTagError("tags[$index]", "Tag must not exceed 50 characters"))
-
-            !TAG_NAME_PATTERN.matches(tag) ->
-                listOf(
-                    InvalidTagError(
-                        "tags[$index]",
-                        "Tag must contain only alphanumeric characters, dots, hyphens, and underscores, " +
-                            "and must start and end with an alphanumeric character",
-                    ),
-                )
-
-            else -> emptyList()
-        }
 }
