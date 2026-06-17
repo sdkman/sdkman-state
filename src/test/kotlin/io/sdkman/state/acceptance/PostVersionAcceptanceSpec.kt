@@ -116,6 +116,97 @@ class PostVersionAcceptanceSpec :
             }
         }
 
+        should("accept a semverish-conforming version for an opted-in candidate") {
+            val version =
+                Version(
+                    candidate = "java",
+                    version = "25.0.2-fx+1",
+                    platform = Platform.LINUX_X64,
+                    url = "https://example.com/java-25.0.2-fx.tar.gz",
+                    visible = true.some(),
+                    distribution = Distribution.TEMURIN.some(),
+                )
+            val requestBody = version.toJsonString()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+                selectVersion(
+                    candidate = version.candidate,
+                    version = version.version,
+                    distribution = version.distribution,
+                    platform = version.platform,
+                ) shouldBe version.some()
+            }
+        }
+
+        should("reject a non-conforming version for an opted-in candidate identifying the version field") {
+            val version =
+                Version(
+                    candidate = "java",
+                    version = "26",
+                    platform = Platform.LINUX_X64,
+                    url = "https://example.com/java-26.tar.gz",
+                    visible = true.some(),
+                    distribution = Distribution.TEMURIN.some(),
+                )
+            val requestBody = version.toJsonString()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val responseBody = response.bodyAsText()
+                    responseBody shouldContain "Validation failed"
+                    responseBody shouldContain "\"field\":\"version\""
+                    responseBody shouldContain "does not conform to the semverish format"
+                }
+            }
+        }
+
+        should("not apply semverish validation to a candidate that has not opted in") {
+            val version =
+                Version(
+                    candidate = "scala",
+                    version = "26",
+                    platform = Platform.UNIVERSAL,
+                    url = "https://example.com/scala-26.zip",
+                    visible = true.some(),
+                    distribution = none(),
+                )
+            val requestBody = version.toJsonString()
+
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+                selectVersion(
+                    candidate = version.candidate,
+                    version = version.version,
+                    distribution = version.distribution,
+                    platform = version.platform,
+                ) shouldBe version.some()
+            }
+        }
+
         should("return 400 Bad Request when distribution value is invalid") {
             val requestBody =
                 """
