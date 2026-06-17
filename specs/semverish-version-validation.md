@@ -137,9 +137,11 @@ Unchanged. The request body is the same as today.
 
 | Status | Body | When |
 |---|---|---|
-| `201 Created` | (existing) | Request body is valid and (for opted-in candidates) the version string conforms to the semverish grammar |
+| `204 No Content` | (empty) | Request body is valid and (for opted-in candidates) the version string conforms to the semverish grammar |
 | `400 Bad Request` | Validation error payload | The candidate is opted in **and** the version string does not conform to the semverish grammar |
 | Other existing statuses | (existing) | Unchanged |
+
+> **Success status.** `POST /versions` returns `204 No Content` on success today (see `VersionRoutes.kt`), not `201 Created`. This spec preserves the existing `204` contract: changing the success status is unrelated to semverish validation and would break existing consumers and tests. An earlier draft of this spec said `201`; that was a documentation error, corrected here. If a `201` contract is genuinely desired it must be raised as a separate work item.
 
 ### Validation error payload
 
@@ -169,7 +171,7 @@ Feature: Semverish version validation on POST /versions
 
   Scenario: Conforming version is accepted for an opted-in candidate
     When the client sends POST /versions with candidate "java" and a semverish-conforming version
-    Then the response status is 201
+    Then the response status is 204
 
   Scenario: Non-conforming version is rejected for an opted-in candidate
     When the client sends POST /versions with candidate "java" and a non-conforming version
@@ -178,7 +180,7 @@ Feature: Semverish version validation on POST /versions
 
   Scenario: Validation does not apply to a candidate that has not opted in
     When the client sends POST /versions with candidate "scala" and a version that would fail semverish validation
-    Then the response status is 201
+    Then the response status is 204
 ```
 
 ## Out of Scope
