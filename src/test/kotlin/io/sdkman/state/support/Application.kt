@@ -29,7 +29,10 @@ fun testApplicationConfig(): MapApplicationConfig =
         "admin.password" to "testadminpassword",
         "jwt.secret" to JwtTestSupport.TEST_SECRET,
         "jwt.expiry" to "10",
-    )
+    ).apply {
+        // Opt "java" in to strict semverish validation; "scala" stays unopted (spec Background).
+        put("version.validation.strict-candidates", listOf("java"))
+    }
 
 fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
     testApplication {
