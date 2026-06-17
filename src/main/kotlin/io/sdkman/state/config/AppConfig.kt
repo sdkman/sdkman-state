@@ -14,6 +14,7 @@ interface AppConfig {
     val adminPassword: String
     val jwtSecret: String
     val jwtExpiry: Int
+    val strictVersionCandidates: Set<String>
 }
 
 class DefaultAppConfig(
@@ -30,4 +31,6 @@ class DefaultAppConfig(
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.getIntOrDefault("jwt.expiry", 10)
+    override val strictVersionCandidates: Set<String> =
+        config.getStringListOrDefault("version.validation.strict-candidates", listOf("java")).toSet()
 }

@@ -17,5 +17,10 @@ fun ApplicationConfig.getIntOrDefault(
 
 fun ApplicationConfig.getOptionString(path: String): Option<String> = propertyOrNull(path).toOption().map { it.getString() }
 
+fun ApplicationConfig.getStringListOrDefault(
+    path: String,
+    default: List<String>,
+): List<String> = propertyOrNull(path).toOption().map { it.getList() }.getOrElse { default }
+
 val AppConfig.jdbcUrl: String
     get() = "jdbc:postgresql://$databaseHost:$databasePort/$databaseName?sslMode=prefer&loglevel=2"
