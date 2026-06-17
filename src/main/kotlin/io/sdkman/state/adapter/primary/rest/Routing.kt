@@ -23,7 +23,7 @@ fun Application.configureRouting(
         versionReadRoutes(versionService, appConfig)
         loginRoute(authService)
         authenticate("auth-jwt") {
-            versionWriteRoutes(versionService)
+            versionWriteRoutes(versionService, appConfig.strictVersionCandidates)
             tagRoutes(tagService)
             adminListVendorsRoute(vendorRepository)
             adminCreateVendorRoute(vendorRepository, appConfig)
