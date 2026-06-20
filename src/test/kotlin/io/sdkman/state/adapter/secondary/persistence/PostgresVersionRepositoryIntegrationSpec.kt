@@ -14,6 +14,7 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.selectLastUpdatedAt
+import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.withCleanDatabase
@@ -78,6 +79,34 @@ class PostgresVersionRepositoryIntegrationSpec :
                         )
                     retrieved.shouldBeRight()
                     retrieved.onRight { it shouldBe version.copy(tags = emptyList<String>().some()).some() }
+                }
+            }
+
+            should("store absent distribution as a SQL NULL column") {
+                val repo = PostgresVersionRepository()
+                val version =
+                    Version(
+                        candidate = "groovy",
+                        version = "4.0.0",
+                        platform = Platform.LINUX_X64,
+                        url = "https://groovy-4.0.0",
+                        visible = true.some(),
+                        distribution = none(),
+                    )
+
+                withCleanDatabase {
+                    repo.createOrUpdate(version)
+
+                    // selectVersion matches on `distribution IS NULL`, so a hit proves the
+                    // column was stored as SQL NULL rather than an 'NA' sentinel string.
+                    val stored =
+                        selectVersion(
+                            candidate = version.candidate,
+                            version = version.version,
+                            distribution = none(),
+                            platform = version.platform,
+                        )
+                    stored.shouldBeSome()
                 }
             }
 
@@ -284,6 +313,48 @@ class PostgresVersionRepositoryIntegrationSpec :
                     val versions = result.shouldBeRight()
                     versions shouldHaveSize 1
                     versions.first() shouldBe temurinVersion
+                }
+            }
+
+            should("keep two versions differing only by distribution as distinct rows") {
+                val repo = PostgresVersionRepository()
+                val temurin =
+                    Version(
+                        candidate = "java",
+                        version = "17.0.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://java-17.0.1-temurin",
+                        visible = true.some(),
+                        distribution = Distribution.TEMURIN.some(),
+                        tags = emptyList<String>().some(),
+                    )
+                val zulu =
+                    Version(
+                        candidate = "java",
+                        version = "17.0.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://java-17.0.1-zulu",
+                        visible = true.some(),
+                        distribution = Distribution.ZULU.some(),
+                        tags = emptyList<String>().some(),
+                    )
+
+                withCleanDatabase {
+                    repo.createOrUpdate(temurin)
+                    repo.createOrUpdate(zulu)
+
+                    // NULLS NOT DISTINCT collapses only NULL distributions; distinct literals
+                    // sharing (candidate, version, platform) must remain separate rows.
+                    val versions =
+                        repo
+                            .findByCandidate(
+                                candidate = "java",
+                                platform = none(),
+                                distribution = none(),
+                                visible = none(),
+                            ).shouldBeRight()
+
+                    versions shouldHaveSize 2
                 }
             }
 
