@@ -64,6 +64,39 @@ class PostgresVersionRepositoryFindByTagIntegrationSpec :
                 }
             }
 
+            should("resolve a tag on a version without distribution") {
+                val repo = PostgresVersionRepository()
+                val tagRepo = PostgresTagRepository()
+
+                withCleanDatabase {
+                    // given: a non-Java version with no distribution carrying a tag
+                    val version =
+                        Version(
+                            candidate = "groovy",
+                            version = "4.0.0",
+                            platform = Platform.LINUX_X64,
+                            url = "https://groovy-4.0.0",
+                            visible = true.some(),
+                            distribution = none(),
+                        )
+                    val versionId = repo.createOrUpdate(version).shouldBeRight()
+                    tagRepo.replaceTags(versionId, "groovy", none(), Platform.LINUX_X64, listOf("latest"))
+
+                    // when: resolving the tag with no distribution (matches the NULL row)
+                    val resolved =
+                        repo
+                            .findByTag("groovy", "latest", Platform.LINUX_X64, none())
+                            .shouldBeRight()
+
+                    // then: the NULL-distribution version is returned
+                    resolved.shouldBeSome()
+                    resolved.onSome { v ->
+                        v.version shouldBe "4.0.0"
+                        v.distribution shouldBe none()
+                    }
+                }
+            }
+
             should("return none() for a non-existent tag") {
                 val repo = PostgresVersionRepository()
 
