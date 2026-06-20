@@ -618,7 +618,6 @@ components:
       required:
         - "candidate"
         - "version"
-        - "distribution"
         - "platform"
     UniqueTag:
       type: "object"
@@ -861,7 +860,3 @@ components:
         - "platform"
         - "url"
         - "visible"
-        - "distribution"
-        - "md5sum"
-        - "sha256sum"
-        - "sha512sum"
