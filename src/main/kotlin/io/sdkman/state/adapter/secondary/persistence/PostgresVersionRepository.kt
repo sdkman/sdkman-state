@@ -4,7 +4,6 @@ import arrow.core.Either
 import arrow.core.Option
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
-import arrow.core.none
 import arrow.core.some
 import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
@@ -22,7 +21,7 @@ import java.time.Instant
 internal object VersionsTable : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
     val version = varchar("version", length = 25)
-    val distribution = text("distribution")
+    val distribution = text("distribution").nullable()
     val platform = varchar("platform", length = 15)
     val url = varchar("url", length = 500)
     val visible = bool("visible")
@@ -33,10 +32,11 @@ internal object VersionsTable : IntIdTable(name = "versions") {
 }
 
 class PostgresVersionRepository : VersionRepository {
-    private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
-
-    private fun dbToDistribution(value: String): Option<Distribution> =
-        if (value == NA_SENTINEL) none() else Distribution.valueOf(value).some()
+    private fun distributionEq(distribution: Option<Distribution>): Op<Boolean> =
+        distribution.fold(
+            { VersionsTable.distribution.isNull() },
+            { VersionsTable.distribution eq it.name },
+        )
 
     private fun ResultRow.toVersion(): Version =
         Version(
@@ -45,7 +45,7 @@ class PostgresVersionRepository : VersionRepository {
             platform = Platform.valueOf(this[VersionsTable.platform]),
             url = this[VersionsTable.url],
             visible = this[VersionsTable.visible].toOption(),
-            distribution = dbToDistribution(this[VersionsTable.distribution]),
+            distribution = this[VersionsTable.distribution].toOption().map { Distribution.valueOf(it) },
             md5sum = this[VersionsTable.md5sum].toOption(),
             sha256sum = this[VersionsTable.sha256sum].toOption(),
             sha512sum = this[VersionsTable.sha512sum].toOption(),
@@ -124,7 +124,7 @@ class PostgresVersionRepository : VersionRepository {
                             (VersionsTable.candidate eq candidate) and
                                 (VersionsTable.version eq version) and
                                 (VersionsTable.platform eq platform.name) and
-                                (VersionsTable.distribution eq distributionToDb(distribution))
+                                distributionEq(distribution)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
                         .firstOrNone()
                         .map { (id, v) -> v.withTags(fetchTagNames(id)) }
@@ -162,7 +162,7 @@ class PostgresVersionRepository : VersionRepository {
                         ) {
                             it[candidate] = version.candidate
                             it[this.version] = version.version
-                            it[distribution] = distributionToDb(version.distribution)
+                            it[distribution] = version.distribution.map { it.name }.getOrNull()
                             it[platform] = version.platform.name
                             it[url] = version.url
                             it[visible] = version.visible.getOrElse { true }
@@ -190,7 +190,7 @@ class PostgresVersionRepository : VersionRepository {
                             (VersionsTable.candidate eq uniqueVersion.candidate) and
                                 (VersionsTable.version eq uniqueVersion.version) and
                                 (VersionsTable.platform eq uniqueVersion.platform.name) and
-                                (VersionsTable.distribution eq distributionToDb(uniqueVersion.distribution))
+                                distributionEq(uniqueVersion.distribution)
                         }.map { it[VersionsTable.id].value }
                         .firstOrNone()
                 }
@@ -210,7 +210,6 @@ class PostgresVersionRepository : VersionRepository {
         Either
             .catch {
                 dbQuery {
-                    val distDb = distributionToDb(distribution)
                     VersionTagsTable
                         .join(
                             VersionsTable,
@@ -220,7 +219,7 @@ class PostgresVersionRepository : VersionRepository {
                         .where {
                             (VersionTagsTable.candidate eq candidate) and
                                 (VersionTagsTable.tag eq tag) and
-                                (VersionTagsTable.distribution eq distDb) and
+                                distributionEq(distribution) and
                                 (VersionTagsTable.platform eq platform.name)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
                         .firstOrNone()
@@ -241,7 +240,7 @@ class PostgresVersionRepository : VersionRepository {
                         (candidate eq uniqueVersion.candidate) and
                             (this.version eq uniqueVersion.version) and
                             (platform eq uniqueVersion.platform.name) and
-                            (distribution eq distributionToDb(uniqueVersion.distribution))
+                            distributionEq(uniqueVersion.distribution)
                     }
                 }
             }.mapLeft { error ->
