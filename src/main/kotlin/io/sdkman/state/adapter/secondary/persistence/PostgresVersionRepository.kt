@@ -136,10 +136,10 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // V15 made versions.distribution NOT NULL with an 'NA' sentinel (mirroring V12's
-    // version_tags shape), so `INSERT … ON CONFLICT (candidate, version, distribution,
-    // platform) DO UPDATE` now applies to every row — Postgres' default NULLS DISTINCT
-    // semantics no longer carve out a deduplication-blind hole for the null-distribution
+    // V16 made versions.distribution nullable (None -> NULL) and recreated the unique
+    // constraint as `UNIQUE NULLS NOT DISTINCT (candidate, version, distribution, platform)`.
+    // Under NULLS NOT DISTINCT two NULL-distribution rows collide on the conflict target, so
+    // `INSERT … ON CONFLICT … DO UPDATE` dedups every row, including the null-distribution
     // case. One UPSERT path covers both Some(d) and None inputs.
     override suspend fun createOrUpdate(version: Version): Either<DatabaseFailure, Int> =
         Either
