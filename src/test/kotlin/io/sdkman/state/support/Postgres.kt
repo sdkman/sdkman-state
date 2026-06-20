@@ -6,7 +6,6 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
-import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
 import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
@@ -83,7 +82,7 @@ fun insertTag(
     VersionTagsTable.insert {
         it[this.candidate] = candidate
         it[this.tag] = tag
-        it[this.distribution] = distribution.map { dist -> dist.name }.getOrElse { NA_SENTINEL }
+        it[this.distribution] = distribution.map { dist -> dist.name }.getOrNull()
         it[this.platform] = platform.name
         it[this.versionId] = versionId
         it[this.createdAt] = Instant.now()
