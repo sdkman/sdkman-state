@@ -12,7 +12,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import io.sdkman.state.adapter.secondary.persistence.NA_SENTINEL
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.dbQuery
 import io.sdkman.state.domain.model.Platform
@@ -26,14 +25,15 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 /**
- * Guards the value of V15 (versions.distribution NOT NULL with 'NA' sentinel): the no-distribution
- * branch of POST /versions must now also collapse concurrent same-payload writes into a single row.
- * Pre-V15 this branch used check-then-act because Postgres' default NULLS DISTINCT semantics
- * defeated INSERT … ON CONFLICT for null-distribution rows. Post-V15 the column is non-null and the
- * UPSERT applies uniformly.
+ * Guards the dedup of the no-distribution branch of POST /versions: concurrent same-payload writes
+ * must collapse into a single row. V16 converged the 'NA' sentinel back to SQL NULL and recreated the
+ * unique constraint as UNIQUE NULLS NOT DISTINCT, so Postgres treats the NULL distributions as
+ * colliding and INSERT … ON CONFLICT still dedups. Before NULLS NOT DISTINCT, Postgres' default
+ * NULLS DISTINCT semantics defeated the UPSERT for null-distribution rows.
  */
 @Tags("acceptance")
 class ConcurrentPostVersionWithoutDistributionAcceptanceSpec :
@@ -82,7 +82,7 @@ class ConcurrentPostVersionWithoutDistributionAcceptanceSpec :
                             .where {
                                 (VersionsTable.candidate eq version.candidate) and
                                     (VersionsTable.version eq version.version) and
-                                    (VersionsTable.distribution eq NA_SENTINEL) and
+                                    VersionsTable.distribution.isNull() and
                                     (VersionsTable.platform eq version.platform.name)
                             }.count()
                     }
