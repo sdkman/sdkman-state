@@ -2,20 +2,20 @@ package io.sdkman.state.adapter.secondary.persistence
 
 import arrow.core.Either
 import arrow.core.Option
-import arrow.core.getOrElse
-import arrow.core.none
-import arrow.core.some
+import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.VersionTag
 import io.sdkman.state.domain.repository.TagRepository
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.notInList
 import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -27,7 +27,7 @@ import java.time.Instant
 internal object VersionTagsTable : IntIdTable("version_tags") {
     val candidate = text("candidate")
     val tag = text("tag")
-    val distribution = text("distribution")
+    val distribution = text("distribution").nullable()
     val platform = text("platform")
     val versionId = integer("version_id")
     val createdAt = timestamp("created_at")
@@ -39,17 +39,18 @@ internal object VersionTagsTable : IntIdTable("version_tags") {
 }
 
 class PostgresTagRepository : TagRepository {
-    private fun distributionToDb(distribution: Option<Distribution>): String = distribution.map { it.name }.getOrElse { NA_SENTINEL }
-
-    private fun dbToDistribution(value: String): Option<Distribution> =
-        if (value == NA_SENTINEL) none() else Distribution.valueOf(value).some()
+    private fun distributionEq(distribution: Option<Distribution>): Op<Boolean> =
+        distribution.fold(
+            { VersionTagsTable.distribution.isNull() },
+            { VersionTagsTable.distribution eq it.name },
+        )
 
     private fun ResultRow.toVersionTag(): VersionTag =
         VersionTag(
             id = this[VersionTagsTable.id].value,
             candidate = this[VersionTagsTable.candidate],
             tag = this[VersionTagsTable.tag],
-            distribution = dbToDistribution(this[VersionTagsTable.distribution]),
+            distribution = this[VersionTagsTable.distribution].toOption().map { Distribution.valueOf(it) },
             platform = Platform.valueOf(this[VersionTagsTable.platform]),
             versionId = this[VersionTagsTable.versionId],
             createdAt = this[VersionTagsTable.createdAt].toKotlinTimeInstant(),
@@ -113,14 +114,14 @@ class PostgresTagRepository : TagRepository {
         Either
             .catch {
                 dbQuery {
-                    val distDb = distributionToDb(distribution)
+                    val distDb = distribution.map { it.name }.getOrNull()
                     val platformDb = platform.name
 
                     VersionTagsTable.deleteWhere {
                         val sameVersionScope =
                             (VersionTagsTable.versionId eq versionId) and
                                 (VersionTagsTable.candidate eq candidate) and
-                                (VersionTagsTable.distribution eq distDb) and
+                                distributionEq(distribution) and
                                 (VersionTagsTable.platform eq platformDb)
                         if (tags.isEmpty()) {
                             sameVersionScope
@@ -169,7 +170,7 @@ class PostgresTagRepository : TagRepository {
                     VersionTagsTable.deleteWhere {
                         (candidate eq uniqueTag.candidate) and
                             (tag eq uniqueTag.tag) and
-                            (distribution eq distributionToDb(uniqueTag.distribution)) and
+                            distributionEq(uniqueTag.distribution) and
                             (platform eq uniqueTag.platform.name)
                     }
                 }
