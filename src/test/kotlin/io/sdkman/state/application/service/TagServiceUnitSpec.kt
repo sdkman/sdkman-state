@@ -311,5 +311,43 @@ class TagServiceUnitSpec :
                 coVerify(exactly = 0) { tagsRepo.assignTag(any(), any(), any(), any(), any()) }
                 coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
             }
+
+            should("still succeed when audit logging fails after the tag is assigned") {
+                // given: the version exists and the tag write succeeds but the audit write fails
+                val assignment =
+                    TagAssignment(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                        tag = "latest",
+                    )
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
+                coEvery {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                } returns Either.Right(Unit)
+                coEvery {
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.TAG, assignment)
+                } returns
+                    Either.Left(
+                        DatabaseFailure.QueryExecutionFailure(
+                            "audit failed",
+                            RuntimeException("disk full"),
+                        ),
+                    )
+
+                // when: assigning the tag with a failing audit write
+                val result = service.assignTag(assignment, NIL_UUID, "admin")
+
+                // then: still succeeds (audit failure is logged but does not roll back the assignment)
+                result.shouldBeRight()
+            }
         }
     })
