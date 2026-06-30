@@ -350,4 +350,34 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 }
             }
         }
+
+        should("return 400 Bad Request accumulating blank candidate, blank version, and invalid tag failures") {
+            withCleanDatabase {
+                // when: posting an assignment that violates three rules at once
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = "",
+                                    version = "",
+                                    distribution = Distribution.TEMURIN.some(),
+                                    platform = Platform.LINUX_X64,
+                                    tag = "-bad-",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 400 with all three failures reported together in one response
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val body = response.bodyAsText()
+                    body shouldContain "Validation Error"
+                    body shouldContain "candidate cannot be empty"
+                    body shouldContain "version cannot be empty"
+                    body shouldContain "must start and end with an alphanumeric character"
+                }
+            }
+        }
     })
