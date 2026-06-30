@@ -2,10 +2,12 @@ package io.sdkman.state.support
 
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.sdkman.state.adapter.primary.rest.dto.TagAssignmentDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
 import io.sdkman.state.adapter.primary.rest.dto.VersionDto
 import io.sdkman.state.adapter.primary.rest.dto.toDto
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
@@ -22,6 +24,8 @@ fun Version.toJsonString() = this.toJson().toString()
 fun UniqueVersion.toJsonString() = Json.encodeToJsonElement(UniqueVersionDto(candidate, version, distribution, platform)).toString()
 
 fun UniqueTag.toJsonString() = Json.encodeToJsonElement(UniqueTagDto(candidate, tag, distribution, platform)).toString()
+
+fun TagAssignment.toJsonString() = Json.encodeToJsonElement(TagAssignmentDto(candidate, version, platform, distribution, tag)).toString()
 
 fun String.parseJsonObject(): JsonObject = Json.decodeFromString<JsonObject>(this)
 
