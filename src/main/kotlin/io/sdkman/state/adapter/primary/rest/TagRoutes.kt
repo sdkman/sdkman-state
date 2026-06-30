@@ -9,14 +9,59 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
+import io.sdkman.state.adapter.primary.rest.dto.TagAssignmentDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
+import io.sdkman.state.application.validation.TagAssignmentValidator
 import io.sdkman.state.application.validation.UniqueTagValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.error.FieldError
 import io.sdkman.state.domain.service.TagService
 
 fun Route.tagRoutes(tagService: TagService) {
+    assignTagRoute(tagService)
+    deleteTagRoute(tagService)
+}
+
+private fun Route.assignTagRoute(tagService: TagService) {
+    post("/versions/tags") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        val vendorId = call.authenticatedVendorId()
+        val email = call.authenticatedEmail()
+        val role = call.authenticatedRole()
+        val candidates = call.authenticatedCandidates()
+        either<DomainError, Unit> {
+            val assignment =
+                Either
+                    .catch { call.receive<TagAssignmentDto>() }
+                    .map { it.toDomain() }
+                    .mapLeft {
+                        DomainError.ValidationFailed(
+                            "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
+                        )
+                    }.bind()
+            TagAssignmentValidator
+                .validate(assignment)
+                .mapLeft { errors ->
+                    DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
+                }.bind()
+            // Admin tokens bypass candidate authorization — admin can operate on any candidate
+            if (role == "vendor" && assignment.candidate !in candidates) {
+                call.respond(
+                    HttpStatusCode.Forbidden,
+                    ErrorResponse("Forbidden", "Not authorized for candidate: ${assignment.candidate}"),
+                )
+                return@post
+            }
+            tagService.assignTag(assignment, vendorId, email).bind()
+        }.fold(
+            ifLeft = { error -> call.respondDomainError(error) },
+            ifRight = { call.respond(HttpStatusCode.NoContent) },
+        )
+    }
+}
+
+private fun Route.deleteTagRoute(tagService: TagService) {
     delete("/versions/tags") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
