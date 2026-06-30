@@ -10,6 +10,7 @@ import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
@@ -264,6 +265,42 @@ class PostVersionTagAssignmentAcceptanceSpec :
 
                 // and: the version carries the assigned tag within the NULL-distribution scope
                 selectTagNames(versionId) shouldContain "latest"
+            }
+        }
+
+        should("return 404 Not Found with an empty body when the target version does not exist") {
+            val candidate = "java"
+            val version = "99.0.0"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: no version exists for the requested coordinates
+
+                // when: assigning a tag to a non-existent version
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 404 Not Found with no body
+                    response.status shouldBe HttpStatusCode.NotFound
+                    response.bodyAsText() shouldBe ""
+                }
+
+                // and: no version was created for the requested coordinates
+                selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
             }
         }
     })
