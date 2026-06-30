@@ -163,13 +163,54 @@ class PostgresTagRepository : TagRepository {
                 )
             }
 
+    // Assigns a single tag to a version via the same race-safe UPSERT used inside replaceTags,
+    // but without the delete-not-in-list step. This re-points the row's `version_id` when the tag
+    // is being moved from another version in scope (mutual exclusivity), is a no-op on same-payload
+    // re-assignment (idempotent), and leaves the version's other tags untouched (append, not replace).
     override suspend fun assignTag(
         versionId: Int,
         candidate: String,
         distribution: Option<Distribution>,
         platform: Platform,
         tag: String,
-    ): Either<DatabaseFailure, Unit> = TODO("Implemented in the next plan item")
+    ): Either<DatabaseFailure, Unit> =
+        Either
+            .catch {
+                dbQuery {
+                    val distDb = distribution.map { it.name }.getOrNull()
+                    val platformDb = platform.name
+
+                    VersionTagsTable.upsert(
+                        VersionTagsTable.candidate,
+                        VersionTagsTable.tag,
+                        VersionTagsTable.distribution,
+                        VersionTagsTable.platform,
+                        onUpdateExclude =
+                            listOf(
+                                VersionTagsTable.id,
+                                VersionTagsTable.candidate,
+                                VersionTagsTable.tag,
+                                VersionTagsTable.distribution,
+                                VersionTagsTable.platform,
+                                VersionTagsTable.createdAt,
+                            ),
+                    ) {
+                        it[this.candidate] = candidate
+                        it[this.tag] = tag
+                        it[this.distribution] = distDb
+                        it[this.platform] = platformDb
+                        it[this.versionId] = versionId
+                        it[this.createdAt] = Instant.now()
+                        it[this.lastUpdatedAt] = Instant.now()
+                    }
+                    Unit
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to assign tag: ${error.message}",
+                    cause = error,
+                )
+            }
 
     override suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int> =
         Either
