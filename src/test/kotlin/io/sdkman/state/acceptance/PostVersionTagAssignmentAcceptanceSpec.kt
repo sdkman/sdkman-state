@@ -6,6 +6,7 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -13,12 +14,16 @@ import io.ktor.client.request.*
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
 import io.sdkman.state.support.JwtTestSupport
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Tags("acceptance")
 class PostVersionTagAssignmentAcceptanceSpec :
@@ -488,6 +493,61 @@ class PostVersionTagAssignmentAcceptanceSpec :
                     // then: 403 — the candidate check rejects before any version lookup
                     response.status shouldBe HttpStatusCode.Forbidden
                 }
+            }
+        }
+
+        should("record an audit entry under AuditOperation.TAG with the tag and version coordinates") {
+            val candidate = "java"
+            val version = "27.0.2"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: a version with no tags
+                insertVersionWithId(
+                    Version(
+                        candidate = candidate,
+                        version = version,
+                        platform = platform,
+                        url = "https://java-27.0.2-tem",
+                        visible = true.some(),
+                        distribution = distribution.some(),
+                    ),
+                )
+
+                // when: assigning a tag to the version
+                withTestApplication {
+                    client
+                        .post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // then: a TAG audit record captures the acting vendor and the assignment payload
+                val auditRecords = selectAuditRecordsByOperation(AuditOperation.TAG)
+                auditRecords shouldHaveSize 1
+                val record = auditRecords.first()
+                record.vendorId shouldBe JwtTestSupport.NIL_UUID
+                record.email shouldBe "admin@sdkman.io"
+                record.operation shouldBe AuditOperation.TAG
+
+                // and: version_data carries the tag plus (candidate, version, distribution, platform)
+                val auditData = Json.parseToJsonElement(record.versionData).jsonObject
+                auditData.getValue("candidate").jsonPrimitive.content shouldBe candidate
+                auditData.getValue("version").jsonPrimitive.content shouldBe version
+                auditData.getValue("tag").jsonPrimitive.content shouldBe "latest"
+                auditData.getValue("distribution").jsonPrimitive.content shouldBe distribution.name
+                auditData.getValue("platform").jsonPrimitive.content shouldBe platform.name
             }
         }
     })
