@@ -23,6 +23,14 @@ interface TagRepository {
         tags: List<String>,
     ): Either<DatabaseFailure, Unit>
 
+    suspend fun assignTag(
+        versionId: Int,
+        candidate: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+        tag: String,
+    ): Either<DatabaseFailure, Unit>
+
     suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int>
 
     suspend fun hasTagsForVersion(versionId: Int): Either<DatabaseFailure, Boolean>

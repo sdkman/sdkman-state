@@ -163,6 +163,14 @@ class PostgresTagRepository : TagRepository {
                 )
             }
 
+    override suspend fun assignTag(
+        versionId: Int,
+        candidate: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+        tag: String,
+    ): Either<DatabaseFailure, Unit> = TODO("Implemented in the next plan item")
+
     override suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int> =
         Either
             .catch {
