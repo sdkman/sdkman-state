@@ -464,4 +464,30 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 }
             }
         }
+
+        should("return 403 Forbidden when a vendor assigns a tag for an unauthorized candidate") {
+            withCleanDatabase {
+                // when: a vendor scoped only to "scala" assigns a tag to a "java" version
+                withTestApplication {
+                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("scala"))
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = "java",
+                                    version = "27.0.2",
+                                    distribution = Distribution.TEMURIN.some(),
+                                    platform = Platform.LINUX_X64,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(vendorToken)
+                        }
+
+                    // then: 403 — the candidate check rejects before any version lookup
+                    response.status shouldBe HttpStatusCode.Forbidden
+                }
+            }
+        }
     })
