@@ -4,6 +4,8 @@ import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.request.bearerAuth
@@ -62,6 +64,66 @@ class PostVersionTagAssignmentAcceptanceSpec :
 
                 // and: the version carries the assigned tag
                 selectTagNames(versionId) shouldContain "latest"
+            }
+        }
+
+        should("move a tag from another version, leaving the source version's other tags intact") {
+            val candidate = "java"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: version A holds "latest" and "27"; version B exists untagged
+                val versionIdA =
+                    insertVersionWithId(
+                        Version(
+                            candidate = candidate,
+                            version = "27.0.1",
+                            platform = platform,
+                            url = "https://java-27.0.1-tem",
+                            visible = true.some(),
+                            distribution = distribution.some(),
+                        ),
+                    )
+                val versionIdB =
+                    insertVersionWithId(
+                        Version(
+                            candidate = candidate,
+                            version = "27.0.2",
+                            platform = platform,
+                            url = "https://java-27.0.2-tem",
+                            visible = true.some(),
+                            distribution = distribution.some(),
+                        ),
+                    )
+                insertTag(candidate, "latest", distribution.some(), platform, versionIdA)
+                insertTag(candidate, "27", distribution.some(), platform, versionIdA)
+
+                // when: assigning "latest" to version B
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = "27.0.2",
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 204 No Content
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // and: B gains "latest"; A loses "latest" but keeps "27"
+                selectTagNames(versionIdB) shouldContain "latest"
+                selectTagNames(versionIdA) shouldNotContain "latest"
+                selectTagNames(versionIdA) shouldContainExactlyInAnyOrder listOf("27")
             }
         }
     })
