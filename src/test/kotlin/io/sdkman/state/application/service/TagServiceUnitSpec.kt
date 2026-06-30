@@ -349,5 +349,81 @@ class TagServiceUnitSpec :
                 // then: still succeeds (audit failure is logged but does not roll back the assignment)
                 result.shouldBeRight()
             }
+
+            should("return DatabaseError when the tag write fails") {
+                // given: the version exists but the tag write fails (the 500 path)
+                val assignment =
+                    TagAssignment(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                        tag = "latest",
+                    )
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "connection reset",
+                        RuntimeException("timeout"),
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
+                coEvery {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                } returns Either.Left(dbFailure)
+
+                // when: assigning the tag while the repository fails
+                val result = service.assignTag(assignment, NIL_UUID, "admin")
+
+                // then: surfaces DatabaseError and never records an audit
+                result.shouldBeLeft()
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("return DatabaseError when the version lookup fails") {
+                // given: the version lookup itself fails before any tag write
+                val assignment =
+                    TagAssignment(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                        tag = "latest",
+                    )
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "connection lost",
+                        RuntimeException("timeout"),
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Left(dbFailure)
+
+                // when: assigning the tag while the version lookup fails
+                val result = service.assignTag(assignment, NIL_UUID, "admin")
+
+                // then: surfaces DatabaseError without touching the tag write or audit
+                result.shouldBeLeft()
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+                coVerify(exactly = 0) { tagsRepo.assignTag(any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
         }
     })
