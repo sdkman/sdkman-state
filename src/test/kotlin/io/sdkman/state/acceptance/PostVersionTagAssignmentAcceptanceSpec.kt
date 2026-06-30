@@ -380,4 +380,34 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 }
             }
         }
+
+        should("return 400 Bad Request when the platform is not a valid enum value") {
+            // a raw body is needed: the typed DTO cannot represent an invalid Platform
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "27.0.2",
+                    "distribution": "TEMURIN",
+                    "platform": "NOT_A_PLATFORM",
+                    "tag": "latest"
+                }
+                """.trimIndent()
+
+            withCleanDatabase {
+                // when: posting an assignment with an unknown platform
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 400 — the bad enum is rejected at deserialization
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    response.bodyAsText() shouldContain "Invalid request"
+                }
+            }
+        }
     })
