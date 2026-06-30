@@ -234,6 +234,31 @@ class PostgresTagRepositoryIntegrationSpec :
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest")
                 }
             }
+
+            should("preserve the version's existing tags when assigning a new tag") {
+                withCleanDatabase {
+                    // given: a version that already holds a tag
+                    val versionId =
+                        insertVersionWithId(
+                            Version(
+                                candidate = "java",
+                                version = "27.0.2",
+                                platform = Platform.LINUX_X64,
+                                url = "https://java-27.0.2",
+                                visible = true.some(),
+                                distribution = Distribution.TEMURIN.some(),
+                            ),
+                        )
+                    repo.assignTag(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "27").shouldBeRight()
+
+                    // when: a different tag is assigned to the same version
+                    val result = repo.assignTag(versionId, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+
+                    // then: both the existing and the new tag are present (append, not replace)
+                    result.shouldBeRight()
+                    selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("27", "latest")
+                }
+            }
         }
 
         context("findTagsByVersionId") {
