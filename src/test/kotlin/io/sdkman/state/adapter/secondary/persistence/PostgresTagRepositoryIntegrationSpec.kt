@@ -141,6 +141,39 @@ class PostgresTagRepositoryIntegrationSpec :
             }
         }
 
+        context("assignTag") {
+            should("assign a previously-unassigned tag to a version") {
+                withCleanDatabase {
+                    // given: a version with no tags
+                    val versionId =
+                        insertVersionWithId(
+                            Version(
+                                candidate = "java",
+                                version = "27.0.2",
+                                platform = Platform.LINUX_X64,
+                                url = "https://java-27.0.2",
+                                visible = true.some(),
+                                distribution = Distribution.TEMURIN.some(),
+                            ),
+                        )
+
+                    // when: a tag is assigned
+                    val result =
+                        repo.assignTag(
+                            versionId = versionId,
+                            candidate = "java",
+                            distribution = Distribution.TEMURIN.some(),
+                            platform = Platform.LINUX_X64,
+                            tag = "latest",
+                        )
+
+                    // then: the tag row exists pointing at the target version
+                    result.shouldBeRight()
+                    selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest")
+                }
+            }
+        }
+
         context("findTagsByVersionId") {
             should("return all tags for a version") {
                 withCleanDatabase {
