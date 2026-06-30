@@ -173,4 +173,51 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("27", "latest")
             }
         }
+
+        should("be an idempotent 204 no-op when re-assigning a tag the version already holds") {
+            val candidate = "java"
+            val version = "27.0.2"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: a version already tagged "latest"
+                val versionId =
+                    insertVersionWithId(
+                        Version(
+                            candidate = candidate,
+                            version = version,
+                            platform = platform,
+                            url = "https://java-27.0.2-tem",
+                            visible = true.some(),
+                            distribution = distribution.some(),
+                        ),
+                    )
+                insertTag(candidate, "latest", distribution.some(), platform, versionId)
+
+                // when: re-assigning the tag it already holds
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 204 No Content (idempotent success)
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // and: the tag set is unchanged
+                selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest")
+            }
+        }
     })
