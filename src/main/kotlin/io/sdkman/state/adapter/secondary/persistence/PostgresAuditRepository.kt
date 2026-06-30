@@ -4,6 +4,7 @@ import arrow.core.Either
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Auditable
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
@@ -34,6 +35,7 @@ class PostgresAuditRepository : AuditRepository {
         when (this) {
             is Version -> Json.encodeToJsonElement(this.toAuditData())
             is UniqueTag -> Json.encodeToJsonElement(this.toAuditData())
+            is TagAssignment -> Json.encodeToJsonElement(this.toAuditData())
         }
 
     override suspend fun recordAudit(
