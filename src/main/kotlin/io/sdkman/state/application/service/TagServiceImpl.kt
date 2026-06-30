@@ -2,14 +2,18 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
+import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
 import org.slf4j.LoggerFactory
 import java.util.UUID
@@ -17,6 +21,7 @@ import java.util.UUID
 class TagServiceImpl(
     private val tagsRepo: TagRepository,
     private val auditRepo: AuditRepository,
+    private val versionsRepo: VersionRepository,
 ) : TagService {
     private val logger = LoggerFactory.getLogger(TagServiceImpl::class.java)
 
@@ -52,6 +57,35 @@ class TagServiceImpl(
                 .recordAudit(vendorId, email, AuditOperation.DELETE, uniqueTag)
                 .onLeft { error ->
                     logger.warn("Audit logging failed for tag deletion: ${error.message}")
+                }
+        }
+
+    override suspend fun assignTag(
+        assignment: TagAssignment,
+        vendorId: UUID,
+        email: String,
+    ): Either<DomainError, Unit> =
+        either {
+            val versionId =
+                versionsRepo
+                    .findVersionId(
+                        UniqueVersion(
+                            candidate = assignment.candidate,
+                            version = assignment.version,
+                            distribution = assignment.distribution,
+                            platform = assignment.platform,
+                        ),
+                    ).mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+                    .getOrElse { raise(DomainError.VersionNotFound(assignment.candidate, assignment.version)) }
+            tagsRepo
+                .assignTag(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
+                .mapLeft { DomainError.DatabaseError(it) }
+                .bind()
+            auditRepo
+                .recordAudit(vendorId, email, AuditOperation.TAG, assignment)
+                .onLeft { error ->
+                    logger.warn("Audit logging failed for tag assignment: ${error.message}")
                 }
         }
 }

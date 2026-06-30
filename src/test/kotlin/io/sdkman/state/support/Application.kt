@@ -76,7 +76,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val tagsRepo = PostgresTagRepository()
             val auditRepo = PostgresAuditRepository()
             val vendorRepo = PostgresVendorRepository()
-            val tagService = TagServiceImpl(tagsRepo, auditRepo)
+            val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
             val transactional = ExposedTransactional()
             val rateLimiter = RateLimiter()
             val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)

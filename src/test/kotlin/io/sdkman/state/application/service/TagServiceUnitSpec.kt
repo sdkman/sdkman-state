@@ -15,9 +15,12 @@ import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
+import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.util.UUID
@@ -29,7 +32,8 @@ class TagServiceUnitSpec :
     ShouldSpec({
         val tagsRepo = mockk<TagRepository>()
         val auditRepo = mockk<AuditRepository>()
-        val service = TagServiceImpl(tagsRepo, auditRepo)
+        val versionsRepo = mockk<VersionRepository>()
+        val service = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
 
         beforeEach { clearAllMocks() }
 
@@ -234,6 +238,45 @@ class TagServiceUnitSpec :
                 coVerify {
                     auditRepo.recordAudit(VENDOR_UUID, "vendor@example.com", AuditOperation.DELETE, uniqueTag)
                 }
+            }
+        }
+
+        context("assignTag") {
+
+            should("assign the tag, delegating to the repository and recording a TAG audit") {
+                // given: the target version exists and the tag write + audit both succeed
+                val assignment =
+                    TagAssignment(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                        tag = "latest",
+                    )
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "27.0.2",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
+                coEvery {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                } returns Either.Right(Unit)
+                coEvery {
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.TAG, assignment)
+                } returns Either.Right(Unit)
+
+                // when: assigning the tag
+                val result = service.assignTag(assignment, NIL_UUID, "admin")
+
+                // then: succeeds, delegates to the repository, and records a TAG audit
+                result.shouldBeRight()
+                coVerify {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                }
+                coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.TAG, assignment) }
             }
         }
     })

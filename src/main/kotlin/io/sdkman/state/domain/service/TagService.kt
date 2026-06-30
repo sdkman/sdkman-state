@@ -5,6 +5,7 @@ import arrow.core.Option
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
 import java.util.UUID
 
@@ -21,6 +22,12 @@ interface TagService {
 
     suspend fun deleteTag(
         uniqueTag: UniqueTag,
+        vendorId: UUID,
+        email: String,
+    ): Either<DomainError, Unit>
+
+    suspend fun assignTag(
+        assignment: TagAssignment,
         vendorId: UUID,
         email: String,
     ): Either<DomainError, Unit>
