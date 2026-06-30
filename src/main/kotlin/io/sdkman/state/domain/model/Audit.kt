@@ -5,4 +5,5 @@ sealed interface Auditable
 enum class AuditOperation {
     CREATE,
     DELETE,
+    TAG,
 }
