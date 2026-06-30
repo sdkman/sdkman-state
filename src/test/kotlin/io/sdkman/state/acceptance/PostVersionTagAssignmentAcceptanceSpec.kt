@@ -440,4 +440,28 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 }
             }
         }
+
+        should("return 401 Unauthorized when assigning a tag without authentication") {
+            withCleanDatabase {
+                // when: posting a well-formed assignment with no bearer token
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = "java",
+                                    version = "27.0.2",
+                                    distribution = Distribution.TEMURIN.some(),
+                                    platform = Platform.LINUX_X64,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                        }
+
+                    // then: 401 — authentication is required before any processing
+                    response.status shouldBe HttpStatusCode.Unauthorized
+                }
+            }
+        }
     })
