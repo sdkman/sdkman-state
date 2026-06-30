@@ -205,6 +205,75 @@ paths:
                   value:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
+    post:
+      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field."
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/TagAssignment"
+            examples:
+              with_distribution:
+                summary: "Assign a tag with distribution"
+                value:
+                  candidate: "java"
+                  version: "27.0.2"
+                  distribution: "TEMURIN"
+                  platform: "LINUX_X64"
+                  tag: "latest"
+              without_distribution:
+                summary: "Assign a tag without distribution"
+                value:
+                  candidate: "gradle"
+                  version: "8.12"
+                  platform: "UNIVERSAL"
+                  tag: "latest"
+        required: true
+      responses:
+        "204":
+          description: "No Content - Tag assigned, moved, or already present (no-op)"
+        "400":
+          description: "Bad Request - Validation errors or malformed JSON"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: "Accumulated validation failures"
+                  value:
+                    error: "Validation Error"
+                    failures:
+                      - field: "candidate"
+                        message: "Candidate must not be blank"
+                      - field: "version"
+                        message: "Version must not be blank"
+                      - field: "tag"
+                        message: "Tag must match the pattern ^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$"
+        "401":
+          description: "Unauthorized - Missing or invalid authentication"
+        "403":
+          description: "Forbidden - Vendor not authorized for this candidate"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: "Not Found - Target version does not exist for the given coordinates"
+        "500":
+          description: "Internal Server Error - Database error"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                database_error:
+                  summary: "Database error"
+                  value:
+                    error: "Database error"
+                    message: "null"
   /login:
     post:
       description: "Authenticate and obtain a JWT token"
@@ -661,6 +730,51 @@ components:
         - "candidate"
         - "tag"
         - "platform"
+    TagAssignment:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        version:
+          type: "string"
+        distribution:
+          type: "string"
+          enum:
+            - "BISHENG"
+            - "CORRETTO"
+            - "GRAALCE"
+            - "GRAALVM"
+            - "JETBRAINS"
+            - "KONA"
+            - "LIBERICA"
+            - "LIBERICA_NIK"
+            - "MANDREL"
+            - "MICROSOFT"
+            - "OPENJDK"
+            - "ORACLE"
+            - "SAP_MACHINE"
+            - "SEMERU"
+            - "TEMURIN"
+            - "ZULU"
+        platform:
+          type: "string"
+          enum:
+            - "LINUX_X32"
+            - "LINUX_X64"
+            - "LINUX_ARM32HF"
+            - "LINUX_ARM32SF"
+            - "LINUX_ARM64"
+            - "MAC_X64"
+            - "MAC_ARM64"
+            - "WINDOWS_X64"
+            - "UNIVERSAL"
+        tag:
+          type: "string"
+      required:
+        - "candidate"
+        - "version"
+        - "platform"
+        - "tag"
     ValidationErrorResponse:
       type: "object"
       properties:
