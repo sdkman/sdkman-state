@@ -126,4 +126,51 @@ class PostVersionTagAssignmentAcceptanceSpec :
                 selectTagNames(versionIdA) shouldContainExactlyInAnyOrder listOf("27")
             }
         }
+
+        should("preserve the target version's existing tags when assigning a new one") {
+            val candidate = "java"
+            val version = "27.0.2"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: a version already tagged "27"
+                val versionId =
+                    insertVersionWithId(
+                        Version(
+                            candidate = candidate,
+                            version = version,
+                            platform = platform,
+                            url = "https://java-27.0.2-tem",
+                            visible = true.some(),
+                            distribution = distribution.some(),
+                        ),
+                    )
+                insertTag(candidate, "27", distribution.some(), platform, versionId)
+
+                // when: assigning a new tag "latest" to the version
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 204 No Content
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // and: the version carries both the existing and the newly assigned tag
+                selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("27", "latest")
+            }
+        }
     })
