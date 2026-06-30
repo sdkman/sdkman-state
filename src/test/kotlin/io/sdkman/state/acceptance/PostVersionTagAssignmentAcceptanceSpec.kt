@@ -1,5 +1,6 @@
 package io.sdkman.state.acceptance
 
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -218,6 +219,51 @@ class PostVersionTagAssignmentAcceptanceSpec :
 
                 // and: the tag set is unchanged
                 selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest")
+            }
+        }
+
+        should("assign a tag to a candidate without a distribution and return 204 No Content") {
+            val candidate = "gradle"
+            val version = "8.12"
+            val platform = Platform.UNIVERSAL
+
+            withCleanDatabase {
+                // given: a distribution-less version with no tags
+                val versionId =
+                    insertVersionWithId(
+                        Version(
+                            candidate = candidate,
+                            version = version,
+                            platform = platform,
+                            url = "https://gradle-8.12.zip",
+                            visible = true.some(),
+                            distribution = none(),
+                        ),
+                    )
+
+                // when: assigning a tag without a distribution
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = none(),
+                                    platform = platform,
+                                    tag = "latest",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 204 No Content
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // and: the version carries the assigned tag within the NULL-distribution scope
+                selectTagNames(versionId) shouldContain "latest"
             }
         }
     })
