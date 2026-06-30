@@ -8,6 +8,7 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.statement.*
@@ -301,6 +302,52 @@ class PostVersionTagAssignmentAcceptanceSpec :
 
                 // and: no version was created for the requested coordinates
                 selectVersion(candidate, version, distribution.some(), platform) shouldBe none()
+            }
+        }
+
+        should("return 400 Bad Request when the tag format is invalid") {
+            val candidate = "java"
+            val version = "27.0.2"
+            val distribution = Distribution.TEMURIN
+            val platform = Platform.LINUX_X64
+
+            withCleanDatabase {
+                // given: the target version exists, so only the tag format is at fault
+                insertVersionWithId(
+                    Version(
+                        candidate = candidate,
+                        version = version,
+                        platform = platform,
+                        url = "https://java-27.0.2-tem",
+                        visible = true.some(),
+                        distribution = distribution.some(),
+                    ),
+                )
+
+                // when: assigning a tag whose format breaks the tag rules
+                withTestApplication {
+                    val response =
+                        client.post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                TagAssignment(
+                                    candidate = candidate,
+                                    version = version,
+                                    distribution = distribution.some(),
+                                    platform = platform,
+                                    tag = "-bad-",
+                                ).toJsonString(),
+                            )
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: 400 Bad Request naming the offending field and rule
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val body = response.bodyAsText()
+                    body shouldContain "Validation Error"
+                    body shouldContain "tag"
+                    body shouldContain "must start and end with an alphanumeric character"
+                }
             }
         }
     })
