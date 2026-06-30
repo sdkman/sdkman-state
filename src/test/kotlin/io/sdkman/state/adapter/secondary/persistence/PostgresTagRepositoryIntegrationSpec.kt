@@ -172,6 +172,43 @@ class PostgresTagRepositoryIntegrationSpec :
                     selectTagNames(versionId) shouldContainExactlyInAnyOrder listOf("latest")
                 }
             }
+
+            should("move a tag to a different version, removing it from the original") {
+                withCleanDatabase {
+                    // given: two versions, the first holding the tag (mutual exclusivity scope)
+                    val versionId1 =
+                        insertVersionWithId(
+                            Version(
+                                candidate = "java",
+                                version = "27.0.1",
+                                platform = Platform.LINUX_X64,
+                                url = "https://java-27.0.1",
+                                visible = true.some(),
+                                distribution = Distribution.TEMURIN.some(),
+                            ),
+                        )
+                    val versionId2 =
+                        insertVersionWithId(
+                            Version(
+                                candidate = "java",
+                                version = "27.0.2",
+                                platform = Platform.LINUX_X64,
+                                url = "https://java-27.0.2",
+                                visible = true.some(),
+                                distribution = Distribution.TEMURIN.some(),
+                            ),
+                        )
+                    repo.assignTag(versionId1, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest").shouldBeRight()
+
+                    // when: the same tag is assigned to a different version in the same scope
+                    val result = repo.assignTag(versionId2, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+
+                    // then: the tag re-points to the new version and the original no longer holds it
+                    result.shouldBeRight()
+                    selectTagNames(versionId1).shouldBeEmpty()
+                    selectTagNames(versionId2) shouldContainExactlyInAnyOrder listOf("latest")
+                }
+            }
         }
 
         context("findTagsByVersionId") {
