@@ -278,5 +278,38 @@ class TagServiceUnitSpec :
                 }
                 coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.TAG, assignment) }
             }
+
+            should("return VersionNotFound when the target version does not exist") {
+                // given: the target version cannot be resolved (no semverish validation gates the lookup)
+                val assignment =
+                    TagAssignment(
+                        candidate = "java",
+                        version = "99.0.0",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                        tag = "latest",
+                    )
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "99.0.0",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(none())
+
+                // when: assigning the tag to the absent version
+                val result = service.assignTag(assignment, NIL_UUID, "admin")
+
+                // then: raises VersionNotFound without touching the tag write or audit
+                result.shouldBeLeft()
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.VersionNotFound>()
+                    error.candidate shouldBe "java"
+                    error.version shouldBe "99.0.0"
+                }
+                coVerify(exactly = 0) { tagsRepo.assignTag(any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
         }
     })
