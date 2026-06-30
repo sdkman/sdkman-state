@@ -26,7 +26,6 @@ class VersionRequestValidator(
         private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
         private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
         private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
-        private val TAG_NAME_PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")
         private val json = Json { explicitNulls = false }
     }
 
@@ -214,25 +213,7 @@ class VersionRequestValidator(
     private fun validateTag(
         index: Int,
         tag: String,
-    ): List<ValidationError> =
-        when {
-            tag.isBlank() ->
-                listOf(InvalidTagError("tags[$index]", "Tag must not be blank"))
-
-            tag.length > 50 ->
-                listOf(InvalidTagError("tags[$index]", "Tag must not exceed 50 characters"))
-
-            !TAG_NAME_PATTERN.matches(tag) ->
-                listOf(
-                    InvalidTagError(
-                        "tags[$index]",
-                        "Tag must contain only alphanumeric characters, dots, hyphens, and underscores, " +
-                            "and must start and end with an alphanumeric character",
-                    ),
-                )
-
-            else -> emptyList()
-        }
+    ): List<ValidationError> = TagNameRules.validate("tags[$index]", tag)
 
     // Returns Right(Unit) when upstream validation already failed, to avoid
     // double-reporting errors that are already in the accumulated error list.
