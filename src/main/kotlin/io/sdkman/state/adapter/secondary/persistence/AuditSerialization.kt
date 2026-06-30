@@ -7,6 +7,7 @@ import arrow.core.none
 import arrow.core.serialization.OptionSerializer
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
 import kotlinx.serialization.Serializable
@@ -34,6 +35,15 @@ internal data class AuditTagData(
     val platform: Platform,
 )
 
+@Serializable
+internal data class AuditTagAssignmentData(
+    val candidate: String,
+    val version: String,
+    val tag: String,
+    val distribution: Option<Distribution> = none(),
+    val platform: Platform,
+)
+
 internal fun Version.toAuditData(): AuditVersionData =
     AuditVersionData(
         candidate = candidate,
@@ -51,6 +61,15 @@ internal fun Version.toAuditData(): AuditVersionData =
 internal fun UniqueTag.toAuditData(): AuditTagData =
     AuditTagData(
         candidate = candidate,
+        tag = tag,
+        distribution = distribution,
+        platform = platform,
+    )
+
+internal fun TagAssignment.toAuditData(): AuditTagAssignmentData =
+    AuditTagAssignmentData(
+        candidate = candidate,
+        version = version,
         tag = tag,
         distribution = distribution,
         platform = platform,
