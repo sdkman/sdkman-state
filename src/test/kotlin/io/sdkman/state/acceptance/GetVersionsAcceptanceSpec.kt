@@ -276,7 +276,7 @@ class GetVersionsAcceptanceSpec :
                             ErrorResponse(
                                 "Bad Request",
                                 "Invalid distribution 'open'. Expected one of: " +
-                                    "BISHENG, CORRETTO, GRAALCE, GRAALVM, JETBRAINS, KONA, LIBERICA, " +
+                                    "BISHENG, CORRETTO, ELIYA, GRAALCE, GRAALVM, JETBRAINS, KONA, LIBERICA, " +
                                     "LIBERICA_NIK, MANDREL, MICROSOFT, OPENJDK, ORACLE, SAP_MACHINE, " +
                                     "SEMERU, TEMURIN, ZULU.",
                             )
