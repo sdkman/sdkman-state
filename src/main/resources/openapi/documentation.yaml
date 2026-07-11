@@ -439,6 +439,7 @@ paths:
             enum:
               - "BISHENG"
               - "CORRETTO"
+              - "ELIYA"
               - "GRAALCE"
               - "GRAALVM"
               - "JETBRAINS"
@@ -520,6 +521,7 @@ paths:
             enum:
               - "BISHENG"
               - "CORRETTO"
+              - "ELIYA"
               - "GRAALCE"
               - "GRAALVM"
               - "JETBRAINS"
@@ -592,6 +594,7 @@ paths:
             enum:
               - "BISHENG"
               - "CORRETTO"
+              - "ELIYA"
               - "GRAALCE"
               - "GRAALVM"
               - "JETBRAINS"
@@ -658,6 +661,7 @@ components:
           enum:
             - "BISHENG"
             - "CORRETTO"
+            - "ELIYA"
             - "GRAALCE"
             - "GRAALVM"
             - "JETBRAINS"
@@ -700,6 +704,7 @@ components:
           enum:
             - "BISHENG"
             - "CORRETTO"
+            - "ELIYA"
             - "GRAALCE"
             - "GRAALVM"
             - "JETBRAINS"
@@ -742,6 +747,7 @@ components:
           enum:
             - "BISHENG"
             - "CORRETTO"
+            - "ELIYA"
             - "GRAALCE"
             - "GRAALVM"
             - "JETBRAINS"
@@ -936,6 +942,7 @@ components:
           enum:
             - "BISHENG"
             - "CORRETTO"
+            - "ELIYA"
             - "GRAALCE"
             - "GRAALVM"
             - "JETBRAINS"
