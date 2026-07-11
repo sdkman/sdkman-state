@@ -3,6 +3,7 @@ package io.sdkman.state.domain.model
 enum class Distribution {
     BISHENG,
     CORRETTO,
+    ELIYA,
     GRAALCE,
     GRAALVM,
     JETBRAINS,
