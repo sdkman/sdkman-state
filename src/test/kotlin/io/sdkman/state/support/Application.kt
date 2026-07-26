@@ -41,6 +41,7 @@ fun testApplicationConfig(): MapApplicationConfig =
         "jwt.secret" to JwtTestSupport.TEST_SECRET,
         "jwt.expiry" to "10",
         "validation.semverish.candidates" to "java",
+        "auth.rateLimit.enabled" to "true",
     )
 
 private val sharedTestAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }

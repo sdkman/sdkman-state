@@ -20,6 +20,7 @@ interface AppConfig {
     val jwtSecret: String
     val jwtExpiry: Int
     val semverishCandidates: Set<String>
+    val rateLimitEnabled: Boolean
 }
 
 class DefaultAppConfig(
@@ -46,4 +47,6 @@ class DefaultAppConfig(
     override val jwtExpiry: Int = config.property("jwt.expiry").getString().toInt()
     override val semverishCandidates: Set<String> =
         config.getCommaSeparatedSet("validation.semverish.candidates")
+    override val rateLimitEnabled: Boolean =
+        config.property("auth.rateLimit.enabled").getString().toBoolean()
 }
