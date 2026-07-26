@@ -38,18 +38,17 @@ class RateLimiterUnitSpec :
             limiter.checkAndRecord("unknown") shouldBe false
         }
 
-        should("not record attempt when rate limited") {
+        should("keep rejecting attempts while the window stays full") {
             val limiter = RateLimiter(enabled = true)
             val ip = "192.168.1.3"
 
             // given: fill up the window
             repeat(5) { limiter.checkAndRecord(ip) }
 
-            // when: additional attempts while rate limited
-            repeat(10) { limiter.checkAndRecord(ip) }
-
-            // then: still exactly 5 recorded (not 15)
-            // verified indirectly — after window expires, only 5 would need to expire
+            // when/then: every further attempt within the window is rejected
+            repeat(10) {
+                limiter.checkAndRecord(ip) shouldBe true
+            }
         }
 
         should("cleanup removes expired entries") {
