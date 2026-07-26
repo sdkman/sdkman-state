@@ -39,7 +39,7 @@ fun Application.module() {
     val vendorRepo = PostgresVendorRepository()
     val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
     val transactional = ExposedTransactional()
-    val rateLimiter = RateLimiter()
+    val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
     launch {
         while (true) {
             delay(60_000)

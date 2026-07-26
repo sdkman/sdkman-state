@@ -6,7 +6,7 @@ import io.kotest.matchers.shouldBe
 class RateLimiterUnitSpec :
     ShouldSpec({
         should("allow first 5 attempts within the window") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
             val ip = "192.168.1.1"
 
             repeat(5) {
@@ -15,7 +15,7 @@ class RateLimiterUnitSpec :
         }
 
         should("rate-limit the 6th attempt within the window") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
             val ip = "192.168.1.2"
 
             repeat(5) { limiter.checkAndRecord(ip) }
@@ -24,7 +24,7 @@ class RateLimiterUnitSpec :
         }
 
         should("track different IPs independently") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
 
             repeat(5) { limiter.checkAndRecord("ip-a") }
 
@@ -33,13 +33,13 @@ class RateLimiterUnitSpec :
         }
 
         should("return false for unknown IP") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
 
             limiter.checkAndRecord("unknown") shouldBe false
         }
 
         should("not record attempt when rate limited") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
             val ip = "192.168.1.3"
 
             // given: fill up the window
@@ -53,7 +53,7 @@ class RateLimiterUnitSpec :
         }
 
         should("cleanup removes expired entries") {
-            val limiter = RateLimiter()
+            val limiter = RateLimiter(enabled = true)
 
             limiter.checkAndRecord("cleanup-ip")
             limiter.checkAndRecord("cleanup-ip") shouldBe false
@@ -61,5 +61,20 @@ class RateLimiterUnitSpec :
             limiter.cleanup()
             // entry still present (not expired)
             limiter.checkAndRecord("cleanup-ip") shouldBe false
+        }
+
+        should("never rate-limit the first attempt when disabled") {
+            val limiter = RateLimiter(enabled = false)
+
+            limiter.checkAndRecord("192.168.1.4") shouldBe false
+        }
+
+        should("never rate-limit even well beyond the threshold when disabled") {
+            val limiter = RateLimiter(enabled = false)
+            val ip = "192.168.1.5"
+
+            repeat(20) {
+                limiter.checkAndRecord(ip) shouldBe false
+            }
         }
     })

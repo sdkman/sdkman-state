@@ -79,7 +79,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val vendorRepo = PostgresVendorRepository()
             val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
             val transactional = ExposedTransactional()
-            val rateLimiter = RateLimiter()
+            val rateLimiter = RateLimiter(sharedTestAppConfig.rateLimitEnabled)
             val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
 
             val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)

@@ -94,7 +94,7 @@ class HealthCheckAcceptanceSpec :
                         val vendorRepo = PostgresVendorRepository()
                         val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
                         val transactional = ExposedTransactional()
-                        val rateLimiter = RateLimiter()
+                        val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
                         val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
                         configureRouting(

@@ -8,10 +8,13 @@ import java.util.concurrent.ConcurrentHashMap
 private const val MAX_ATTEMPTS = 5
 private const val WINDOW_SECONDS = 60L
 
-class RateLimiter {
+class RateLimiter(
+    private val enabled: Boolean,
+) {
     private val attempts = ConcurrentHashMap<String, MutableList<Instant>>()
 
     fun checkAndRecord(clientIp: String): Boolean {
+        if (!enabled) return false
         val now = Instant.now()
         val windowStart = now.minusSeconds(WINDOW_SECONDS)
         var rateLimited = false
