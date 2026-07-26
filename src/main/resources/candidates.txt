@@ -1,6 +1,7 @@
 activemq
 ant
 asciidoctorj
+atmosphere
 ballerina
 bld
 bpipe
@@ -31,6 +32,7 @@ java
 jbake
 jbang
 jeka
+jenesis
 jetty
 jextract
 jikkou
@@ -44,8 +46,10 @@ kcctl
 ki
 kobweb
 kotlin
+kotlintoolchain
 kscript
 ktx
+kuml
 layrry
 leiningen
 liquibase
