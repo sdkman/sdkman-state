@@ -9,7 +9,6 @@ btrace
 concurnas
 connor
 coursier
-cuba
 cxf
 detekt
 doctoolchain
@@ -48,7 +47,6 @@ kobweb
 kotlin
 kotlintoolchain
 kscript
-ktx
 kuml
 layrry
 leiningen
