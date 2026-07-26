@@ -48,5 +48,5 @@ class DefaultAppConfig(
     override val semverishCandidates: Set<String> =
         config.getCommaSeparatedSet("validation.semverish.candidates")
     override val rateLimitEnabled: Boolean =
-        config.property("auth.rateLimit.enabled").getString().toBoolean()
+        config.property("auth.rateLimit.enabled").getString().toBooleanStrict()
 }
