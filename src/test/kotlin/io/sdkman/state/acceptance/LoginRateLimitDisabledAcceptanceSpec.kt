@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.sdkman.state.adapter.primary.rest.configureHTTP
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
 import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
@@ -38,6 +39,7 @@ class LoginRateLimitDisabledAcceptanceSpec :
                         this.config = config
                     }
                     application {
+                        configureHTTP()
                         configureSerialization()
                         configureJwtAuthentication(appConfig)
 
