@@ -15,7 +15,9 @@ import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
+import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
@@ -45,7 +47,14 @@ class VersionServiceUnitSpec :
         val auditRepo = mockk<AuditRepository>()
         val service = VersionServiceImpl(versionsRepo, tagService, auditRepo, passthroughTransactional())
 
-        beforeEach { clearAllMocks() }
+        beforeEach {
+            clearAllMocks()
+            // Supersession fires on every java publication, so the port is stubbed to retire
+            // nothing by default; the supersession tests below override it per scenario.
+            coEvery {
+                versionsRepo.retireOtherVersionsInSeries(any(), any())
+            } returns Either.Right(emptyList())
+        }
 
         context("findByCandidate") {
 
@@ -287,6 +296,175 @@ class VersionServiceUnitSpec :
                 coVerify(exactly = 0) {
                     auditRepo.recordAudit(any(), any(), any(), any())
                 }
+            }
+
+            should("retire the rest of the series when a visible java version is published") {
+                // R10: the posted version wins positionally — every other row in its series is
+                // flipped to visible=false, with no comparison against what it displaces.
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2-fx+1.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/liberica-26-fx.tar.gz",
+                        distribution = Distribution.LIBERICA.some(),
+                    )
+                val retired =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2.fx",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/liberica-26-fx-legacy.tar.gz",
+                        visible = false.some(),
+                        distribution = Distribution.LIBERICA.some(),
+                    )
+                val key =
+                    SeriesKey(
+                        candidate = "java",
+                        distribution = Distribution.LIBERICA.some(),
+                        platform = Platform.LINUX_X64,
+                        major = 26,
+                        variant = "fx".some(),
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery {
+                    versionsRepo.retireOtherVersionsInSeries(key, "26.0.2-fx+1.1")
+                } returns Either.Right(listOf(retired))
+                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
+
+                // when: publishing the semverish successor of a legacy row
+                val result = service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: the series is retired for the derived key
+                result.shouldBeRight()
+                coVerify { versionsRepo.retireOtherVersionsInSeries(key, "26.0.2-fx+1.1") }
+            }
+
+            should("record one RETIRE audit entry per retired version") {
+                // R15: each retired row is attributed to the vendor of the POST that displaced it,
+                // so a row that vanishes from listings traces back to its successor.
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2+1.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-26.tar.gz",
+                    )
+                val retired =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-26-legacy.tar.gz",
+                        visible = false.some(),
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery {
+                    versionsRepo.retireOtherVersionsInSeries(any(), "26.0.2+1.1")
+                } returns Either.Right(listOf(retired))
+                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
+
+                // when: publishing a version that displaces one row
+                service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: the retired row produces its own audit entry
+                coVerify(exactly = 1) {
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.RETIRE, retired)
+                }
+            }
+
+            should("retire nothing when the candidate is not java") {
+                // R1: supersession is fixed to java; every other candidate's POST is untouched.
+                val version =
+                    Version(
+                        candidate = "scala",
+                        version = "3.3.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/scala-3.3.1.zip",
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
+
+                // when: publishing a non-java version whose spelling would be eligible
+                val result = service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: no series is retired
+                result.shouldBeRight()
+                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
+            }
+
+            should("retire nothing when the publication is hidden") {
+                // R11: publishing a hidden row must not empty the series.
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2+1.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-26.tar.gz",
+                        visible = false.some(),
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
+
+                // when: publishing with visible=false
+                val result = service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: no series is retired
+                result.shouldBeRight()
+                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
+            }
+
+            should("retire nothing when the posted version is ineligible") {
+                // R11a: a four-component rebuild counter belongs to no series, so it fails safe
+                // and leaves the plain series advertised.
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "11.0.14.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-11.tar.gz",
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
+
+                // when: publishing an ineligible spelling
+                val result = service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: no series is retired
+                result.shouldBeRight()
+                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
+            }
+
+            should("fail the POST and skip audit when retirement fails") {
+                // R13: retirement is atomic with the upsert — a failed retirement fails the whole
+                // publication, so no CREATE audit entry may be written for it.
+                val version =
+                    Version(
+                        candidate = "java",
+                        version = "26.0.2+1.1",
+                        platform = Platform.LINUX_X64,
+                        url = "https://example.com/java-26.tar.gz",
+                    )
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "deadlock detected",
+                        RuntimeException("lock timeout"),
+                    )
+                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
+                coEvery {
+                    versionsRepo.retireOtherVersionsInSeries(any(), "26.0.2+1.1")
+                } returns Either.Left(dbFailure)
+
+                // when: the retirement step fails
+                val result = service.createOrUpdate(version, NIL_UUID, "admin")
+
+                // then: the failure surfaces and nothing is audited
+                result.shouldBeLeft()
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
             }
 
             should("roll back the outer transaction when tag processing fails") {
