@@ -5,6 +5,7 @@ import arrow.core.Option
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 
@@ -35,4 +36,15 @@ interface VersionRepository {
     ): Either<DatabaseFailure, Option<Version>>
 
     suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
+
+    /**
+     * Sets `visible = false` on every visible row of [key]'s release series except [postedVersion],
+     * and returns the rows it retired. Retirement never deletes: a retired row keeps its URL,
+     * checksums, identifier and tags, so it still resolves by explicit identifier and only drops
+     * out of listings.
+     */
+    suspend fun retireOtherVersionsInSeries(
+        key: SeriesKey,
+        postedVersion: String,
+    ): Either<DatabaseFailure, List<Version>>
 }
