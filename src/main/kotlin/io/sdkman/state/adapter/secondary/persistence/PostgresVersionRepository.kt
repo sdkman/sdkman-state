@@ -9,13 +9,16 @@ import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.VersionRepository
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.core.vendors.ForUpdateOption
 import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import java.time.Instant
 
 internal object VersionsTable : IntIdTable(name = "versions") {
@@ -231,6 +234,72 @@ class PostgresVersionRepository : VersionRepository {
                     cause = error,
                 )
             }
+
+    // Rule 15a: two publications into one series must not both survive visible. Under the
+    // read-committed isolation this service runs at, a locking select cannot observe a
+    // concurrent transaction's uncommitted insert, so an unlocked implementation lets two
+    // posts of different versions interleave and both stay advertised. A transaction-scoped
+    // advisory lock keyed on the series closes that window: the later transaction blocks
+    // here, then sees the earlier one's committed row and retires it. The `FOR UPDATE`
+    // select beneath it pins the rows being flipped.
+    override suspend fun retireOtherVersionsInSeries(
+        key: SeriesKey,
+        postedVersion: String,
+    ): Either<DatabaseFailure, List<Version>> =
+        Either
+            .catch {
+                dbQuery {
+                    lockSeries(key)
+
+                    // The series key is derived per row rather than queried, because major and
+                    // variant live inside the version string in two spellings (legacy `26.0.2.fx`
+                    // and semverish `26.0.2-fx+1.1`) and an ineligible spelling belongs to no
+                    // series at all. Candidate, distribution and platform narrow the scan in SQL;
+                    // `SeriesKey.of` decides membership over that narrowed set.
+                    val retiring =
+                        VersionsTable
+                            .selectAll()
+                            .where {
+                                (VersionsTable.candidate eq key.candidate) and
+                                    distributionEq(key.distribution) and
+                                    (VersionsTable.platform eq key.platform.name) and
+                                    (VersionsTable.visible eq true)
+                            }.forUpdate(ForUpdateOption.ForUpdate)
+                            .map { it[VersionsTable.id].value to it.toVersion() }
+                            .filter { (_, row) -> row.version != postedVersion && row.inSeries(key) }
+
+                    if (retiring.isNotEmpty()) {
+                        VersionsTable.update({ VersionsTable.id inList retiring.map { (id, _) -> id } }) {
+                            it[visible] = false
+                        }
+                    }
+
+                    retiring.map { (_, row) -> row.copy(visible = false.some()) }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to retire versions in series: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    private fun lockSeries(key: SeriesKey) {
+        val lockKey =
+            listOf(
+                key.candidate,
+                key.distribution.map { it.name }.getOrElse { "" },
+                key.platform.name,
+                key.major.toString(),
+                key.variant.getOrElse { "" },
+            ).joinToString("|")
+
+        TransactionManager.current().exec(
+            "SELECT pg_advisory_xact_lock(hashtext(?))",
+            listOf(TextColumnType() to lockKey),
+        )
+    }
+
+    private fun Version.inSeries(key: SeriesKey): Boolean = SeriesKey.of(candidate, distribution, platform, version) == key.some()
 
     override suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int> =
         Either
