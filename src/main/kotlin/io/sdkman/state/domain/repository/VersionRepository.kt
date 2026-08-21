@@ -37,12 +37,6 @@ interface VersionRepository {
 
     suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
 
-    /**
-     * Sets `visible = false` on every visible row of [key]'s release series except [postedVersion],
-     * and returns the rows it retired. Retirement never deletes: a retired row keeps its URL,
-     * checksums, identifier and tags, so it still resolves by explicit identifier and only drops
-     * out of listings.
-     */
     suspend fun retireOtherVersionsInSeries(
         key: SeriesKey,
         postedVersion: String,
