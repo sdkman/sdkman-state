@@ -21,8 +21,6 @@ import io.sdkman.state.domain.service.VersionService
 import org.slf4j.LoggerFactory
 import java.util.UUID
 
-// R1: the candidate that supersedes on write is fixed in code — java is the only candidate with a
-// distribution axis and a release-series notion, so the rule is meaningful nowhere else.
 private const val JAVA_CANDIDATE = "java"
 
 class VersionServiceImpl(
@@ -65,10 +63,8 @@ class VersionServiceImpl(
 
     // R3/R5: the version write and tag replacement run inside a single Transactional block so a
     // tag-replacement failure rolls back the version write (today they were in separate
-    // transactions, leaving orphan version rows on partial failure). R13: the retirements of the
-    // superseded series join that same transaction, so a failed retirement fails the POST and
-    // leaves no partial state. R6/R15: audit logging stays outside the transaction so an audit
-    // failure cannot roll back a successful version write, for the create and for each retirement.
+    // transactions, leaving orphan version rows on partial failure). R6: audit logging stays
+    // outside the transaction so an audit failure cannot roll back a successful version write.
     override suspend fun createOrUpdate(
         version: Version,
         vendorId: UUID,
@@ -101,11 +97,6 @@ class VersionServiceImpl(
                 }
             }.map { }
 
-    // R1: supersession is fixed to the java candidate in code — no toggle, no candidate list.
-    // R11: a POST carrying visible=false publishes a hidden row and must not empty the series;
-    // an absent visible field persists as true and therefore does supersede. R11a: a posted
-    // version outside the eligibility grammar belongs to no series and retires nothing, which is
-    // the fail-safe if semverish validation is ever switched off for java.
     private suspend fun retireSupersededVersions(version: Version): Either<DomainError, List<Version>> =
         if (version.candidate != JAVA_CANDIDATE || !version.visible.getOrElse { true }) {
             emptyList<Version>().right()

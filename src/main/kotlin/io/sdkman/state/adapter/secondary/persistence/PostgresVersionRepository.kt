@@ -235,13 +235,9 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // Rule 15a: two publications into one series must not both survive visible. Under the
-    // read-committed isolation this service runs at, a locking select cannot observe a
-    // concurrent transaction's uncommitted insert, so an unlocked implementation lets two
-    // posts of different versions interleave and both stay advertised. A transaction-scoped
-    // advisory lock keyed on the series closes that window: the later transaction blocks
-    // here, then sees the earlier one's committed row and retires it. The `FOR UPDATE`
-    // select beneath it pins the rows being flipped.
+    // R15a: a locking select cannot see a concurrent transaction's uncommitted insert under
+    // read-committed, so two posts into one series would interleave and both stay visible.
+    // The advisory lock, not the `FOR UPDATE` beneath it, is what serializes them.
     override suspend fun retireOtherVersionsInSeries(
         key: SeriesKey,
         postedVersion: String,
@@ -251,16 +247,8 @@ class PostgresVersionRepository : VersionRepository {
                 dbQuery {
                     lockSeries(key)
 
-                    // The series key is derived per row rather than queried, because major and
-                    // variant live inside the version string in two spellings (legacy `26.0.2.fx`
-                    // and semverish `26.0.2-fx+1.1`) and an ineligible spelling belongs to no
-                    // series at all. `SeriesKey.of` decides membership, but the scan is narrowed
-                    // to the series in SQL first: `versionPattern` is the same grammar expressed
-                    // as a regex over the version string, so the `FOR UPDATE` holds only rows that
-                    // could be members. Without it the lock spans every visible row of the
-                    // candidate/distribution/platform, and two publications into different major
-                    // lines — java 21 and java 26 TEMURIN/LINUX_X64 — would contend on row locks
-                    // despite taking different advisory locks and touching different rows.
+                    // Major and variant are not columns, so the pattern narrows the rows the
+                    // `FOR UPDATE` holds and `SeriesKey.of` decides membership over them.
                     val retiring =
                         VersionsTable
                             .selectAll()
