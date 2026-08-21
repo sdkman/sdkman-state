@@ -27,15 +27,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-/**
- * Spec rule 15a: concurrent publications into one release series must serialize. Every POST
- * succeeds, but only the row published by the last transaction to hold the series lock may
- * remain visible — under read-committed isolation an unlocked implementation interleaves and
- * leaves several visible rows behind.
- *
- * Run repeatedly (`./gradlew test --tests '*ConcurrentSupersession*' --rerun`) to flush out any
- * surviving interleaving window.
- */
 @Tags("acceptance")
 class ConcurrentSupersessionAcceptanceSpec :
     ShouldSpec({

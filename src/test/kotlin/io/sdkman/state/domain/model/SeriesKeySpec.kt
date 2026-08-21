@@ -8,11 +8,6 @@ import io.kotest.matchers.shouldNotBe
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
 
-/**
- * Every row of the eligible-shapes table in `specs/java-version-supersession.md` is
- * asserted here, because the grammar is the whole of the fail-safe: a spelling that
- * this parser does not recognise takes part in no series, and so is never hidden.
- */
 class SeriesKeySpec :
     ShouldSpec({
 
@@ -24,7 +19,6 @@ class SeriesKeySpec :
 
         context("eligible shapes") {
 
-            // The eligible-shapes table: stored version to major and variant.
             listOf(
                 Triple("26.0.2+1.1", 26, none<String>()),
                 Triple("26.0.2-fx+1.1", 26, "fx".some()),
@@ -66,8 +60,6 @@ class SeriesKeySpec :
 
         context("ineligible shapes") {
 
-            // The ineligible rows of the table, plus the shapes the grammar excludes
-            // by construction. An ineligible version takes part in no series.
             listOf(
                 "25.0.4.r25" to "r25 is a runtime target, not a variant",
                 "11.0.14.1" to "four numeric components are a rebuild counter",
@@ -94,9 +86,6 @@ class SeriesKeySpec :
 
         context("series version pattern") {
 
-            // The retirement query pushes this pattern into SQL to narrow the rows it locks, so
-            // it has to agree with `of` on every spelling: a member the pattern fails to match
-            // is a superseded row that would silently stay advertised.
             listOf(
                 "26.0.2",
                 "26.0.2+1.1",

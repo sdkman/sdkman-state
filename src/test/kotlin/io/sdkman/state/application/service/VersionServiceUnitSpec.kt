@@ -49,8 +49,6 @@ class VersionServiceUnitSpec :
 
         beforeEach {
             clearAllMocks()
-            // Supersession fires on every java publication, so the port is stubbed to retire
-            // nothing by default; the supersession tests below override it per scenario.
             coEvery {
                 versionsRepo.retireOtherVersionsInSeries(any(), any())
             } returns Either.Right(emptyList())
@@ -299,8 +297,7 @@ class VersionServiceUnitSpec :
             }
 
             should("retire the rest of the series when a visible java version is published") {
-                // R10: the posted version wins positionally — every other row in its series is
-                // flipped to visible=false, with no comparison against what it displaces.
+                // given: the repository retires one legacy row of the posted version's series
                 val version =
                     Version(
                         candidate = "java",
@@ -341,8 +338,7 @@ class VersionServiceUnitSpec :
             }
 
             should("record one RETIRE audit entry per retired version") {
-                // R15: each retired row is attributed to the vendor of the POST that displaced it,
-                // so a row that vanishes from listings traces back to its successor.
+                // given: a publication that displaces one row
                 val version =
                     Version(
                         candidate = "java",
@@ -374,7 +370,7 @@ class VersionServiceUnitSpec :
             }
 
             should("retire nothing when the candidate is not java") {
-                // R1: supersession is fixed to java; every other candidate's POST is untouched.
+                // given: a non-java publication whose spelling would be eligible
                 val version =
                     Version(
                         candidate = "scala",
@@ -394,7 +390,7 @@ class VersionServiceUnitSpec :
             }
 
             should("retire nothing when the publication is hidden") {
-                // R11: publishing a hidden row must not empty the series.
+                // given: a publication carrying visible=false
                 val version =
                     Version(
                         candidate = "java",
@@ -415,8 +411,7 @@ class VersionServiceUnitSpec :
             }
 
             should("retire nothing when the posted version is ineligible") {
-                // R11a: a four-component rebuild counter belongs to no series, so it fails safe
-                // and leaves the plain series advertised.
+                // given: a publication whose spelling belongs to no series
                 val version =
                     Version(
                         candidate = "java",
@@ -436,8 +431,7 @@ class VersionServiceUnitSpec :
             }
 
             should("fail the POST and skip audit when retirement fails") {
-                // R13: retirement is atomic with the upsert — a failed retirement fails the whole
-                // publication, so no CREATE audit entry may be written for it.
+                // given: a publication whose retirement step fails
                 val version =
                     Version(
                         candidate = "java",

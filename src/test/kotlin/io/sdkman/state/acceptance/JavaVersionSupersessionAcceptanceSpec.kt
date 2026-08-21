@@ -23,13 +23,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 
-/**
- * Covers the core supersession rule and the series boundaries: publishing a visible,
- * eligible `java` version retires every other row of its release series — same
- * candidate, distribution, platform, major line and variant — and nothing outside it.
- *
- * Guards, tags, audit and concurrency live in their own specs.
- */
 @Tags("acceptance")
 class JavaVersionSupersessionAcceptanceSpec :
     ShouldSpec({
