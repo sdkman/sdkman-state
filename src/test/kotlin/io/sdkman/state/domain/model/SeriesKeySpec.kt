@@ -92,6 +92,46 @@ class SeriesKeySpec :
             }
         }
 
+        context("series version pattern") {
+
+            // The retirement query pushes this pattern into SQL to narrow the rows it locks, so
+            // it has to agree with `of` on every spelling: a member the pattern fails to match
+            // is a superseded row that would silently stay advertised.
+            listOf(
+                "26.0.2",
+                "26.0.2+1.1",
+                "26.0.0",
+                "26.0.2.fx",
+                "26.0.2-fx+1.1",
+                "26.0.1.1",
+                "26.0.4.r25",
+                "21.0.2",
+                "260.0.2",
+            ).forEach { version ->
+                should("agree with series membership for $version") {
+                    // given: the plain major 26 series
+                    val series = seriesKeyOf("26.0.2").shouldBeSome()
+
+                    // when: matching a version against the series pattern
+                    val matches = Regex(series.versionPattern()).matches(version)
+
+                    // then: the pattern admits exactly the members the parser derives
+                    matches shouldBe (seriesKeyOf(version) == series.some())
+                }
+            }
+
+            should("admit both spellings of its variant") {
+                // given: the fx series of major 26
+                val series = seriesKeyOf("26.0.2-fx+1.1").shouldBeSome()
+
+                // when: matching the legacy spelling of a member
+                val matches = Regex(series.versionPattern()).matches("26.0.2.fx")
+
+                // then: legacy and semverish members share the one pattern
+                matches shouldBe true
+            }
+        }
+
         context("series identity") {
 
             should("place a version and its rebuilt counterpart in the same series") {
