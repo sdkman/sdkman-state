@@ -1,40 +1,11 @@
--- Retire the java rows that write-time supersession would have retired, had it
--- existed when they were published. The versions collection was carried across from
--- MongoDB verbatim, in its legacy spelling ('26.0.2', '26.0.2.fx'), and DISCO has
--- since been posting semverish builds of the same releases ('26.0.2+1.1',
--- '26.0.2-fx+1.1') without retiring what they replace. This one-off pass collapses
--- that accumulated duplication.
+-- Retire the java rows that write-time supersession would have retired, had it existed
+-- when they were published. See specs/java-version-supersession.md, 'Clearing the Backlog'.
 --
--- A release series is (candidate, distribution, platform, major, variant). Only the
--- eligible shapes take part in one: exactly three numeric core components, with an
--- optional 'fx'/'crac' variant in either the legacy dot spelling or the semverish
--- '-' spelling, and optional build metadata. Runtime targets ('25.0.4.r25'),
--- rebuild counters ('11.0.14.1') and two-component cores ('25.r25') are ineligible
--- and are left exactly as they are.
---
--- The backlog pass has no triggering POST, so unlike the write-time rule it cannot
--- be positional. It selects the survivor by ordering: highest core version wins,
--- and at equal core version a DISCO-generation row beats a migrated one. Generation
--- is read from the spelling — there is no provenance column — so a version carrying
--- a '-' or '+' section is DISCO and a bare '<major>.<minor>.<patch>' is migrated.
---
--- Two guards keep the pass conservative:
---
---   * A series with no DISCO row is untouched. Nothing has superseded those rows,
---     so they stay as they were — this is what keeps Corretto's major-8 line
---     advertising '8.0.504', '8.0.472' and '8.0.232'.
---   * A series whose two highest rows are both DISCO at the same core version is
---     skipped and reported. Separating them needs a semverish comparator, which is
---     deliberately unspecified. Those series resolve themselves when DISCO next
---     publishes into them and the write-time rule fires positionally.
---
--- Tags are left alone, exactly as the write-time rule leaves them. A retired row
--- still holding 'lts', 'latest' or a major alias keeps resolving through findByTag
--- until DISCO next hydrates that tag, so every such tag is reported rather than
--- moved — it is a short, self-correcting list that is worth seeing.
---
--- Runs after V17, which hides the mis-versioned GraalVM '+r<N>' rows. Left visible
--- those would be read as the head of their series and would retire the correct row.
+-- The pass has no triggering POST, so it selects the survivor by ordering rather than
+-- position: highest core version wins, and at equal core version a DISCO row — one whose
+-- spelling carries a '-' or '+' section — beats a migrated one. A series holding no DISCO
+-- row, and one whose two highest rows are both DISCO at the same core version, is left
+-- untouched and reported. Runs after V17.
 
 DO $$
 DECLARE
