@@ -7,14 +7,6 @@ import io.sdkman.state.support.sharedTestDataSource
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.configuration.FluentConfiguration
 
-/**
- * Proves the backlog pass end to end: seed the pre-supersession catalogue as it stood at V16,
- * run V17 and V18 over it, and read the resulting visibility back.
- *
- * The pass runs in its own schema so the seeded backlog cannot collide with the rows every other
- * spec writes into the default schema, and so the migrations are exercised exactly once, in order,
- * against data that predates them.
- */
 @Tags("integration")
 class BacklogMigrationIntegrationSpec :
     ShouldSpec({
@@ -32,7 +24,6 @@ class BacklogMigrationIntegrationSpec :
 
         context("V17") {
             should("hide a GraalVM row carrying a runtime-target suffix") {
-                // 25.2.4+r25 records the GraalVM product version, not a JDK patch level
                 visibilityOf("25.2.4+r25", "GRAALVM") shouldBe false
             }
 
@@ -41,8 +32,6 @@ class BacklogMigrationIntegrationSpec :
             }
 
             should("leave the correctly versioned GraalVM row visible") {
-                // the ordering guarantee: hidden first, 25.2.4+r25 never reads as the head of the
-                // series, so V18 leaves 25.0.4 advertised
                 visibilityOf("25.0.4", "GRAALVM") shouldBe true
             }
         }
@@ -53,7 +42,6 @@ class BacklogMigrationIntegrationSpec :
             }
 
             should("retire the migrated twin of a DISCO row at the same core version") {
-                // the commonest backlog case: same release, two generations of spelling
                 visibilityOf("26.0.2", "LIBERICA") shouldBe false
             }
 
@@ -66,13 +54,10 @@ class BacklogMigrationIntegrationSpec :
             }
 
             should("leave a series holding no DISCO row untouched") {
-                // Corretto major 8 is entirely migrated-generation, so nothing there is superseded
                 corretto8Visibility() shouldBe listOf(true, true, true)
             }
 
             should("leave both rows of a tied series visible") {
-                // two DISCO rows at one core version cannot be separated without a semverish
-                // comparator, so the series is skipped and reported rather than guessed at
                 tiedEarlyAccessVisibility() shouldBe listOf(true, true)
             }
         }
@@ -82,20 +67,16 @@ private const val BACKLOG_SCHEMA = "backlog_test"
 
 private val BACKLOG_ROWS =
     listOf(
-        // GraalVM: two mis-versioned runtime-target rows beside the correct one they must not retire
         "25.2.4+r25" to "GRAALVM",
         "21.0.9+r24" to "GRAALVM",
         "25.0.4" to "GRAALVM",
-        // Liberica: a plain and an fx release, each carrying both generations of spelling
         "26.0.2" to "LIBERICA",
         "26.0.2+1.1" to "LIBERICA",
         "26.0.2.fx" to "LIBERICA",
         "26.0.2-fx+1.1" to "LIBERICA",
-        // Corretto major 8: migrated rows only, nothing has superseded them
         "8.0.504" to "CORRETTO",
         "8.0.472" to "CORRETTO",
         "8.0.232" to "CORRETTO",
-        // OpenJDK early access: two DISCO rows tied at one core version
         "27.0.0+ea.34" to "OPENJDK",
         "27.0.0+ea.35" to "OPENJDK",
     )

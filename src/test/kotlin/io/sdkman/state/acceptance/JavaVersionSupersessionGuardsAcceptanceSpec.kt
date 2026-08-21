@@ -27,22 +27,11 @@ import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * Covers the guards that stop supersession from firing, and the trail it leaves behind:
- * a hidden publication (R11), an ineligible publication (R11a) and a candidate other
- * than java (R1) retire nothing, a re-post of the current version is idempotent (R14),
- * retirement leaves tags alone (R16), and every retired row produces its own `RETIRE`
- * audit entry attributed to the triggering POST (R15).
- *
- * The core rule and the series boundaries live in `JavaVersionSupersessionAcceptanceSpec`;
- * concurrency lives in its own spec.
- */
 @Tags("acceptance")
 class JavaVersionSupersessionGuardsAcceptanceSpec :
     ShouldSpec({
 
         should("leave the series alone when the publication is hidden") {
-            // given: a visible migrated row that a hidden publication must not empty out
             val migrated = liberica("26.0.2")
             val hidden = liberica("26.0.2+1.1").copy(visible = false.some())
 
@@ -55,7 +44,6 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         }
 
         should("keep the current version visible when it is re-posted") {
-            // given: the series has already been superseded once
             val current = liberica("26.0.2+1.1")
 
             withCleanDatabase {
@@ -67,7 +55,6 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         }
 
         should("record no retirement when the current version is re-posted") {
-            // given: the row the re-post would retire is the posted row itself, so it is excluded
             val current = liberica("26.0.2+1.1")
 
             withCleanDatabase {
@@ -79,8 +66,6 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         }
 
         should("leave the series alone when the posted variant is outside the series vocabulary") {
-            // given: `jfr` is valid semverish but is not an `fx`/`crac` variant, so the
-            // publication belongs to no series and supersedes nothing
             val migrated = liberica("26.0.2")
 
             withCleanDatabase {
@@ -92,7 +77,6 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         }
 
         should("leave prior versions of another candidate visible") {
-            // given: supersession is fixed to java, so a gradle publication is additive as before
             val previous = gradle("8.13")
 
             withCleanDatabase {
@@ -116,8 +100,6 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         }
 
         should("leave the tag of a retired version in place") {
-            // given: retirement neither moves, copies nor clears a tag — the tag endpoints
-            // re-point it when the new version is tagged, which is a separate call
             withCleanDatabase {
                 val taggedId = insertVersionWithId(temurin("21.0.12"))
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, taggedId)
