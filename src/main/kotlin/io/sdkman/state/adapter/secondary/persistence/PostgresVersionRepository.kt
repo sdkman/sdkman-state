@@ -254,8 +254,13 @@ class PostgresVersionRepository : VersionRepository {
                     // The series key is derived per row rather than queried, because major and
                     // variant live inside the version string in two spellings (legacy `26.0.2.fx`
                     // and semverish `26.0.2-fx+1.1`) and an ineligible spelling belongs to no
-                    // series at all. Candidate, distribution and platform narrow the scan in SQL;
-                    // `SeriesKey.of` decides membership over that narrowed set.
+                    // series at all. `SeriesKey.of` decides membership, but the scan is narrowed
+                    // to the series in SQL first: `versionPattern` is the same grammar expressed
+                    // as a regex over the version string, so the `FOR UPDATE` holds only rows that
+                    // could be members. Without it the lock spans every visible row of the
+                    // candidate/distribution/platform, and two publications into different major
+                    // lines — java 21 and java 26 TEMURIN/LINUX_X64 — would contend on row locks
+                    // despite taking different advisory locks and touching different rows.
                     val retiring =
                         VersionsTable
                             .selectAll()
@@ -263,7 +268,8 @@ class PostgresVersionRepository : VersionRepository {
                                 (VersionsTable.candidate eq key.candidate) and
                                     distributionEq(key.distribution) and
                                     (VersionsTable.platform eq key.platform.name) and
-                                    (VersionsTable.visible eq true)
+                                    (VersionsTable.visible eq true) and
+                                    (VersionsTable.version regexp key.versionPattern())
                             }.forUpdate(ForUpdateOption.ForUpdate)
                             .map { it[VersionsTable.id].value to it.toVersion() }
                             .filter { (_, row) -> row.version != postedVersion && row.inSeries(key) }
