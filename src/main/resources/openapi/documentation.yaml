@@ -84,7 +84,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P[-variant][+build-metadata]."
+      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P[-variant][+build-metadata]. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries exactly three numeric core components with an optional 'fx' or 'crac' variant; build metadata is not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
       security:
         - bearerAuth: []
       requestBody:
