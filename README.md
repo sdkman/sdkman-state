@@ -2,13 +2,12 @@
 
 This application exposes the SDKMAN Candidate and Version state through a JSON API.
 
-It exposes `GET`, `POST`, `PATCH` and `DELETE` HTTP methods on candidates and versions.
+It exposes `GET`, `POST` and `DELETE` HTTP methods on versions, with additional routes for tag resolution and vendor administration.
 
 The audience of this API is twofold:
 
 * as a backend for [sdkman-cli-native](https://github.com/sdkman/sdkman-cli-native), the Rust-based native CLI components
-* as admin API of the datastore, used directly or by build system plugins and
-  the [DISCO integration](https://github.com/sdkman/sdkman-disco-integration)
+* as admin API of the datastore, used directly or by build system plugins, and by the [Foojay DISCO API](https://api.foojay.io) which pushes new Java versions directly
 
 ## Running Locally
 
