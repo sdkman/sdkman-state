@@ -38,6 +38,7 @@ jikkou
 jmc
 jmeter
 joern
+jpx
 jqassistant
 jreleaser
 karaf
