@@ -187,7 +187,7 @@ CREATE TABLE candidates
 
 ### The seed
 
-`V20` ends with an `INSERT` of the candidate set. The rows are **generated, not hand-written**: `candidates-migration/` in the parent workspace dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, and emits the `INSERT` statement. The generated SQL is committed and reviewed like any other migration; the generator exists so the derivation is reproducible and the remediation table is curated config rather than inline edits.
+`V20` ends with an `INSERT` of the candidate set. The rows are **generated, not hand-written**: `candidates_migration/` in the parent workspace dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, and emits the `INSERT` statement. The generated SQL is committed and reviewed like any other migration; the generator exists so the derivation is reproducible and the remediation table is curated config rather than inline edits.
 
 ```sql
 INSERT INTO candidates (candidate, name, description, website_url) VALUES
