@@ -238,6 +238,20 @@ An earlier draft had the rows arriving through `POST /admin/candidates` between 
 
 **`V21` is the pre-flight, and it now fires on the first deploy.** If any distinct `versions.candidate` or `version_tags.candidate` in production falls outside the seeded set, `V21` fails and the service does not start. Flyway runs migrations transactionally on Postgres, so a failure leaves no half-applied state, but the deploy fails. Run that comparison against production before shipping rather than discovering it at boot.
 
+**Rehearse it locally before shipping.** `test/migration-rehearsal.sh` in the parent workspace
+drives the exact production sequence: bring the stack up at pre-`V20`, replay the real Mongo dump
+through `POST /versions` with the phase 1 `migration/` tool (populating `version_tags` too, via its
+inline `lts` tagging), *then* rebuild with `V20`/`V21` and restart so Flyway applies them against
+populated tables. It asserts the service starts, both constraints exist and no row count moved, and
+it reports `V21`'s Flyway execution time — which is the `ACCESS EXCLUSIVE` window.
+
+Its `negative` phase is the one that earns its keep. Because the validator has gated every
+`POST /versions` against the allow-list since before the phase 1 backfill, nothing loaded through
+the API can be an orphan, so the happy path is clean by construction and proves little on its own.
+The negative phase injects an orphan row by direct SQL and proves the failure is survivable: `V21`
+refuses to apply, the service refuses to start, no constraint is left behind, and the data is
+untouched.
+
 **Rollback** is a redeploy of the prior release, which restores `candidates.txt` while leaving the table and foreign keys in place. Safe, because the seeded registry is a superset of the file: every candidate the restored file accepts exists in the table, so no accepted write can violate the constraint.
 
 ## Auditing
@@ -433,6 +447,9 @@ Feature: Candidate registry
 - [ ] `V20` creates the `candidates` table and seeds it with the candidate set in the same migration
 - [ ] `V21` adds both foreign keys with `ON DELETE RESTRICT`, and applies successfully against a database where only `V20` has run
 - [ ] A single boot of the service applies `V20` and `V21` in order and starts cleanly
+- [ ] `test/migration-rehearsal.sh rehearse` passes against a database loaded at pre-`V20` with the real dump: both constraints present, row count unchanged
+- [ ] `test/migration-rehearsal.sh negative` passes: an orphan row makes `V21` refuse to apply, the service refuses to start, no constraint is left behind and no data changes
+- [ ] `V21`'s Flyway execution time is recorded, so the `ACCESS EXCLUSIVE` window on `versions` is a measured number rather than an assumption
 - [ ] Every existing acceptance spec that writes a version registers its candidate first; none relies on a classpath allow-list
 - [ ] `V21` fails when a `versions` or `version_tags` row references an unregistered candidate
 - [ ] A direct SQL insert into `versions` for an unregistered candidate is refused by the database
