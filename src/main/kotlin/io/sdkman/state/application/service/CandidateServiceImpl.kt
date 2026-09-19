@@ -12,8 +12,8 @@ import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.repository.CandidateRepository
 import io.sdkman.state.domain.service.CandidateService
 
-// `java` is the one candidate excluded from `default` (business rule 8): its `lts` tag exists
-// once per distribution, so a single value would be arbitrary. It still appears in the listing.
+// Excluded from `default`: java's `lts` tag exists once per distribution, so one value would
+// be arbitrary. It still appears in the listing.
 private const val JAVA_CANDIDATE = "java"
 
 class CandidateServiceImpl(
@@ -26,8 +26,6 @@ class CandidateServiceImpl(
                     .findAll()
                     .mapLeft { DomainError.DatabaseError(it) }
                     .bind()
-            // One query for the whole registry, not one per candidate, so the listing stays
-            // two round trips however many candidates are registered.
             val defaults =
                 candidateRepository
                     .findLtsDefaults()
@@ -54,8 +52,6 @@ class CandidateServiceImpl(
                 .mapLeft { DomainError.DatabaseError(it) }
                 .bind()
                 .getOrElse { raise(DomainError.CandidateNotFound(candidate)) }
-            // The count is the whole guard: no foreign key stands behind it, so a delete that
-            // skipped this would strand every version row published under the candidate.
             val versionCount =
                 candidateRepository
                     .countVersions(candidate)

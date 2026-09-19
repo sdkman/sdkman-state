@@ -7,23 +7,14 @@ import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
 
 interface CandidateService {
-    /**
-     * Lists the registry ascending by candidate, each row paired with its derived `default`.
-     * The default is never stored (business rule 4), so it is resolved on every read and is
-     * [arrow.core.None] whenever no `lts` tag answers for that candidate.
-     */
+    /** Lists the registry ascending by candidate. The order is part of the public contract. */
     suspend fun list(): Either<DomainError, List<Pair<Candidate, Option<String>>>>
 
-    /**
-     * Registers a candidate, keyed on its identifier. The boolean reports whether the row is
-     * new, which is what tells a `201` from a `200` without a preceding read.
-     */
+    /** Upserts a candidate. The boolean reports whether the row was new, which is what tells a
+     * `201` from a `200` without a preceding read. */
     suspend fun register(registration: CandidateRegistration): Either<DomainError, Pair<Candidate, Boolean>>
 
-    /**
-     * Removes a candidate and answers the record as it was. Refuses with
-     * [DomainError.CandidateHasVersions] while any version is published under it (business rule 3):
-     * the count is the guard itself, because no foreign key stands behind it.
-     */
+    /** Removes a candidate, answering the record as it was. Refuses with
+     * [DomainError.CandidateHasVersions] while any version is published under it. */
     suspend fun delete(candidate: String): Either<DomainError, Candidate>
 }

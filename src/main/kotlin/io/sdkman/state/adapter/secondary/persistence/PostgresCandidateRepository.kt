@@ -37,8 +37,7 @@ class PostgresCandidateRepository : CandidateRepository {
     private companion object {
         const val LTS_TAG = "lts"
 
-        // Order is the resolution order, not merely a filter: `UNIVERSAL` wins over
-        // `LINUX_X64` and no other platform is consulted at all (business rule 5).
+        // Resolution order, not merely a sort: no platform outside these two is consulted.
         val DEFAULT_PLATFORMS = listOf("UNIVERSAL", "LINUX_X64")
     }
 
@@ -62,8 +61,7 @@ class PostgresCandidateRepository : CandidateRepository {
             lastUpdatedAt = getTimestamp("last_updated_at").toInstant(),
         )
 
-    // Ordering is ascending by identifier (business rule 11), matching the sort the
-    // Mongo repository applied, so the listing stays stable across the cutover.
+    // Ascending by identifier: the order is part of the public contract.
     override suspend fun findAll(): Either<DatabaseFailure, List<Candidate>> =
         Either
             .catch {
@@ -97,9 +95,8 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // `(xmax = 0)` tells an insert from an update without a preceding SELECT, so two
-    // concurrent registrations of one new candidate still yield exactly one 201.
-    // The identifier is never updated on conflict (business rule 2).
+    // `(xmax = 0)` tells an insert from an update without a preceding SELECT, so two concurrent
+    // registrations of one new candidate still yield exactly one 201.
     override suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, Pair<Candidate, Boolean>> =
         Either
             .catch {
@@ -137,8 +134,7 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // Deleting and reading the removed row in one statement keeps the caller from
-    // racing a concurrent delete between a SELECT and a DELETE.
+    // One statement, so the caller cannot race a concurrent delete between a SELECT and a DELETE.
     override suspend fun delete(candidate: String): Either<DatabaseFailure, Option<Candidate>> =
         Either
             .catch {
@@ -161,8 +157,7 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // Counts every version under the candidate, visible or not: the delete guard asks whether
-    // anything was ever published, not whether anything is currently listed (business rule 3).
+    // Visible or not: the delete guard asks what was published, not what is currently listed.
     override suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long> =
         Either
             .catch {
@@ -179,13 +174,13 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // One query for the whole registry, so listing candidates never fans out into a query per
-    // candidate. The filters mirror `PostgresVersionRepository.findByTag` exactly: the tag's
-    // candidate and platform, and the *version's* distribution (business rule 6). Reading
-    // `version_tags.distribution` here instead would make `GET /candidates` and
-    // `GET /versions/{c}/tags/lts` disagree about the same candidate. `visible` is deliberately
-    // not filtered, for the same reason: the two reads must agree even while a retired row still
-    // holds the tag (business rule 7).
+    // One query for the whole registry, never one per candidate.
+    //
+    // The filters mirror `PostgresVersionRepository.findByTag` exactly, and must: both tables
+    // carry a `distribution` column, so reading `version_tags.distribution` rather than the
+    // *version's* would make this endpoint and `GET /versions/{c}/tags/lts` disagree about the
+    // same candidate. `visible` goes unfiltered for the same reason -- the two must agree even
+    // while a retired row still holds the tag.
     override suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>> =
         Either
             .catch {

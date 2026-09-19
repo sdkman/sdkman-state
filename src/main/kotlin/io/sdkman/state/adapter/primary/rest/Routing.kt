@@ -36,11 +36,9 @@ fun Application.configureRouting(
 }
 
 /**
- * Wires the candidate registry routes.
- *
- * It is a second `routing` block rather than another parameter on [configureRouting], which
- * already carries seven. Ktor resolves both blocks against the same routing root, so the read
- * route still inherits the `CachingHeaders` plugin installed by `versionReadRoutes`.
+ * A second `routing` block rather than an eighth parameter on [configureRouting]. Ktor resolves
+ * both against the same routing root, so the read route still inherits the `CachingHeaders`
+ * plugin installed by `versionReadRoutes`.
  */
 fun Application.configureCandidateRouting(candidateService: CandidateService) {
     routing {

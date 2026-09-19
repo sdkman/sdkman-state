@@ -101,9 +101,9 @@ class CacheHeadersAcceptanceSpec :
             }
         }
 
-        // Reading the header by name returns only its first value, so a route that sets `no-store`
-        // and then has `max-age` appended by the caching plugin still reads as correct. These two
-        // assertions are what see the appended value and the `Expires` that comes with it.
+        // Reading the header by name returns only its first value, so a route that sets
+        // `no-store` and then has `max-age` appended still reads as correct. These two assertions
+        // are what see the appended value and the `Expires` that comes with it.
         should("return exactly one Cache-Control value on GET /admin/vendors") {
             withCleanDatabase {
                 withTestApplication {

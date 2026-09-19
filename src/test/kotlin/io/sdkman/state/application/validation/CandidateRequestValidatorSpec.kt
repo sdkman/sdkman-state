@@ -7,9 +7,6 @@ import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 
-// Covers every rejection rule of `CandidateRequestValidator`. The rules exist because a
-// registry row is rendered by `sdk list` into a fixed-width terminal box and is addressed by
-// its identifier in a public URL, so a malformed row is unrecoverable rather than merely wrong.
 class CandidateRequestValidatorSpec :
     ShouldSpec({
 
@@ -53,7 +50,7 @@ class CandidateRequestValidatorSpec :
                 // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the identifier-shape error, which mirrors the table CHECK
+                // then: returns the identifier-shape error mirroring the table CHECK
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe InvalidCandidateIdentifierError(candidate = "Scala")
@@ -143,7 +140,7 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a description containing a line break") {
-                // given: a description spanning two lines, which breaks the `sdk list` layout
+                // given: a description spanning two lines
                 val json = requestJson(description = "Scala is a language.\\nIt runs on the JVM.")
 
                 // when: validating the request
@@ -159,7 +156,7 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a description containing consecutive spaces") {
-                // given: a description with a double space, which survives no reflow
+                // given: a description with a double space
                 val json = requestJson(description = "Scala is a  programming language.")
 
                 // when: validating the request

@@ -26,14 +26,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Guards the claim of `POST /admin/candidates` that a concurrent double-post of one new candidate
- * cannot answer `201` twice.
+ * A concurrent double-post of one new candidate must not answer `201` twice.
  *
- * The property belongs to the upsert, not to the route: `201` and `200` are told apart by what the
- * write reports — `(xmax = 0)` in `PostgresCandidateRepository.upsert` — rather than by a preceding
- * `SELECT`. A check-then-act implementation would pass every case in
- * `AdminCandidateRegistrationAcceptanceSpec` and fail here, because both callers would read an
- * empty table before either wrote to it.
+ * The property belongs to the upsert, not the route: a check-then-act implementation would pass
+ * every case in `AdminCandidateRegistrationAcceptanceSpec` and fail here, because both callers
+ * would read an empty table before either wrote to it.
  *
  * Run repeatedly (`--rerun`) to flush out any surviving race window.
  */
