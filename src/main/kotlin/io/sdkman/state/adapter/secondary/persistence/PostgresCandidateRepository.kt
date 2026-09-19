@@ -9,10 +9,15 @@ import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.repository.CandidateRepository
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.javatime.timestamp
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import java.sql.ResultSet
@@ -29,6 +34,14 @@ internal object CandidatesTable : Table(name = "candidates") {
 }
 
 class PostgresCandidateRepository : CandidateRepository {
+    private companion object {
+        const val LTS_TAG = "lts"
+
+        // Order is the resolution order, not merely a filter: `UNIVERSAL` wins over
+        // `LINUX_X64` and no other platform is consulted at all (business rule 5).
+        val DEFAULT_PLATFORMS = listOf("UNIVERSAL", "LINUX_X64")
+    }
+
     private fun ResultRow.toCandidate(): Candidate =
         Candidate(
             candidate = this[CandidatesTable.candidate],
@@ -144,6 +157,59 @@ class PostgresCandidateRepository : CandidateRepository {
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to delete candidate: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    // Counts every version under the candidate, visible or not: the delete guard asks whether
+    // anything was ever published, not whether anything is currently listed (business rule 3).
+    override suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable
+                        .selectAll()
+                        .where { VersionsTable.candidate eq candidate }
+                        .count()
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to count versions for candidate: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    // One query for the whole registry, so listing candidates never fans out into a query per
+    // candidate. The filters mirror `PostgresVersionRepository.findByTag` exactly: the tag's
+    // candidate and platform, and the *version's* distribution (business rule 6). Reading
+    // `version_tags.distribution` here instead would make `GET /candidates` and
+    // `GET /versions/{c}/tags/lts` disagree about the same candidate. `visible` is deliberately
+    // not filtered, for the same reason: the two reads must agree even while a retired row still
+    // holds the tag (business rule 7).
+    override suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionTagsTable
+                        .join(
+                            VersionsTable,
+                            JoinType.INNER,
+                            additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
+                        ).select(VersionTagsTable.candidate, VersionTagsTable.platform, VersionsTable.version)
+                        .where {
+                            (VersionTagsTable.tag eq LTS_TAG) and
+                                VersionsTable.distribution.isNull() and
+                                (VersionTagsTable.platform inList DEFAULT_PLATFORMS)
+                        }.groupBy { it[VersionTagsTable.candidate] }
+                        .mapValues { (_, tagged) ->
+                            tagged
+                                .sortedBy { DEFAULT_PLATFORMS.indexOf(it[VersionTagsTable.platform]) }
+                                .first()[VersionsTable.version]
+                        }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find lts defaults: ${error.message}",
                     cause = error,
                 )
             }
