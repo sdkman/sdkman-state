@@ -1,5 +1,6 @@
 package io.sdkman.state.domain.model
 
+import arrow.core.Option
 import java.time.Instant
 
 data class Candidate(
@@ -35,3 +36,10 @@ sealed interface CandidateDeletion {
         val versionCount: Long,
     ) : CandidateDeletion
 }
+
+// R4: `default` is derived from version_tags on every read and never stored, so a listing is a
+// candidate row plus the value resolved for it at that moment. R8 leaves it absent for `java`.
+data class CandidateListing(
+    val candidate: Candidate,
+    val default: Option<String>,
+)
