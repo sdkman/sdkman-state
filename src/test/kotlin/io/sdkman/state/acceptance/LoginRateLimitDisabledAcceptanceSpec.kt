@@ -6,16 +6,19 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
 import io.sdkman.state.adapter.primary.rest.configureHTTP
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
 import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
+import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
+import io.sdkman.state.application.service.CandidateServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
@@ -52,6 +55,8 @@ class LoginRateLimitDisabledAcceptanceSpec :
                         val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
                         val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
+                        val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
+
                         configureRouting(
                             versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
                             tagService = tagService,
@@ -61,6 +66,7 @@ class LoginRateLimitDisabledAcceptanceSpec :
                             appConfig = appConfig,
                             versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
                         )
+                        configureCandidateRouting(candidateService)
                     }
 
                     // when: far more than MAX_ATTEMPTS rapid logins from the same client

@@ -2,16 +2,19 @@ package io.sdkman.state.support
 
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
+import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
 import io.sdkman.state.adapter.primary.rest.configureHTTP
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
 import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
+import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
+import io.sdkman.state.application.service.CandidateServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
@@ -84,6 +87,8 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
 
             val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)
 
+            val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
+
             configureRouting(
                 versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
                 tagService = tagService,
@@ -93,6 +98,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
                 appConfig = sharedTestAppConfig,
                 versionRequestValidator = versionRequestValidator,
             )
+            configureCandidateRouting(candidateService)
         }
         fn(this)
     }
