@@ -1,10 +1,10 @@
 # Candidate Registry: the Allow-List Cutover
 
-Part 1, [`candidate-registry.md`](candidate-registry.md), built the `candidates` table and the three routes that read and write it, and deliberately stopped there. `POST /versions` still validates against `src/main/resources/candidates.txt`, a 79-line classpath resource loaded by `CandidateLoader` and enforced by `VersionRequestValidator`. Two candidate registries therefore exist side by side, which is the duplication the work set out to remove.
+Part 1, [`candidate-registry.md`](candidate-registry.md), built the `candidates` table and the three routes that read and write it, and deliberately stopped there. `POST /versions` still validates against `src/main/resources/candidates.txt`, a 79-line classpath resource deployed with the service. Two candidate registries therefore exist side by side, which is the duplication the work set out to remove.
 
 This part removes it. The allow-list moves onto the table and the file is deleted.
 
-That is the entire feature: no new endpoint, no response shape changes, no schema change and no migration. What changes is where one check gets its answer. Everything else here follows from doing that safely. The registry has to be held in memory so validation stays synchronous, it has to refresh so a candidate registered through the API is publishable without a restart, and it has to tell "never loaded" apart from "loaded and genuinely empty" so that a database blip does not reach a publisher as "candidate is not valid".
+That is the entire feature: no new endpoint, no response shape changes, no schema change and no migration. What changes is where one check gets its answer. Everything else here follows from doing that safely. The answer has to stay fast enough to sit on every publish, it has to follow the table closely enough that a candidate registered through the API is publishable without a restart, and "never loaded" has to be distinguishable from "loaded and genuinely empty" so that a database blip does not reach a publisher as "candidate is not valid".
 
 **Precondition.** This must not ship until the registry is populated and verified. On the first request after deploy the table becomes load-bearing, and an empty or partial registry means `POST /versions` returns `400` for every candidate it is missing. See *Rollout*.
 
@@ -24,80 +24,81 @@ No new endpoints, and no request or response body changes anywhere. `POST /versi
 
 | Status | Body | When |
 |---|---|---|
-| `400` | `ValidationErrorResponse` | The candidate is not in the registry. Previously: not in `candidates.txt`. `InvalidCandidateError` carries the same message and enumerates the registered candidates, **sorted ascending** |
+| `400` | `ValidationErrorResponse` | The candidate is not in the registry. Previously: not in `candidates.txt`. The same message, enumerating the registered candidates, **sorted ascending** |
 | `500` | `ErrorResponse` | The registry has never loaded successfully. Not a validation failure, and never reported as one |
 | all others | (existing) | Unchanged |
 
 ## Business Rules
 
+Part 1's rules carry over except where stated here: its rule 1 (the registry is not yet the allow-list) and its rule 13 (an empty registry is the normal state) are superseded by this part, and the accepted-window clause of its rule 3 is restated as rule 6 below.
+
 1. **The registry is the allow-list.** `POST /versions` accepts a candidate if and only if it is registered. There is no second list, no classpath resource, and no configuration override.
-2. **The check is against an in-memory set, and it performs no database read.** Validation stays a synchronous, non-`suspend` computation.
-3. **The set is refreshed, never loaded once.** A successful `POST /admin/candidates` or `DELETE /admin/candidates/{candidate}` refreshes the set in the process that served it, and a TTL refresh backs that up for siblings that did not.
-4. **A refresh failure serves the last good set.** A briefly stale allow-list beats rejecting valid publishes.
+2. **The check performs no database read.** A publish is validated against a copy the service already holds, not against a query.
+3. **That copy is refreshed, never loaded once.** A successful `POST /admin/candidates` or `DELETE /admin/candidates/{candidate}` refreshes it in the instance that served the write, and a periodic refresh backs that up for siblings that did not.
+4. **A refresh failure keeps serving the last good copy.** A briefly stale allow-list beats rejecting valid publishes.
 5. **A registry that has never loaded answers `500`, not `400`.** The distinction between "not loaded" and "loaded and empty" is load-bearing and must be represented.
-6. **`versions.candidate` is still not a foreign key, and the delete race is accepted.** Rule 3 of part 1's `409` version count is a check rather than a lock, so the concrete way an orphan can arise is a `DELETE /admin/candidates/{candidate}` racing a `POST /versions`: the count sees no versions, the delete commits, and the publish lands after it. **That race is accepted, not closed.** No isolation level closes it, because the publish path reads the in-memory registry and never touches the `candidates` table, so Postgres has no read/write conflict to detect; closing it would take either the foreign key [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md) declined or a registry read inside the publish transaction, which is the database read the in-memory allow-list exists to avoid. The window is also wider than a transaction: the publishing instance keeps accepting the deleted candidate until its cached set next refreshes. The trade is taken knowingly, because deletion is a rare administrative act and the outcome is an inert row rather than a broken read. No such row exists in production today, so this remains a consequence the design accepts rather than one it has observed. (`cuba` and `ktx` are the inverse case, not an example: Postgres holds none of their rows, while Mongo still lists the candidates.)
+6. **`versions.candidate` is still not a foreign key, and the delete race is accepted.** Rule 3 of part 1's `409` version count is a check rather than a lock, so the concrete way an orphan can arise is a `DELETE /admin/candidates/{candidate}` racing a `POST /versions`: the count sees no versions, the delete commits, and the publish lands after it. **That race is accepted, not closed.** No isolation level closes it, because the publish path never touches the `candidates` table, so Postgres has no read/write conflict to detect; closing it would take either the foreign key [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md) declined or a registry read inside the publish transaction, which is the per-publish read rule 2 rules out. The window is also wider than a transaction: the publishing instance keeps accepting the deleted candidate until it next refreshes. The trade is taken knowingly, because deletion is a rare administrative act and the outcome is an inert row rather than a broken read. No such row exists in production today, so this remains a consequence the design accepts rather than one it has observed. (`cuba` and `ktx` are the inverse case, not an example: Postgres holds none of their rows, while Mongo still lists the candidates.)
 7. **The allow-list grows by two.** The registry is a superset of `candidates.txt`: 79 names in the file, 81 in the backfilled registry, adding `jpx` and `ksrc`. No candidate loses publishing rights at the cutover, and that containment is the property the rollout depends on.
 
-## The Registry in Memory
+## Freshness and Failure
 
-`VersionRequestValidator`'s candidate check changes source, not shape. `InvalidCandidateError` still returns the same message and enumerates the allowed values, but reads them from the registry instead of `CandidateLoader.allowedCandidates`, **sorted ascending** — the file order it inherits today disappears with the file.
+The candidate check changes source, not shape. The rejection still carries the same message and still enumerates the allowed values, but takes them from the registry, **sorted ascending**: the file order it inherits today disappears with the file.
 
-**The check is against an in-memory set, and validation stays synchronous.** The registry is order-of-100 rows, static in nature, and consulted on every `POST /versions`. Holding it in memory keeps validation a pure, non-`suspend` computation, which is what avoids a coroutine ripple through `VersionRoutes.kt`. Staying synchronous is the property that matters; how the set reaches the validator is an implementation-plan question, and the *Domain & Implementation Notes* record why the obvious answer does not work.
+**The publish path does not read the database for it.** The registry is order-of-100 rows, static in nature, and consulted on every `POST /versions`. A read per publish would be the wrong trade for data that changes a few times a year. It also matters that validation is a plain synchronous computation today: the version write path is built around that, and making the candidate check asynchronous ripples outward well beyond this feature. The *Findings* record why the obvious way to hold the set instead does not work.
 
-**The set must not be loaded once for the process lifetime.** `CandidateLoader` loads `by lazy`, which is right for a classpath resource and wrong for a table that `POST /admin/candidates` mutates. Inheriting that would mean a candidate registered through the API is rejected by `POST /versions` until the service restarts — the `jpx` / `ksrc` failure the merged registry exists to remove, surviving the migration in a new form.
+**The set must not be loaded once for the process lifetime.** The classpath allow-list is loaded lazily and then never again, which is right for a file baked into the deployment and wrong for a table `POST /admin/candidates` mutates. Inheriting that would mean a candidate registered through the API is rejected by `POST /versions` until the service restarts, which is the `jpx` / `ksrc` failure the merged registry exists to remove, surviving the migration in a new form.
 
-**Freshness is bounded, not instantaneous.** A successful `POST /admin/candidates` **or `DELETE /admin/candidates/{candidate}`** refreshes the set in the process that served it — both writes evict, not just the register, or a deleted candidate stays publishable on the very instance that removed it. A TTL refresh backs that up, because eager invalidation is only complete on a single instance: a sibling that did not serve the write keeps its own copy until its TTL expires. The observable contract is therefore *a newly registered candidate becomes publishable within the TTL, a deleted one stops being publishable within the TTL, and neither needs a restart*. `sdkman-candidates` warms and refreshes the same registry on the same pattern ([`candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §10).
+**Freshness is bounded, not instantaneous.** A successful `POST /admin/candidates` **or `DELETE /admin/candidates/{candidate}`** refreshes the copy held by the instance that served it. Both writes have to, not only the register: otherwise a deleted candidate stays publishable on the very instance that removed it. Eager refresh is only ever complete on one instance, though, since a sibling that did not serve the write keeps its own copy, so a periodic refresh has to back it up. The observable contract is therefore *a newly registered candidate becomes publishable within the TTL, a deleted one stops being publishable within the TTL, and neither needs a restart*. `sdkman-candidates` warms and refreshes the same registry on the same pattern ([`candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §10).
 
-**The TTL is five minutes, and it is configuration.** The default lives once, in `application.conf`, per the service's [HOCON rule](../.claude/rules/hocon.md); no Kotlin fallback literal mirrors it.
+**The refresh interval is five minutes, and it is configuration**, declared once alongside the service's other defaults and overridable per environment.
 
-```hocon
-candidates {
-    registry {
-        refreshIntervalMs = 300000
-        refreshIntervalMs = ${?CANDIDATE_REGISTRY_REFRESH_INTERVAL_MS}
-    }
-}
-```
-
-Five minutes is chosen against the write path, which is the only thing this TTL governs: how long after a `POST /admin/candidates` a sibling instance starts accepting that candidate on `POST /versions`. It bounds rule 6's delete window on the same path. It is deliberately not derived from `api.cache.control`, and it must not be read as bounding how long the registry takes to reach `sdk list` — that is a different chain with three hops:
+Five minutes is chosen against the write path, which is the only thing this interval governs: how long after a `POST /admin/candidates` a sibling instance starts accepting that candidate on `POST /versions`. It bounds rule 6's delete window on the same path. It is deliberately not derived from the HTTP cache lifetime, and it must not be read as bounding how long the registry takes to reach `sdk list` — that is a different chain with three hops:
 
 | Hop | Mechanism | Today |
 |---|---|---|
-| `sdkman-state` → the wire | HTTP `max-age` from `api.cache.control`, inherited by `GET /candidates` because `CachingHeaders` installs on the root route | 600s |
+| `sdkman-state` → the wire | the HTTP `max-age` every JSON response in the service carries, `GET /candidates` included | 600s |
 | the wire → `sdkman-candidates` | Play WS response cache (`play.ws.cache.enabled=true`) honours that `max-age` | 600s |
 | `sdkman-candidates` → the listing | that service's own candidate cache ([`candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md)) | 300s |
 
-Worst case a newly registered candidate is **900 seconds** from appearing in `sdk list`, because the in-process refresh can re-fetch and be served the still-cached HTTP body. That is the read chain's number, not this one, and nothing here changes it. Aligning the two would mean either raising this TTL to 600s or giving `GET /candidates` its own `max-age`; both are out of scope, and the second is entangled with the `CachingHeaders` fix in *Domain & Implementation Notes*.
+Worst case a newly registered candidate is **900 seconds** from appearing in `sdk list`, because the in-process refresh can re-fetch and be served the still-cached HTTP body. That is the read chain's number, not this one, and nothing here changes it. Aligning the two would mean either raising this interval to 600s or giving `GET /candidates` its own `max-age`; both are out of scope, and the second runs into the caching-plugin trap recorded under *Findings*.
 
-**A refresh failure serves the last good set; a cold failure is a `500`, never a `400`.** If a refresh fails, the previous set keeps serving — the registry changes rarely enough that a briefly stale allow-list beats rejecting valid publishes. If the *first* load fails there is nothing to fall back to, and `POST /versions` must answer `500`. The allow-list used to be a classpath resource and could not fail; a transient database error must not now surface as "candidate is not valid", which reads as permanent to a retrying client.
+**A refresh failure serves the last good copy; a cold failure is a `500`, never a `400`.** If a refresh fails, the previous copy keeps serving — the registry changes rarely enough that a briefly stale allow-list beats rejecting valid publishes. If the *first* load fails there is nothing to fall back to, and `POST /versions` answers `500`. The allow-list used to be a classpath resource and could not fail; a transient database error must not now surface as "candidate is not valid", which reads as permanent to a retrying client.
+
+**A failed load at startup does not stop the service booting, and the TTL is also the retry.** No read path consults the registry, so an instance that cannot build its allow-list still serves every read route correctly and degrades publishing alone; refusing to boot would trade a publishing stall for an outage. The ordinary TTL refresh doubles as the cold-load retry, so an unready holder becomes ready within one interval of the database recovering, with no restart and no second backoff to configure and test. Part 1's property that nothing here can refuse to boot therefore survives the cutover.
 
 ## Rollout
 
 **One release, and it has a hard precondition.** The registry must already hold every candidate before this deploys, because the first `POST /versions` after the deploy is validated against it.
 
-1. **Verify the registry** — `GET /candidates` returns the full backfilled set, and every name in `candidates.txt` appears in it. Rule 7 is the thing being checked, and it should be asserted mechanically rather than eyeballed: the backfill's `verify` compares the registry against the Mongo snapshot and does not look at `candidates.txt` at all, so the containment that makes this release safe is otherwise unasserted.
-2. **Deploy** — the validator switches to the registry; `candidates.txt`, `CandidateLoader` and the `ALLOWED_CANDIDATES` companion constant are deleted.
+1. **Verify the registry** — `GET /candidates` returns the full backfilled set, and every name in `candidates.txt` appears in it. Rule 7 is the thing being checked, and it is asserted mechanically rather than eyeballed: the backfill's `verify` compares the registry against the Mongo snapshot and does not look at `candidates.txt` at all, so the containment that makes this release safe needs a check of its own. `candidates_migration`'s `verify` gains an `--allow-list` option taking the path to `candidates.txt`, failing on any name in the file that the live registry does not hold. It must run against the live registry rather than a fixture, which is why it cannot be a test in this repo. That option is the only backfill-tool change this part depends on; see *Out of Scope*.
+2. **Deploy** — the publish check switches to the registry, and `candidates.txt` and the code that loaded it are deleted.
 3. The Candidates Service read flip follows, specced separately.
 
 **If the precondition is missed.** Reads are unaffected in every case: `sdk list` and `sdk install` keep working, because no read path consults the registry. The damage is confined to publishing, where a missing candidate returns `400` until it is registered. DISCO retries the next day. This is a publishing stall rather than an outage, which is why the precondition is a verification step rather than a startup assertion.
 
-**Rollback.** Redeploy part 1: the validator returns to `candidates.txt` and the table is left in place, unread. Safe in both directions, because no constraint was ever added and the registry is a superset of the file. The two candidates the file lacks, `jpx` and `ksrc`, simply become unpublishable again, which is the state they are in today.
+**The health check is unchanged.** `/meta/health` stays a `checkDatabaseConnection()` probe and deliberately does not gate on registry readiness. The common cause of a cold-load failure already surfaces there as `503`, because the same connection fails both. The residual case is a database that answers the probe while the registry load failed, and that breaks publishing only: pulling the instance out of rotation would stop reads that are serving correctly, to signal a write-path fault. Part 1 relied on the health check enumerating no tables so an empty registry could not fail a deploy gate; that stays true, and a registry that never loads is visible as a `500` on `POST /versions` rather than as an unhealthy instance.
 
-**Ordering note for the test suite.** Once the validator reads the registry, a candidate must be registered before any version is posted to it. That applies to the acceptance suite as much as to production; see *Domain & Implementation Notes*.
+**Rollback.** Redeploy part 1: the publish check returns to `candidates.txt` and the table is left in place, unread. Safe in both directions, because no constraint was ever added and the registry is a superset of the file. The two candidates the file lacks, `jpx` and `ksrc`, simply become unpublishable again, which is the state they are in today.
 
-## Domain & Implementation Notes
+**Ordering note for the test suite.** Once the publish check reads the registry, a candidate must be registered before any version is posted to it. That applies to the acceptance suite as much as to production; see *Findings*.
 
-- **Validator: a frozen `Set<String>` at construction does not work.** The tempting move is to mirror `semverishCandidates: Set<String>`, which `Application.kt` reads once at startup. It cannot satisfy this feature. An immutable set captured at construction can be neither refreshed on write nor expired on a TTL, and it cannot represent "never loaded" as distinct from "loaded and genuinely empty" — which is the distinction the `500`-vs-`400` rule depends on. Whatever shape is chosen must therefore carry a *live* view plus a readiness state, not a value. Candidates for the implementation plan: inject the holder itself; inject a `() -> Set<String>` supplier; pass the set per call; or rebuild the validator on each refresh. Each trades purity against signature churn differently, and the choice is out of scope here. What the spec fixes is the behaviour: synchronous, no database read on the happy path, refreshable, and readiness-aware.
+## Findings
 
-- **Registry holder:** a new component owns the set — startup load, configurable TTL refresh, eager refresh after a successful `POST /admin/candidates`. A failed refresh leaves the previous set in place. A failed *first* load leaves the holder unready, and `POST /versions` must answer `500` while it stays that way. That readiness check has to sit somewhere validation cannot swallow into a `ValidationError`, since the route maps those to `400`: either the route consults the holder before validating, or a distinct error type carries `500` out of it.
+Observations made while surveying the code this feature lands in, recorded so they are not rediscovered the hard way. They constrain what a correct solution looks like; none of them chooses one.
 
-- **Every construction site gains an argument.** There are six, all currently single-argument: `Application.kt`, the test `support/Application.kt`, `HealthCheckAcceptanceSpec`, `LoginRateLimitDisabledAcceptanceSpec`, `VersionRequestValidatorSpec` and `VersionRequestSemverishValidatorSpec`. The last two also depend on `candidates.txt` today through `ALLOWED_CANDIDATES` — they use `java` heavily, plus `gradle`, `kotlin`, `maven` and `scala` — so each case with a valid candidate must now be handed a set containing it. This is signature churn, but it is not `suspend` churn, which is the expensive kind.
+- **Holding the allow-list as a value captured at construction does not work.** The tempting move is to mirror the existing set of semverish-opted-in candidates, which is read once at startup and handed to the validator. It cannot satisfy this feature. A set captured at construction can be neither refreshed on write nor expired on an interval, and it cannot represent "never loaded" as distinct from "loaded and genuinely empty", which is the distinction the `500`-versus-`400` rule rests on. Whatever holds the registry has to expose a live view and a readiness state rather than a value.
 
-- **The rejection message needs a defined order.** `InvalidCandidateError.allowedCandidates` is a `List<String>` rendered with `joinToString(", ")`, and today's order is `candidates.txt` file order. A `Set` has no defined iteration order, so the message must enumerate the registry **sorted ascending**, matching `GET /candidates`. `VersionRequestValidatorSpec` asserts only that the message contains `"Allowed values:"`, so nothing currently catches a scrambled list.
+- **Readiness has to reach the response without passing through validation.** The write route maps validation failures to `400`, so an unready registry reported as one would surface as "candidate is not valid", which is precisely what rule 5 forbids.
 
-- **Existing tests need a registered candidate.** Nothing in the suite seeds an allow-list today: the acceptance specs rely on `candidates.txt` being on the classpath with `java`, `gradle` and friends already in it. Once the validator reads the registry, an acceptance spec posting a version against a fresh Testcontainers database finds it empty and gets a `400`. The ~14 specs that post versions need a shared fixture registering the candidate first — one helper in `support/`, not fourteen ad-hoc inserts. (26 of 55 test files touch `versions`; only those going through `POST /versions` are affected, because a direct insert no longer meets a constraint.) Two things soften this relative to a foreign-key design: unit tests of the validator are untouched, because they construct it with an explicit set, and a test that wants an orphan version row can still insert one directly, since the database will not stop it.
+- **The validator has six construction sites today, all single-argument**: the application itself, the test application support, two acceptance specs, and the two validator unit specs. The last two also lean on `candidates.txt` through the allow-list constant, using `java` heavily plus `gradle`, `kotlin`, `maven` and `scala`, so every case with a valid candidate needs one supplied. The cost is signature churn, which is cheap; what would not be cheap is making validation asynchronous, and nothing here requires that.
 
-- **Deletions:** `src/main/resources/candidates.txt` and `io/sdkman/state/config/CandidateLoader.kt` are removed, along with the `ALLOWED_CANDIDATES` companion constant. They are deleted rather than left as a fallback: two allow-lists that can disagree is the defect this work exists to remove, and a fallback would hide exactly the cold-load failure rule 5 turns into a `500`.
+- **The rejection message has no defined order once the file goes.** The allowed values are rendered into the message as a list, and today's order is the order of lines in `candidates.txt`. A set has no such order, so the message has to sort. Nothing currently catches a scrambled list: the existing validator spec asserts only that the message contains `"Allowed values:"`.
+
+- **Nothing in the test suite seeds an allow-list.** The acceptance specs rely on `candidates.txt` being on the classpath with `java`, `gradle` and friends already in it, so once the validator reads the registry, a spec posting a version against a fresh Testcontainers database finds it empty and gets a `400`. Around 14 specs post versions and are affected; 26 of 55 test files touch `versions`, but a direct insert still meets no constraint and so is untouched. Two things soften this relative to a foreign-key design: the validator's own unit tests are unaffected, because they are handed an explicit set, and a test that wants an orphan version row can still create one, since the database will not stop it.
+
+- **The caching plugin appends rather than replaces**, and its options block fires for any JSON body, so a route that also sets its own `Cache-Control` emits two values plus an `Expires`. That is why the table above notes that giving `GET /candidates` its own `max-age` is not a one-line change. Part 1 carries the same finding, where it applies to the admin routes. Nothing in this part touches the plugin.
+
+- **Deleting `candidates.txt` and its loader is part of the deliverable, not a tidy-up.** Leaving the file as a fallback would restore the two-lists-that-can-disagree defect this work exists to remove, and would mask exactly the cold-load failure rule 5 turns into a `500`.
 
 ## Examples
 
@@ -139,13 +140,19 @@ Feature: Candidate registry as the allow-list
     Given the registry has never loaded successfully
     When a vendor publishes a version of "gradle"
     Then the response status is 500
+
+  Scenario: An unready registry serves reads and recovers without a restart
+    Given the registry has never loaded successfully
+      And GET /versions/gradle still succeeds
+    When the database becomes available and the refresh interval elapses
+    Then a vendor publishing a version of "gradle" succeeds
 ```
 
 ## Out of Scope
 
 - Anything part 1 delivered: the table, the migration, `GET /candidates`, the two admin routes and their validation.
 - The Candidates Service's read flip. Specced separately in [`../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md).
-- The backfill tool. It is an operator-side script driving `POST /admin/candidates`; it lives in the parent workspace, not in this repo.
+- The backfill tool, with one carve-out. It is an operator-side script driving `POST /admin/candidates`, and it lives in the parent workspace, not in this repo. The `verify --allow-list` containment check of *Rollout* step 1 is the single change to it this part depends on.
 - Foreign-keying either `versions.candidate` or the vendor authorisation scope to the registry.
 - Closing the delete-versus-publish race of rule 6.
 - Any change to `DELETE /versions`, the tag routes, or the version read routes.
@@ -154,18 +161,22 @@ Feature: Candidate registry as the allow-list
 ## Acceptance Criteria
 
 - [ ] `POST /versions` accepts a candidate registered through the API without a restart, and rejects an unregistered one with `400`
-- [ ] `src/main/resources/candidates.txt` and `CandidateLoader` no longer exist
+- [ ] `src/main/resources/candidates.txt` and the code that loaded it no longer exist
 - [ ] Every existing acceptance spec that writes a version registers its candidate first; none relies on a classpath allow-list
-- [ ] `POST /versions` performs no database read of the registry; the check is against the in-memory set
-- [ ] `VersionRequestValidator.validate` and `validateRequest` remain synchronous
-- [ ] The registry is not loaded once for the process lifetime: a candidate registered through `POST /admin/candidates` is publishable without a restart
-- [ ] The registry refreshes on a TTL as well as on write, so an instance that did not serve the write picks the candidate up within the TTL
-- [ ] `DELETE /admin/candidates/{candidate}` refreshes the registry in the serving process, so the deleted candidate stops being publishable there without waiting for the TTL
-- [ ] The refresh interval is read from `application.conf` and defaults to five minutes; no Kotlin literal duplicates it
+- [ ] `POST /versions` performs no database read of the registry
+- [ ] A candidate registered through `POST /admin/candidates` is publishable without a restart
+- [ ] The registry refreshes periodically as well as on write, so an instance that did not serve the write picks the candidate up within the interval
+- [ ] `DELETE /admin/candidates/{candidate}` refreshes the registry in the instance that served it, so the deleted candidate stops being publishable there without waiting for the interval
+- [ ] The refresh interval is configuration, defaults to five minutes, and is overridable per environment
 - [ ] No test asserts that the delete `409` serialises against a concurrent `POST /versions`; rule 6 records that window as accepted
-- [ ] A registry refresh failure keeps serving the last good set rather than rejecting valid publishes
+- [ ] A registry refresh failure keeps serving the last good copy rather than rejecting valid publishes
 - [ ] `POST /versions` returns `500`, not `400`, when the registry has never loaded successfully
-- [ ] `InvalidCandidateError` enumerates the registry sorted ascending, asserted on the order rather than only on the `"Allowed values:"` prefix
-- [ ] Every name in `candidates.txt` is present in the registry before this ships, asserted mechanically rather than by inspection
+- [ ] A failed load at startup does not stop the service booting, the read routes keep serving while the holder is unready, and the TTL refresh recovers it without a restart
+- [ ] `/meta/health` is unchanged and does not gate on registry readiness
+- [ ] The rejection message enumerates the registry sorted ascending, asserted on the order rather than only on the `"Allowed values:"` prefix
+- [ ] Every name in `candidates.txt` is present in the registry before this ships, proven by `candidates_migration verify --allow-list` against the live registry rather than by inspection
 - [ ] No read path consults the registry: `GET /candidates`, the version read routes and the tag routes are unchanged
+- [ ] Part 1's `candidates.txt` scenarios are deleted rather than adapted: "Publishing is unaffected by an empty registry" and "Registering a candidate does not make it publishable in this part"
+- [ ] This part adds no Flyway migration and alters no existing table
+- [ ] OpenAPI: `POST /versions`'s existing `500` description covers a registry that has never loaded, not only a database error
 - [ ] All quality gates pass (`./gradlew check`)
