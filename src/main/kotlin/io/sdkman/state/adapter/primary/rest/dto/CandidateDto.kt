@@ -5,9 +5,18 @@ package io.sdkman.state.adapter.primary.rest.dto
 import arrow.core.Option
 import arrow.core.none
 import arrow.core.serialization.OptionSerializer
+import io.sdkman.state.domain.model.Candidate
+import io.sdkman.state.domain.model.CandidateListing
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+// Both admin responses render their instants as ISO-8601, the same way `AdminRoutes`
+// renders a `Vendor`. The column is `TIMESTAMPTZ`, so the offset is converted
+// explicitly rather than assumed to be the server's zone.
+private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 
 // Public shape of a registered candidate, as `GET /candidates` renders it. The
 // `default` is derived from `version_tags` on every read and never stored, so it is
@@ -62,3 +71,27 @@ data class CandidateConflictResponse(
     @SerialName("version_count")
     val versionCount: Long,
 )
+
+// `GET /candidates` renders a listing, not a bare candidate row: the `default` is
+// resolved by the service on every read and carried alongside the row it belongs to.
+fun CandidateListing.toDto(): CandidateDto =
+    CandidateDto(
+        candidate = candidate.candidate,
+        name = candidate.name,
+        description = candidate.description,
+        websiteUrl = candidate.websiteUrl,
+        default = default,
+    )
+
+// The admin responses carry the stored row and no derived `default`. The domain field
+// is `lastUpdatedAt` and the JSON field is `updated_at`; the rename happens here and
+// nowhere else.
+fun Candidate.toAdminDto(): CandidateAdminDto =
+    CandidateAdminDto(
+        candidate = candidate,
+        name = name,
+        description = description,
+        websiteUrl = websiteUrl,
+        createdAt = ISO_FORMATTER.format(createdAt.atOffset(ZoneOffset.UTC)),
+        updatedAt = ISO_FORMATTER.format(lastUpdatedAt.atOffset(ZoneOffset.UTC)),
+    )
