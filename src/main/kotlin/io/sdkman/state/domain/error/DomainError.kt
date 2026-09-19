@@ -19,6 +19,15 @@ sealed interface DomainError {
         val tagName: String,
     ) : DomainError
 
+    data class CandidateNotFound(
+        val candidate: String,
+    ) : DomainError
+
+    data class CandidateHasVersions(
+        val candidate: String,
+        val versionCount: Long,
+    ) : DomainError
+
     data class ValidationFailed(
         val message: String,
     ) : DomainError
