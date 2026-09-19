@@ -2,6 +2,7 @@ package io.sdkman.state.adapter.primary.rest
 
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.toDto
@@ -15,6 +16,9 @@ import io.sdkman.state.domain.service.CandidateService
 fun Application.configureCandidateRouting(candidateService: CandidateService) {
     routing {
         candidateReadRoutes(candidateService)
+        authenticate("auth-jwt") {
+            adminCreateCandidateRoute(candidateService)
+        }
     }
 }
 
