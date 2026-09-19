@@ -15,6 +15,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.sdkman.state.adapter.primary.rest.dto.CandidateConflictResponse
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
@@ -159,6 +160,22 @@ suspend fun ApplicationCall.respondDomainError(error: DomainError) {
                     error = "Conflict",
                     message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
                     tags = error.tags,
+                ),
+            )
+
+        is DomainError.CandidateNotFound ->
+            respond(
+                HttpStatusCode.NotFound,
+                ErrorResponse("Not Found", "Candidate '${error.candidate}' not found"),
+            )
+
+        is DomainError.CandidateHasVersions ->
+            respond(
+                HttpStatusCode.Conflict,
+                CandidateConflictResponse(
+                    error = "Conflict",
+                    message = "Cannot delete candidate with existing versions. Remove the versions first.",
+                    versionCount = error.versionCount,
                 ),
             )
 
