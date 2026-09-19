@@ -81,3 +81,27 @@ data class InvalidRequestError(
     override val field: String = "request"
     override val message: String = "Invalid request: $details"
 }
+
+data class InvalidCandidateIdentifierError(
+    override val field: String = "candidate",
+    val candidate: String,
+) : ValidationError() {
+    override val message: String =
+        "$field '$candidate' must start with a lowercase letter and contain only lowercase letters and digits"
+}
+
+data class FieldTooLongError(
+    override val field: String,
+    val maxLength: Int,
+    val actualLength: Int,
+) : ValidationError() {
+    override val message: String =
+        "$field must be at most $maxLength characters, got: $actualLength"
+}
+
+data class InvalidDescriptionError(
+    override val field: String = "description",
+    val reason: String,
+) : ValidationError() {
+    override val message: String = "$field is invalid: $reason"
+}
