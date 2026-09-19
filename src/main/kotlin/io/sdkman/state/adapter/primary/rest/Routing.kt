@@ -8,6 +8,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.repository.HealthRepository
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
+import io.sdkman.state.domain.service.CandidateService
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.VersionService
 
@@ -31,5 +32,18 @@ fun Application.configureRouting(
             adminCreateVendorRoute(vendorRepository, appConfig)
             adminDeleteVendorRoute(vendorRepository)
         }
+    }
+}
+
+/**
+ * Wires the candidate registry routes.
+ *
+ * It is a second `routing` block rather than another parameter on [configureRouting], which
+ * already carries seven. Ktor resolves both blocks against the same routing root, so the read
+ * route still inherits the `CachingHeaders` plugin installed by `versionReadRoutes`.
+ */
+fun Application.configureCandidateRouting(candidateService: CandidateService) {
+    routing {
+        candidateReadRoute(candidateService)
     }
 }
