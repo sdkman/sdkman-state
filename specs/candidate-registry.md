@@ -2,7 +2,7 @@
 
 The State API owns every `versions` row but has no idea what a candidate *is*. Candidate metadata — the name, description and website that `sdk list` renders — lives in a MongoDB `candidates` collection read directly by the Candidates Service. This feature moves that collection into Postgres and makes `candidates` a first-class State API resource.
 
-It also resolves a duplication that already exists inside this service. `src/main/resources/candidates.txt` is a 79-line classpath resource, and it is the allow-list `POST /versions` enforces. That file **is** a candidate registry, maintained by hand, deployed with the service, and independent of the 84-entry Mongo collection it shadows. The two disagreed: `cuba` and `ktx` were retired by deleting them from the file, while `jpx` and `ksrc` fell out of it by accident and cannot be published to at all. Collapsing the two is the point of the work, but it is **not** what this document specifies.
+It also resolves a duplication that already exists inside this service. `src/main/resources/candidates.txt` is an 80-line classpath resource, and it is the allow-list `POST /versions` enforces. That file **is** a candidate registry, maintained by hand, deployed with the service, and independent of the 84-entry Mongo collection it shadows. The two disagreed: `cuba` and `ktx` were retired by deleting them from the file, while `jpx` and `ksrc` fell out of it by accident. `ksrc` still cannot be published to at all; `jpx` was in the same state until it was added back to the file by hand, which is the manual repair collapsing the two lists exists to make unnecessary. Collapsing the two is the point of the work, but it is **not** what this document specifies.
 
 **This is part 1 of two, and it deliberately stops short of the cutover.** It builds the registry as a resource: the table, the public read route, and the two admin write routes. `POST /versions` is untouched and keeps validating against `candidates.txt`, which stays on the classpath. Nothing in this part reads the registry to decide whether a publish is allowed, so the table can be empty for as long as it likes without affecting a single request. Part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), moves the allow-list onto the registry and deletes the file, and it is only safe once the registry has been backfilled through the routes built here.
 
@@ -378,10 +378,14 @@ Feature: Candidate registry
     Then the version is accepted
 
   Scenario: Registering a candidate does not make it publishable in this part
-    Given the candidate "jpx" is registered
-      And "jpx" is absent from candidates.txt
-    When an authorized vendor posts a version of "jpx"
+    Given the candidate "nonesuch" is registered
+      And "nonesuch" is absent from candidates.txt
+    When an authorized vendor posts a version of "nonesuch"
     Then the response status is 400
+
+  # "nonesuch" is synthetic on purpose. The scenario needs a name the file omits,
+  # and the names it omits by accident are exactly the ones a future commit adds
+  # back by hand -- which is what happened to "jpx".
 
   Scenario: An orphaned version row is inert
     Given a version row exists for the unregistered candidate "cuba"
