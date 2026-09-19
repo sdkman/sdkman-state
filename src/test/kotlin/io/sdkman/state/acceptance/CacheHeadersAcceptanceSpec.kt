@@ -1,6 +1,8 @@
 package io.sdkman.state.acceptance
 
+import arrow.core.none
 import arrow.core.some
+import arrow.core.toOption
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -95,6 +97,35 @@ class CacheHeadersAcceptanceSpec :
 
                     response.status shouldBe HttpStatusCode.OK
                     response.headers[HttpHeaders.CacheControl] shouldBe "no-store"
+                }
+            }
+        }
+
+        // Reading the header by name returns only its first value, so a route that sets `no-store`
+        // and then has `max-age` appended by the caching plugin still reads as correct. These two
+        // assertions are what see the appended value and the `Expires` that comes with it.
+        should("return exactly one Cache-Control value on GET /admin/vendors") {
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.get("/admin/vendors") {
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
+                }
+            }
+        }
+
+        should("return no Expires header on GET /admin/vendors") {
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.get("/admin/vendors") {
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    response.headers[HttpHeaders.Expires].toOption() shouldBe none()
                 }
             }
         }
