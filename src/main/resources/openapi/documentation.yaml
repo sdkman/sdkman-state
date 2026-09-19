@@ -406,6 +406,131 @@ paths:
             'application/json':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /candidates:
+    get:
+      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived from the `lts` tag on every request and is never stored."
+      responses:
+        "200":
+          description: "OK"
+          content:
+            'application/json':
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/CandidateDto"
+        "500":
+          description: "Internal Server Error - Database error"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/candidates:
+    post:
+      description: "Register a candidate. The write is an upsert keyed on the identifier: an existing candidate has its name, description and website_url updated and its timestamp refreshed, and the identifier itself is never mutated - renaming a candidate is a delete plus a create. 201 and 200 are told apart by what the upsert reports rather than by a preceding read, so a concurrent double post cannot answer 201 twice. Registration does not authorise publishing: POST /versions still validates its candidate against its own allow-list."
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/CreateCandidateRequest"
+        required: true
+      responses:
+        "201":
+          description: "Created - Candidate did not exist and was registered"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/CandidateAdminDto"
+        "200":
+          description: "OK - Candidate existed and its metadata was updated"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/CandidateAdminDto"
+        "400":
+          description: "Bad Request - Validation failure or malformed JSON. Malformed JSON is an accumulated validation failure on the `request` field, never a deserialisation 500."
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: "Structural validation failure"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "website_url"
+                        message: "URL 'http://gradle.org/' must be a valid HTTPS URL"
+                malformed_json:
+                  summary: "Body that is not valid JSON"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "request"
+                        message: "Invalid JSON: Unexpected JSON token at offset 0"
+        "401":
+          description: "Unauthorized - Missing, invalid, or non-admin token"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: "Internal Server Error - Database error"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/candidates/{candidate}:
+    delete:
+      description: "Remove a candidate from the registry. Deletion is hard, not soft: a candidate carries no history worth preserving once its versions are gone, so the body is the removed record. A candidate that still has versions is refused with 409 and the count of those versions; the count is the whole guard, and no database constraint stands behind it."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: "candidate"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+          description: "The candidate identifier (e.g. gradle, java)"
+      responses:
+        "200":
+          description: "OK - Candidate deleted; the body is the removed record"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/CandidateAdminDto"
+        "401":
+          description: "Unauthorized - Missing, invalid, or non-admin token"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: "Not Found - No such candidate"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Conflict - The candidate still has versions, which must be removed first"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/CandidateConflictResponse"
+              examples:
+                candidate_has_versions:
+                  summary: "Candidate still has versions"
+                  value:
+                    error: "Conflict"
+                    message: "Cannot delete candidate with existing versions. Remove the versions first."
+                    version_count: 2
+        "500":
+          description: "Internal Server Error - Database error"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /versions/{candidate}:
     get:
       description: "List versions for a candidate, optionally filtered by platform, distribution, and visibility."
@@ -913,6 +1038,90 @@ components:
         - "candidates"
         - "created_at"
         - "updated_at"
+    CreateCandidateRequest:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+          pattern: "^[a-z][a-z0-9]*$"
+          maxLength: 20
+          description: "Candidate identifier. Lowercase and case-sensitive: 'Java' is not 'java' and is rejected by the pattern."
+        name:
+          type: "string"
+          maxLength: 100
+          description: "Display name, e.g. Gradle"
+        description:
+          type: "string"
+          maxLength: 2000
+          description: "Free text rendered into a fixed-width terminal box by `sdk list`, so it must be a single paragraph of printable ASCII: every character in 0x20-0x7E, no control characters, no line breaks, and no runs of consecutive spaces."
+        website_url:
+          type: "string"
+          maxLength: 500
+          description: "Absolute URL. The https scheme is required; anything else is rejected on write."
+      required:
+        - "candidate"
+        - "name"
+        - "description"
+        - "website_url"
+    CandidateDto:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        name:
+          type: "string"
+        description:
+          type: "string"
+        website_url:
+          type: "string"
+        default:
+          type: "string"
+          description: "The version carrying the `lts` tag, resolved on UNIVERSAL first and then LINUX_X64, considering only rows with no distribution. Derived from version_tags on every request and never stored. The field is absent - not null - when no tag resolves, and always absent for java, which is the one candidate with per-distribution tags."
+      required:
+        - "candidate"
+        - "name"
+        - "description"
+        - "website_url"
+    CandidateAdminDto:
+      type: "object"
+      properties:
+        candidate:
+          type: "string"
+        name:
+          type: "string"
+        description:
+          type: "string"
+        website_url:
+          type: "string"
+        created_at:
+          type: "string"
+          format: "date-time"
+        updated_at:
+          type: "string"
+          format: "date-time"
+          description: "The JSON field is updated_at, matching VendorResponse; the column behind it is last_updated_at, matching versions and version_tags."
+      required:
+        - "candidate"
+        - "name"
+        - "description"
+        - "website_url"
+        - "created_at"
+        - "updated_at"
+    CandidateConflictResponse:
+      type: "object"
+      properties:
+        error:
+          type: "string"
+        message:
+          type: "string"
+        version_count:
+          type: "integer"
+          format: "int64"
+          description: "How many versions the candidate still has. Carried structurally, as TagConflictResponse carries its tags, so a caller can act on it without parsing the message."
+      required:
+        - "error"
+        - "message"
+        - "version_count"
     Version:
       type: "object"
       properties:
