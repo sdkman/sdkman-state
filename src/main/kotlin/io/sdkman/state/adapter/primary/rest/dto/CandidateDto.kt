@@ -5,9 +5,14 @@ package io.sdkman.state.adapter.primary.rest.dto
 import arrow.core.Option
 import arrow.core.none
 import arrow.core.serialization.OptionSerializer
+import io.sdkman.state.domain.model.Candidate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+
+private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 
 /**
  * Request body of `POST /admin/candidates`.
@@ -74,3 +79,34 @@ data class CandidateConflictResponse(
     @SerialName("version_count")
     val versionCount: Long,
 )
+
+/**
+ * Maps a registry row onto the public response.
+ *
+ * The derived default is passed in rather than read off [Candidate], because business rule 4
+ * keeps it out of the table: it is resolved from `version_tags` per request.
+ */
+fun Candidate.toDto(default: Option<String>): CandidateDto =
+    CandidateDto(
+        candidate = candidate,
+        name = name,
+        description = description,
+        websiteUrl = websiteUrl,
+        defaultVersion = default,
+    )
+
+/**
+ * Maps a registry row onto the admin response.
+ *
+ * Both instants render through [ISO_FORMATTER] at UTC, the idiom `AdminRoutes` applies to
+ * `VendorResponse`, so `TIMESTAMPTZ` becomes a zone-explicit ISO-8601 string.
+ */
+fun Candidate.toAdminDto(): CandidateAdminDto =
+    CandidateAdminDto(
+        candidate = candidate,
+        name = name,
+        description = description,
+        websiteUrl = websiteUrl,
+        createdAt = ISO_FORMATTER.format(createdAt.atOffset(ZoneOffset.UTC)),
+        updatedAt = ISO_FORMATTER.format(lastUpdatedAt.atOffset(ZoneOffset.UTC)),
+    )
