@@ -52,7 +52,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 // when: the defaults are derived
                 val defaults = repo.findLtsDefaults().shouldBeRight()
 
-                // then: UNIVERSAL wins — the platforms are a resolution order, not a filter (business rule 5)
+                // then: UNIVERSAL wins — the platforms are a resolution order, not a filter
                 defaults shouldContain ("gradle" to "9.0.0")
             }
         }
@@ -74,7 +74,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 // when: the defaults are derived
                 val defaults = repo.findLtsDefaults().shouldBeRight()
 
-                // then: the second platform answers — an untagged UNIVERSAL row does not block the fallback
+                // then: an untagged UNIVERSAL row does not block the fallback
                 defaults shouldContain ("gradle" to "8.0.0")
             }
         }
@@ -87,20 +87,20 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 // when: the defaults are derived
                 val defaults = repo.findLtsDefaults().shouldBeRight()
 
-                // then: no default at all — MAC_ARM64 is never consulted (business rule 5)
+                // then: no default at all — MAC_ARM64 is never consulted
                 defaults.shouldNotContainKey("scala")
             }
         }
 
         should("include a candidate whose lts row is not visible") {
             withCleanDatabase {
-                // given: the lts tag points at a retired row, as it does between supersession and the next DISCO pass
+                // given: the lts tag points at a retired row, as between supersession and the next DISCO pass
                 seedLtsVersion("groovy", "4.0.0", Platform.UNIVERSAL, visible = false)
 
                 // when: the defaults are derived
                 val defaults = repo.findLtsDefaults().shouldBeRight()
 
-                // then: visibility is not filtered, so this read agrees with GET /versions/{c}/tags/lts (business rule 7)
+                // then: visibility goes unfiltered, so this agrees with GET /versions/{c}/tags/lts
                 defaults shouldContain ("groovy" to "4.0.0")
             }
         }
@@ -108,7 +108,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
         should("omit a version row that carries a distribution") {
             withCleanDatabase {
                 // given: a distribution on the *version* row while the tag row carries none —
-                // reading version_tags.distribution instead would wrongly include it (business rule 6)
+                // reading version_tags.distribution instead would wrongly include it
                 seedLtsVersion("java", "25.0.2", Platform.UNIVERSAL, Distribution.TEMURIN.some(), tagDistribution = none())
 
                 // when: the defaults are derived

@@ -44,8 +44,7 @@ class CandidateServiceUnitSpec :
         context("list") {
 
             should("keep java in the listing without a default") {
-                // given: java is registered and carries an lts tag the derivation would otherwise answer with
-                // (business rule 8: java is excluded by name because its lts tags are per-distribution)
+                // given: java carries an lts tag the derivation would otherwise answer with
                 coEvery { candidatesRepo.findAll() } returns Either.Right(listOf(candidate("java")))
                 coEvery { candidatesRepo.findLtsDefaults() } returns Either.Right(mapOf("java" to "21.0.8-tem"))
 
@@ -116,7 +115,7 @@ class CandidateServiceUnitSpec :
         context("register") {
 
             should("delegate to the repository upsert and report whether the row is new") {
-                // given: the upsert creates the row (business rule 2: registration is an upsert)
+                // given: the upsert creates the row
                 val registration =
                     CandidateRegistration(
                         candidate = "groovy",
@@ -182,7 +181,7 @@ class CandidateServiceUnitSpec :
             }
 
             should("return CandidateHasVersions when a version is published under the candidate") {
-                // given: the candidate exists and one version names it (business rule 3: the count is the guard)
+                // given: the candidate exists and one version names it
                 coEvery { candidatesRepo.find("groovy") } returns Either.Right(candidate("groovy").some())
                 coEvery { candidatesRepo.countVersions("groovy") } returns Either.Right(1L)
 
@@ -221,7 +220,7 @@ class CandidateServiceUnitSpec :
             }
 
             should("return DatabaseError when the version count fails") {
-                // given: the candidate exists but the guard query fails, so the guard cannot be proven
+                // given: the candidate exists but the guard query fails
                 val dbFailure = queryFailure("connection reset")
                 coEvery { candidatesRepo.find("groovy") } returns Either.Right(candidate("groovy").some())
                 coEvery { candidatesRepo.countVersions("groovy") } returns Either.Left(dbFailure)

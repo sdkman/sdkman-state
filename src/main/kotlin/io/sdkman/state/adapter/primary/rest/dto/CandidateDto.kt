@@ -15,11 +15,9 @@ import java.time.format.DateTimeFormatter
 private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 
 /**
- * Request body of `POST /admin/candidates`.
- *
- * Every field is required by the contract but modelled as [Option] so that a missing field
- * reaches [io.sdkman.state.application.validation.CandidateRequestValidator] as an accumulated
- * validation failure rather than a deserialisation exception, which would surface as a `500`.
+ * Every field is required by the contract, yet modelled as [Option] so a missing one reaches
+ * [io.sdkman.state.application.validation.CandidateRequestValidator] as an accumulated validation
+ * failure rather than a deserialisation exception, which would surface as a `500`.
  */
 @Serializable
 data class CreateCandidateRequest(
@@ -30,12 +28,7 @@ data class CreateCandidateRequest(
     val websiteUrl: Option<String> = none(),
 )
 
-/**
- * Public response body of `GET /candidates`.
- *
- * [defaultVersion] is derived per request from `version_tags` and is never stored, so it is
- * absent whenever no `lts` tag resolves, and always absent for `java`.
- */
+/** [defaultVersion] is derived per request from `version_tags` and never stored. */
 @Serializable
 data class CandidateDto(
     val candidate: String,
@@ -47,12 +40,8 @@ data class CandidateDto(
     val defaultVersion: Option<String> = none(),
 )
 
-/**
- * Response body of the admin write routes.
- *
- * It is [CandidateDto] without the derived default, plus the record timestamps. The JSON field
- * is `updated_at`, matching `VendorResponse`, while the column behind it is `last_updated_at`.
- */
+/** The JSON field is `updated_at`, matching `VendorResponse`; the column behind it is
+ * `last_updated_at`, matching `versions`. The two conventions disagree by design. */
 @Serializable
 data class CandidateAdminDto(
     val candidate: String,
@@ -66,12 +55,6 @@ data class CandidateAdminDto(
     val updatedAt: String,
 )
 
-/**
- * Response body of a `409` from `DELETE /admin/candidates/{candidate}`.
- *
- * It follows the structured shape of [TagConflictResponse] rather than interpolating the count
- * into prose, so a caller can act on [versionCount] without parsing the message.
- */
 @Serializable
 data class CandidateConflictResponse(
     val error: String,
@@ -80,12 +63,7 @@ data class CandidateConflictResponse(
     val versionCount: Long,
 )
 
-/**
- * Maps a registry row onto the public response.
- *
- * The derived default is passed in rather than read off [Candidate], because business rule 4
- * keeps it out of the table: it is resolved from `version_tags` per request.
- */
+/** The default is passed in rather than read off [Candidate]: it is not stored on the row. */
 fun Candidate.toDto(default: Option<String>): CandidateDto =
     CandidateDto(
         candidate = candidate,
@@ -95,12 +73,6 @@ fun Candidate.toDto(default: Option<String>): CandidateDto =
         defaultVersion = default,
     )
 
-/**
- * Maps a registry row onto the admin response.
- *
- * Both instants render through [ISO_FORMATTER] at UTC, the idiom `AdminRoutes` applies to
- * `VendorResponse`, so `TIMESTAMPTZ` becomes a zone-explicit ISO-8601 string.
- */
 fun Candidate.toAdminDto(): CandidateAdminDto =
     CandidateAdminDto(
         candidate = candidate,

@@ -58,7 +58,7 @@ class PostgresCandidateRepositoryIntegrationSpec :
                 // given: the candidate is registered under its original name
                 repo.upsert(registrationOf("kotlin", name = "Kotlin"))
 
-                // when: the same identifier is posted with a new name (business rule 2)
+                // when: the same identifier is posted with a new name
                 val (candidate, _) = repo.upsert(registrationOf("kotlin", name = "Kotlin Language")).shouldBeRight()
 
                 // then: the mutable metadata carries the new value
@@ -112,7 +112,7 @@ class PostgresCandidateRepositoryIntegrationSpec :
                 // when: the whole registry is listed
                 val result = repo.findAll()
 
-                // then: the order is ascending by identifier (business rule 11), not insertion order
+                // then: ascending by identifier, not insertion order
                 result.shouldBeRight().map { it.candidate } shouldBe listOf("groovy", "kotlin", "scala")
             }
         }
@@ -187,7 +187,7 @@ class PostgresCandidateRepositoryIntegrationSpec :
                 // when: the candidate's versions are counted
                 val result = repo.countVersions("kotlin")
 
-                // then: the guard asks whether anything was ever published (business rule 3)
+                // then: the guard asks what was published, not what is listed
                 result shouldBeRight 1L
             }
         }

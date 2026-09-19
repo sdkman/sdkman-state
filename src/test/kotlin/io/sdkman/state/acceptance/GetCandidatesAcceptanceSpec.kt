@@ -28,14 +28,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * End-to-end cover of `GET /candidates`.
+ * Read as raw JSON rather than decoded into `CandidateDto`: the contract says an unresolved
+ * `default` is *absent*, and a decode cannot tell an absent field from a null one — both land
+ * on `none()`.
  *
- * The response is read as raw JSON rather than decoded into `CandidateDto`, because the contract
- * says an unresolved `default` is *absent* and a decode cannot tell an absent field from a null
- * one — both land on `none()`.
- *
- * No request in this spec carries an `Authorization` header: the route is public, so needing no
- * token is a property of every case here rather than of one.
+ * No request here carries an `Authorization` header; the route is public.
  */
 @Tags("acceptance")
 class GetCandidatesAcceptanceSpec :
@@ -78,7 +75,7 @@ class GetCandidatesAcceptanceSpec :
 
         should("return an empty array when no candidate is registered") {
             withCleanDatabase {
-                // given: an empty registry, which is the state the table ships in (business rule 13)
+                // given: an empty registry, which is the state the table ships in
                 withTestApplication {
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
@@ -103,8 +100,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the order is ascending by identifier — the Candidates Service renders
-                    // `sdk list` straight from it, so the order is part of the contract (rule 11)
+                    // then: ascending by identifier, which is part of the public contract
                     response.bodyAsText().candidateEntries().identifiers() shouldBe listOf("ant", "gradle", "scala")
                 }
             }
@@ -120,7 +116,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the default is derived from `version_tags`, never stored (rule 4)
+                    // then: the default is derived from `version_tags`, never stored
                     response.bodyAsText().candidateEntries().defaultOf("gradle") shouldBe "8.14".some()
                 }
             }
@@ -128,8 +124,8 @@ class GetCandidatesAcceptanceSpec :
 
         should("fall back to the LINUX_X64 lts tag when no UNIVERSAL row is tagged") {
             withCleanDatabase {
-                // given: an untagged UNIVERSAL row alongside the tagged LINUX_X64 one, so the case
-                // separates "no UNIVERSAL row tagged lts" from "no UNIVERSAL row at all"
+                // given: an untagged UNIVERSAL row alongside the tagged LINUX_X64 one, separating
+                // "no UNIVERSAL row tagged lts" from "no UNIVERSAL row at all"
                 insertCandidates(registrationOf("kuml"))
                 insertVersionWithId(
                     Version(
@@ -146,7 +142,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the second platform of the resolution order answers (rule 5)
+                    // then: the second platform of the resolution order answers
                     response.bodyAsText().candidateEntries().defaultOf("kuml") shouldBe "0.20.5".some()
                 }
             }
@@ -154,8 +150,8 @@ class GetCandidatesAcceptanceSpec :
 
         should("omit the default of java even when its lts row would otherwise resolve") {
             withCleanDatabase {
-                // given: a java row that satisfies every other rule — no distribution, on UNIVERSAL —
-                // so only the by-name exclusion (rule 8) can keep the default away
+                // given: a java row satisfying every other rule — no distribution, on UNIVERSAL —
+                // so only the by-name exclusion can keep the default away
                 insertCandidates(registrationOf("java"))
                 insertVersionTaggedLts("java", "25.0.4", Platform.UNIVERSAL)
 
@@ -163,8 +159,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: java is listed — `single` fails if it is not — with the field absent,
-                    // not null: `sdk list` reads an absent default as "unset"
+                    // then: java is listed — `single` fails if not — with the field absent, not null
                     val javaEntry = response.bodyAsText().candidateEntries().single()
                     javaEntry.keys shouldNotContain "default"
                 }
@@ -173,8 +168,8 @@ class GetCandidatesAcceptanceSpec :
 
         should("omit a candidate that has versions but is not registered") {
             withCleanDatabase {
-                // given: a version row for `cuba`, which no registry row names. Until the backfill
-                // runs this is the normal state of the service, not an edge case (rule 13)
+                // given: a version row for `cuba`, which no registry row names — the normal state
+                // of the service until the backfill runs
                 insertCandidates(registrationOf("gradle"))
                 insertVersions(
                     Version(
@@ -190,8 +185,8 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the orphan is inert — it is unreachable from `sdk list` and still
-                    // resolves by exact identifier on the download path
+                    // then: the orphan is inert — unreachable from `sdk list`, still resolvable
+                    // by exact identifier on the download path
                     response.bodyAsText().candidateEntries().identifiers() shouldNotContain "cuba"
                 }
             }
@@ -205,8 +200,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client with no token lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the route caches like the version read routes, and the plugin value
-                    // arrives alone — the route declares no `Cache-Control` of its own
+                    // then: the plugin value arrives alone — the route declares none of its own
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("max-age=600")
                 }
             }

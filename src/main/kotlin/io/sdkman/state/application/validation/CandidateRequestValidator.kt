@@ -12,27 +12,23 @@ import io.sdkman.state.adapter.primary.rest.dto.CreateCandidateRequest
 import io.sdkman.state.domain.model.CandidateRegistration
 import kotlinx.serialization.json.Json
 
-// Structural validation for a candidate registration, following the accumulated-error
-// pattern of `VersionRequestValidator`: every field failure is returned together in one
-// `NonEmptyList` and rendered as a single `400 ValidationErrorResponse`. Malformed JSON is
-// one of those failures rather than a deserialisation `500`, which is why the request DTO
-// models every field as an `Option` and the decode happens here.
+// Accumulates every field failure into one `400`, following `VersionRequestValidator`.
+// Malformed JSON is one of those failures rather than a deserialisation `500`, which is why
+// the DTO models every field as an `Option` and the decode happens here rather than in Ktor.
 //
-// This validator is purely structural. It performs no registry lookup: the publish path
-// still authorises a candidate against `candidates.txt`, and nothing reads the table to
-// authorise a write in this part of the migration.
+// Purely structural: no registry lookup. The publish path still authorises against
+// `candidates.txt`, and nothing reads the table to authorise a write in this part.
 object CandidateRequestValidator {
     private const val MAX_CANDIDATE_LENGTH = 20
     private const val MAX_NAME_LENGTH = 100
     private const val MAX_DESCRIPTION_LENGTH = 2000
 
-    // The identifier shape is mirrored by the `candidates` table CHECK constraint, so the
-    // two cannot drift. The length bound is carried separately, as the constraint spells it.
+    // Mirrored by the `candidates` table CHECK constraint; the two must not drift.
     private val CANDIDATE_PATTERN = Regex("^[a-z][a-z0-9]*$")
 
-    // A description is a single paragraph of printable ASCII: `sdk list` renders it into a
-    // fixed-width terminal box, where a line break breaks the layout, a non-ASCII codepoint
-    // is mojibake under a non-UTF-8 locale, and a run of spaces survives no reflow.
+    // Single paragraph of printable ASCII: `sdk list` renders it into a fixed-width terminal
+    // box, where a line break breaks the layout and a non-ASCII codepoint is mojibake under a
+    // non-UTF-8 locale.
     private val PRINTABLE_ASCII_PATTERN = Regex("^[\\x20-\\x7E]*$")
     private const val CONSECUTIVE_SPACES = "  "
 

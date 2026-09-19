@@ -15,16 +15,10 @@ interface CandidateRepository {
 
     suspend fun delete(candidate: String): Either<DatabaseFailure, Option<Candidate>>
 
-    /**
-     * Counts every version published under [candidate], visible or not. This count is the
-     * mechanism behind the delete guard (business rule 3), not a friendlier surface over a
-     * database constraint.
-     */
+    /** Counts every version under [candidate], visible or not. No foreign key stands behind
+     * the delete guard, so this count *is* the guard. */
     suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long>
 
-    /**
-     * Resolves the derived `default` for every candidate at once, keyed by candidate. The
-     * default is never stored (business rule 4): it is read from the `lts` tag on each request.
-     */
+    /** Resolves every candidate's `lts` default in one query, keyed by candidate. */
     suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>>
 }

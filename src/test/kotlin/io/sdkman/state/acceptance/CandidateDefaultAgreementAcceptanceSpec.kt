@@ -23,19 +23,15 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * Cross-checks the `default` of `GET /candidates` against `GET /versions/{candidate}/tags/lts`.
+ * The derived `default` and `GET /versions/{candidate}/tags/lts` must name the *same* version.
+ * Each endpoint has its own spec, and both would stay green if the two drifted apart, so the
+ * agreement needs a case that reads both and compares.
  *
- * Business rules 6 and 7 do not describe two independent behaviours — they say the derived default
- * and the existing tag lookup must name the *same* version. Each endpoint already has its own spec,
- * and each would stay green if the two drifted apart, so the agreement needs a case that reads both
- * in one scenario and compares the answers.
- *
- * The fixture is `visible = false`, which is rule 7's trap: a default that filtered on visibility
- * would find nothing here while the tag route still resolves, and the case fails. Rule 6's trap —
- * reading `version_tags.distribution` instead of `versions.distribution` — needs a row whose two
- * distribution columns disagree, which the write path cannot produce; it is pinned by
- * `PostgresCandidateDefaultsIntegrationSpec` instead, and swapping the column leaves this case
- * green.
+ * The fixture is `visible = false` on purpose: a default that filtered on visibility would find
+ * nothing while the tag route still resolves. The companion trap — reading
+ * `version_tags.distribution` rather than `versions.distribution` — needs a row whose two columns
+ * disagree, which the write path cannot produce, so it is pinned by
+ * `PostgresCandidateDefaultsIntegrationSpec` instead.
  */
 @Tags("acceptance")
 class CandidateDefaultAgreementAcceptanceSpec :
@@ -54,14 +50,14 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 )
 
             withCleanDatabase {
-                // given: a retired gradle row that the lts tag still points at — the window the
-                // java supersession pass leaves open, where the two reads must not disagree (rule 7)
+                // given: a retired gradle row the lts tag still points at — the window the java
+                // supersession pass leaves open, where the two reads must not disagree
                 val versionId = insertVersionWithId(version)
                 insertTag("gradle", "lts", none(), Platform.UNIVERSAL, versionId)
 
                 withTestApplication {
-                    // given: gradle registered over the admin route rather than seeded, so the
-                    // comparison runs against a registry row the service itself wrote
+                    // given: gradle registered over the admin route, so the comparison runs
+                    // against a row the service itself wrote
                     client
                         .post("/admin/candidates") {
                             contentType(ContentType.Application.Json)

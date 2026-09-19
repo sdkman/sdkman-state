@@ -28,16 +28,12 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * End-to-end cover of `DELETE /admin/candidates/{candidate}`.
+ * Outcomes are read back through `GET /candidates` as well as from the delete response: the
+ * status alone cannot tell a refused delete from one that answered `409` after removing the row.
  *
- * Every outcome is read back through `GET /candidates` as well as from the delete response,
- * because the status alone cannot tell a refused delete from one that answered `409` after
- * removing the row. The listing is the surface the Candidates Service reads, so it is what the
- * caller is actually promised.
- *
- * The registry rows are seeded with `insertCandidates` rather than over `POST /admin/candidates`,
- * so that a regression in the write route fails its own spec and not this one. The audit case is
- * the exception: it names a registration, so it drives the write route on purpose.
+ * Rows are seeded with `insertCandidates` rather than over `POST /admin/candidates`, so a
+ * regression in the write route fails its own spec and not this one. The audit case is the
+ * exception — it names a registration, so it drives the write route on purpose.
  */
 @Tags("acceptance")
 class AdminCandidateDeletionAcceptanceSpec :
@@ -74,7 +70,7 @@ class AdminCandidateDeletionAcceptanceSpec :
 
         should("answer 200 when the candidate has no versions") {
             withCleanDatabase {
-                // given: a registered candidate that nothing publishes under
+                // given: a registered candidate with no versions
                 insertCandidates(registrationOf("jbang"))
 
                 withTestApplication {
@@ -84,8 +80,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the deleted record comes back with a `200`, not the `204` the version
-                    // delete answers — the body is the record that was removed
+                    // then: a `200` carrying the removed record, not the version route's `204`
                     response.status shouldBe HttpStatusCode.OK
                 }
             }
@@ -93,7 +88,7 @@ class AdminCandidateDeletionAcceptanceSpec :
 
         should("remove a deleted candidate from the listing") {
             withCleanDatabase {
-                // given: a registered candidate that nothing publishes under
+                // given: a registered candidate with no versions
                 insertCandidates(registrationOf("jbang"))
 
                 withTestApplication {
@@ -105,8 +100,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: deletion is hard, so the row is gone from the public read rather than
-                    // hidden behind a flag
+                    // then: deletion is hard — the row is gone, not hidden behind a flag
                     response.bodyAsText().candidateEntries().identifiers() shouldNotContain "jbang"
                 }
             }
@@ -125,8 +119,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the service's own count is the whole guard — no foreign key stands
-                    // behind it, so this case is the only thing defending business rule 3
+                    // then: no foreign key stands behind this, so the count is the whole guard
                     response.status shouldBe HttpStatusCode.Conflict
                 }
             }
@@ -147,8 +140,8 @@ class AdminCandidateDeletionAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the refusal left the row alone. A `409` raised after the delete had
-                    // already run would pass the status case and fail here
+                    // then: a `409` raised after the delete had run would pass the status case
+                    // above and fail here
                     response.bodyAsText().candidateEntries().identifiers() shouldContain "gradle"
                 }
             }
@@ -167,8 +160,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the count arrives as a field rather than inside the prose, so a
-                    // caller can act on it without parsing the message
+                    // then: the count is a field, so a caller need not parse the message
                     val body = Json.decodeFromString<CandidateConflictResponse>(response.bodyAsText())
                     body.versionCount shouldBe 2L
                 }
@@ -185,8 +177,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: an absent candidate is a `404` and never the `409` a versioned one
-                    // gives, because the count is only reached once the row is found
+                    // then: a `404`, never a `409` — the count is reached only once the row is
                     response.status shouldBe HttpStatusCode.NotFound
                 }
             }
@@ -217,8 +208,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.vendorToken(candidates = listOf("jbang")))
                         }
 
-                    // then: the token authenticates, so the refusal is the route's own role check
-                    // rather than the authentication layer's
+                    // then: the token authenticates, so this refusal is the route's role check
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
@@ -252,8 +242,8 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the value the route declares arrives alone. Reading the header by name
-                    // would return the first value and hide a `max-age` appended after it
+                    // then: asserted over all values — reading by name would return the first
+                    // and hide a `max-age` appended after it
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
                 }
             }
@@ -270,7 +260,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: nothing makes an admin write cacheable, not even by an expiry in the past
+                    // then: nothing makes an admin write cacheable, not even a past expiry
                     response.headers[HttpHeaders.Expires].toOption() shouldBe none()
                 }
             }
@@ -291,8 +281,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
-                    // then: candidate writes are recorded by the row timestamps alone — the audit
-                    // machinery exists for the high-volume vendor version writes, not for these
+                    // then: candidate writes are recorded by the row timestamps alone
                     selectAuditRecords() shouldBe emptyList()
                 }
             }

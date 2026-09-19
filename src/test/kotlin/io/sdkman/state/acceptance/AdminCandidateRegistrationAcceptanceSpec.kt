@@ -19,14 +19,11 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * End-to-end cover of `POST /admin/candidates`.
+ * Registrations are read back through `GET /candidates` rather than trusted from the write
+ * response, which is the only way to prove the row the caller was told about is the row written.
  *
- * The registration is always read back through `GET /candidates` rather than trusted from the
- * write response alone: `201` and `200` are told apart by what the upsert reports, so only the
- * public listing proves the row that the caller was told about is the row that was written.
- *
- * Every rejection case asserts the status alone. The accumulated failure list is the subject of
- * `CandidateRequestValidatorSpec`, which covers each field without a database.
+ * Rejections assert the status alone; the accumulated failure list is
+ * `CandidateRequestValidatorSpec`'s subject.
  */
 @Tags("acceptance")
 class AdminCandidateRegistrationAcceptanceSpec :
@@ -52,7 +49,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 201 when the candidate is new") {
             withCleanDatabase {
                 withTestApplication {
-                    // when: an admin registers a candidate that no registry row names
+                    // when: an admin registers an unknown candidate
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -60,7 +57,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the created status comes from the upsert reporting a new row
+                    // then: the upsert reports a new row
                     response.status shouldBe HttpStatusCode.Created
                 }
             }
@@ -79,7 +76,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the write reached the table the public read serves from
+                    // then: the write reached the table the public read serves
                     response.bodyAsText().candidateEntries().nameOf("jbang") shouldBe "JBang"
                 }
             }
@@ -103,8 +100,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: registration is an upsert, so a repeat post updates rather than
-                    // conflicts (business rule 2)
+                    // then: a repeat post updates rather than conflicts
                     response.status shouldBe HttpStatusCode.OK
                 }
             }
@@ -127,8 +123,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
-                    // then: the second write replaced the metadata of the one row, and `single`
-                    // in `nameOf` fails if the upsert inserted a duplicate instead
+                    // then: `single` in `nameOf` fails if the upsert inserted a duplicate
                     val response = client.get("/candidates")
                     response.bodyAsText().candidateEntries().nameOf("jbang") shouldBe "JBang!"
                 }
@@ -146,8 +141,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the https rule the version download URLs already carry applies here
-                    // too (business rule 9)
+                    // then: the https rule covers `website_url` too
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -164,8 +158,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: identifiers are lowercase and case-sensitive, so this is a different
-                    // candidate and not a spelling of `jbang` (business rule 10)
+                    // then: identifiers are case-sensitive, so this is not a spelling of `jbang`
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -182,7 +175,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the field bound is refused at the route, not at the column
+                    // then: the bound is refused at the route, not at the column
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -199,8 +192,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: `sdk list` renders the description into a terminal box, where a
-                    // non-ASCII codepoint is mojibake under a non-UTF-8 locale (business rule 14)
+                    // then: a non-ASCII codepoint is mojibake in `sdk list`'s terminal box
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -209,9 +201,8 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject a description spanning two lines") {
             withCleanDatabase {
                 withTestApplication {
-                    // when: an admin registers a candidate whose description carries a line break.
-                    // The `\n` is a JSON escape in the posted body, so the decoded string holds a
-                    // real newline rather than two characters
+                    // when: a description carries a line break. The `\n` is a JSON escape, so
+                    // the decoded string holds a real newline rather than two characters
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -219,8 +210,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: a description is a single paragraph — an embedded newline breaks the
-                    // fixed-width layout (business rule 14)
+                    // then: a description is a single paragraph
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -237,8 +227,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: a run of spaces survives no reflow, so it is refused on write rather
-                    // than normalised (business rule 14)
+                    // then: a run of spaces is refused on write rather than normalised
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -255,8 +244,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the decode happens inside the validator, so a bad body is an ordinary
-                    // validation failure and never the `500` the vendor admin routes would give
+                    // then: a bad body is an ordinary validation failure, not a `500`
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -273,8 +261,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the body decodes as the accumulated-failure shape — a strict decode
-                    // is itself the assertion that the response is not an `ErrorResponse`
+                    // then: the strict decode is itself the assertion that this is no `ErrorResponse`
                     val body = Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
                     body.failures.map { it.field } shouldBe listOf("request")
                 }
@@ -308,8 +295,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.vendorToken(candidates = listOf("jbang")))
                         }
 
-                    // then: the token authenticates, so the refusal is the route's own role check
-                    // rather than the authentication layer's
+                    // then: the token authenticates, so this refusal is the route's role check
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
@@ -343,8 +329,8 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: the value the route declares arrives alone. Reading the header by name
-                    // would return the first value and hide a `max-age` appended after it
+                    // then: asserted over all values — reading by name would return the first
+                    // and hide a `max-age` appended after it
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
                 }
             }
@@ -361,7 +347,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: nothing makes an admin write cacheable, not even by an expiry in the past
+                    // then: nothing makes an admin write cacheable, not even a past expiry
                     response.headers[HttpHeaders.Expires].toOption() shouldBe none()
                 }
             }
