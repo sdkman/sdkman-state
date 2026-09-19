@@ -47,6 +47,7 @@ fun Application.configureCandidateRouting(candidateService: CandidateService) {
         candidateReadRoute(candidateService)
         authenticate("auth-jwt") {
             adminCreateCandidateRoute(candidateService)
+            adminDeleteCandidateRoute(candidateService)
         }
     }
 }
