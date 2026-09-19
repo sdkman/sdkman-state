@@ -23,7 +23,13 @@ import io.sdkman.state.support.withTestApplication
  * `POST /versions` accepts a candidate if and only if `candidates.txt` names it, and the registry
  * table takes no part in that decision (business rule 1). The two are allowed to disagree in both
  * directions, so both directions are proven here: `gradle` publishes with the registry empty, and
- * `jpx` is still refused after it is registered.
+ * `nonesuch` is still refused after it is registered.
+ *
+ * `nonesuch` is deliberately not a real candidate. The refused direction needs a name the
+ * allow-list omits, and the obvious choices are the names it omits *by accident* — `jpx` and
+ * `ksrc`. Those are exactly the names a future commit fixes: `jpx` was added to the file
+ * upstream and broke this spec. A synthetic identifier cannot be adopted, so the premise holds
+ * however the file is edited. The assertion below guards it rather than assuming it.
  *
  * Rule 13 makes the first of those the *normal* state rather than an edge case — the table ships
  * empty while `versions` already holds rows, so every publish until the backfill runs names a
@@ -35,7 +41,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
 
         fun registrationBody(candidate: String): String =
             """
-            {"candidate":"$candidate","name":"JPX","description":"A candidate the allow-list does not name.","website_url":"https://jpx.example.com/"}
+            {"candidate":"$candidate","name":"Nonesuch","description":"A candidate the allow-list does not name.","website_url":"https://nonesuch.example.com/"}
             """.trimIndent()
 
         should("accept a version for a candidate that the registry does not hold") {
@@ -69,21 +75,21 @@ class CandidateRegistryPublishingAcceptanceSpec :
         should("refuse a version for a registered candidate that the allow-list omits") {
             withCleanDatabase {
                 withTestApplication {
-                    // given: jpx is registered, which the 400 below would pass vacuously without
+                    // given: nonesuch is registered, which the 400 below would pass vacuously without
                     val registration =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
-                            setBody(registrationBody("jpx"))
+                            setBody(registrationBody("nonesuch"))
                             bearerAuth(JwtTestSupport.adminToken())
                         }
                     registration.status shouldBe HttpStatusCode.Created
 
                     val version =
                         Version(
-                            candidate = "jpx",
+                            candidate = "nonesuch",
                             version = "1.0.0",
                             platform = Platform.UNIVERSAL,
-                            url = "https://example.com/jpx-1.0.0.zip",
+                            url = "https://example.com/nonesuch-1.0.0.zip",
                             visible = true.some(),
                             distribution = none(),
                         )
@@ -107,8 +113,8 @@ class CandidateRegistryPublishingAcceptanceSpec :
             CandidateLoader.allowedCandidates shouldContain "gradle"
         }
 
-        should("omit jpx from the publish allow-list") {
+        should("omit nonesuch from the publish allow-list") {
             // then: the refused publish above turns on the file, not on a missing registry row
-            CandidateLoader.allowedCandidates shouldNotContain "jpx"
+            CandidateLoader.allowedCandidates shouldNotContain "nonesuch"
         }
     })
