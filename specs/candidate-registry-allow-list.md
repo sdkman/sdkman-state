@@ -12,7 +12,7 @@ That is the entire feature: no new endpoint, no response shape changes, no schem
 
 ## Behaviour
 
-**Publishing.** `POST /versions` continues to reject an unknown candidate with `400`, but the answer now comes from the table rather than from a file on the classpath. Registering a candidate through `POST /admin/candidates` is therefore sufficient to publish to it, with no deploy and no restart. Two candidates gain publishing rights by this alone: `jpx` and `ksrc`, which fell out of `candidates.txt` by accident and cannot be published to today.
+**Publishing.** `POST /versions` continues to reject an unknown candidate with `400`, but the answer now comes from the table rather than from a file on the classpath. Registering a candidate through `POST /admin/candidates` is therefore sufficient to publish to it, with no deploy and no restart. One candidate gains publishing rights by this alone: `ksrc`, which fell out of `candidates.txt` by accident and cannot be published to today. `jpx` was in the same position until it was added back to the file by hand -- the manual repair this cutover removes the need for.
 
 **Registering and deleting become load-bearing.** In part 1 both admin routes wrote to a table nothing consulted. From here a registration grants publishing rights and a deletion revokes them, bounded by the refresh interval rather than instantaneous.
 
@@ -38,7 +38,7 @@ Part 1's rules carry over except where stated here: its rule 1 (the registry is 
 4. **A refresh failure keeps serving the last good copy.** A briefly stale allow-list beats rejecting valid publishes.
 5. **A registry that has never loaded answers `500`, not `400`.** The distinction between "not loaded" and "loaded and empty" is load-bearing and must be represented.
 6. **`versions.candidate` is still not a foreign key, and the delete race is accepted.** Rule 3 of part 1's `409` version count is a check rather than a lock, so the concrete way an orphan can arise is a `DELETE /admin/candidates/{candidate}` racing a `POST /versions`: the count sees no versions, the delete commits, and the publish lands after it. **That race is accepted, not closed.** No isolation level closes it, because the publish path never touches the `candidates` table, so Postgres has no read/write conflict to detect; closing it would take either the foreign key [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md) declined or a registry read inside the publish transaction, which is the per-publish read rule 2 rules out. The window is also wider than a transaction: the publishing instance keeps accepting the deleted candidate until it next refreshes. The trade is taken knowingly, because deletion is a rare administrative act and the outcome is an inert row rather than a broken read. No such row exists in production today, so this remains a consequence the design accepts rather than one it has observed. (`cuba` and `ktx` are the inverse case, not an example: Postgres holds none of their rows, while Mongo still lists the candidates.)
-7. **The allow-list grows by two.** The registry is a superset of `candidates.txt`: 79 names in the file, 81 in the backfilled registry, adding `jpx` and `ksrc`. No candidate loses publishing rights at the cutover, and that containment is the property the rollout depends on.
+7. **The allow-list grows by one.** The registry is a superset of `candidates.txt`: 80 names in the file, 81 in the backfilled registry, adding `ksrc`. No candidate loses publishing rights at the cutover, and that containment is the property the rollout depends on.
 
 ## Freshness and Failure
 
@@ -78,7 +78,7 @@ Worst case a newly registered candidate is **900 seconds** from appearing in `sd
 
 **The health check is unchanged.** `/meta/health` stays a `checkDatabaseConnection()` probe and deliberately does not gate on registry readiness. The common cause of a cold-load failure already surfaces there as `503`, because the same connection fails both. The residual case is a database that answers the probe while the registry load failed, and that breaks publishing only: pulling the instance out of rotation would stop reads that are serving correctly, to signal a write-path fault. Part 1 relied on the health check enumerating no tables so an empty registry could not fail a deploy gate; that stays true, and a registry that never loads is visible as a `500` on `POST /versions` rather than as an unhealthy instance.
 
-**Rollback.** Redeploy part 1: the publish check returns to `candidates.txt` and the table is left in place, unread. Safe in both directions, because no constraint was ever added and the registry is a superset of the file. The two candidates the file lacks, `jpx` and `ksrc`, simply become unpublishable again, which is the state they are in today.
+**Rollback.** Redeploy part 1: the publish check returns to `candidates.txt` and the table is left in place, unread. Safe in both directions, because no constraint was ever added and the registry is a superset of the file. The one candidate the file lacks, `ksrc`, simply becomes unpublishable again, which is the state it is in today.
 
 **Ordering note for the test suite.** Once the publish check reads the registry, a candidate must be registered before any version is posted to it. That applies to the acceptance suite as much as to production; see *Findings*.
 
