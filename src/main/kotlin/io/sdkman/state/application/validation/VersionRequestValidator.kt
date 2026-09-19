@@ -22,7 +22,6 @@ class VersionRequestValidator(
 ) {
     companion object {
         private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
-        private val HTTPS_URL_PATTERN = Regex("^https://[a-zA-Z0-9.-]+(/.*)?$")
         private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
         private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
         private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
@@ -139,7 +138,7 @@ class VersionRequestValidator(
             { value ->
                 when {
                     value.isBlank() -> EmptyFieldError("url").nel().left()
-                    !HTTPS_URL_PATTERN.matches(value) ->
+                    !UrlRules.HTTPS_URL_PATTERN.matches(value) ->
                         InvalidUrlError(url = value).nel().left()
 
                     else -> value.right()
