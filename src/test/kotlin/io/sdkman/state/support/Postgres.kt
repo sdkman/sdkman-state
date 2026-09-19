@@ -6,6 +6,7 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
+import io.sdkman.state.adapter.secondary.persistence.CandidatesTable
 import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
@@ -243,6 +244,7 @@ fun withCleanDatabase(fn: suspend () -> Unit) {
         AuditTable.deleteAll()
         VersionsTable.deleteAll()
         VendorsTable.deleteAll()
+        CandidatesTable.deleteAll()
     }
     runBlocking { fn() }
 }
