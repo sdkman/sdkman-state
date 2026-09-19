@@ -2,7 +2,7 @@
 
 The State API owns every `versions` row but has no idea what a candidate *is*. Candidate metadata — the name, description and website that `sdk list` renders — lives in a MongoDB `candidates` collection read directly by the Candidates Service. This feature moves that collection into Postgres and makes `candidates` a first-class State API resource.
 
-It also resolves a duplication that already exists inside this service. `src/main/resources/candidates.txt` is a 79-line resource loaded by `CandidateLoader` and enforced by `VersionRequestValidator` as the allow-list for `POST /versions`. That file **is** a candidate registry, maintained by hand, deployed with the service, and independent of the 84-entry Mongo collection it shadows. The two disagreed: `cuba` and `ktx` were retired by deleting them from the file, while `jpx` and `ksrc` fell out of it by accident and cannot be published to at all. Collapsing the two is the point of the work, but it is **not** what this document specifies.
+It also resolves a duplication that already exists inside this service. `src/main/resources/candidates.txt` is a 79-line classpath resource, and it is the allow-list `POST /versions` enforces. That file **is** a candidate registry, maintained by hand, deployed with the service, and independent of the 84-entry Mongo collection it shadows. The two disagreed: `cuba` and `ktx` were retired by deleting them from the file, while `jpx` and `ksrc` fell out of it by accident and cannot be published to at all. Collapsing the two is the point of the work, but it is **not** what this document specifies.
 
 **This is part 1 of two, and it deliberately stops short of the cutover.** It builds the registry as a resource: the table, the public read route, and the two admin write routes. `POST /versions` is untouched and keeps validating against `candidates.txt`, which stays on the classpath. Nothing in this part reads the registry to decide whether a publish is allowed, so the table can be empty for as long as it likes without affecting a single request. Part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), moves the allow-list onto the registry and deletes the file, and it is only safe once the registry has been backfilled through the routes built here.
 
@@ -22,7 +22,7 @@ Resolving `default` needs a platform, because tags are scoped to one. The candid
 
 **Writing.** An admin registers a candidate with `POST /admin/candidates`. Registration is an upsert keyed on the candidate name: posting an existing candidate updates its metadata. `DELETE /admin/candidates/{candidate}` removes one, but only if it has no versions — a candidate with versions cannot be deleted, and the request is refused rather than orphaning rows.
 
-**Publishing is unchanged.** `POST /versions` keeps its existing allow-list: `CandidateLoader` reads `src/main/resources/candidates.txt` and `VersionRequestValidator` enforces it, exactly as today. No code path in this part consults the `candidates` table to decide whether a publish is allowed, and no registry is held in memory. An empty registry therefore gates nothing, which is the property that lets this part deploy ahead of the backfill.
+**Publishing is unchanged.** `POST /versions` keeps its existing allow-list, `src/main/resources/candidates.txt`, enforced exactly as today. No code path in this part consults the `candidates` table to decide whether a publish is allowed, and no registry is held in memory. An empty registry therefore gates nothing, which is the property that lets this part deploy ahead of the backfill.
 
 ## API Contract
 
@@ -96,7 +96,7 @@ Request body (`CreateCandidateRequest`):
 
 `201` and `200` are told apart by the upsert itself — whether the row already existed, reported by the write — not by a preceding `SELECT`. A concurrent double-post therefore cannot answer `201` twice.
 
-Malformed JSON is a `400` `ValidationErrorResponse` like any other failure, never a deserialisation `500`. That means taking the raw body and mapping the parse failure into the accumulated-error shape, as `VersionRequestValidator.validateRequest` already does. It is explicitly *not* the `call.receive<CreateVendorRequest>()` the neighbouring vendor admin routes use, which throws before the handler can shape a response. This is the one place where following the vendor precedent gives the wrong status.
+Malformed JSON is a `400` `ValidationErrorResponse` like any other failure, never a deserialisation `500`. Worth knowing, because the neighbouring vendor admin routes do not behave this way: they deserialise straight into the request type, which throws before a handler can shape a response, so a bad body there surfaces as a `500`. The version write path already answers `400` for the same input. The vendor routes are the closer neighbour and the wrong precedent.
 
 `CandidateAdminDto` is `CandidateDto` without the derived `default`, plus `created_at` and `updated_at` as ISO-8601 instants. The JSON field is `updated_at`, matching `VendorResponse`; the column behind it is `last_updated_at`, matching `versions` and `version_tags`. The two conventions already disagree in this codebase, so each layer follows its own. The column *type* follows `vendors` too: `TIMESTAMPTZ`, so rendering an instant is a conversion rather than an assumption about the server's zone. See *Database Schema*.
 
@@ -125,13 +125,13 @@ Deletion is hard, not soft — unlike vendors, a candidate carries no history wo
 
 1. **The registry is not yet the allow-list.** `POST /versions` accepts a candidate if and only if it appears in `candidates.txt`. The registry and the file coexist for the length of this part and are allowed to disagree; reconciling them is part 2. Nothing here reads the table to authorise a write.
 2. **Registration is an upsert.** `POST /admin/candidates` for an existing candidate updates `name`, `description` and `website_url` and refreshes `last_updated_at`. The identifier itself is never mutated; renaming a candidate is a delete plus a create.
-3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop. It is a check and not a lock: a `POST /versions` arriving after the count is not stopped by it. In this part that is inconsequential, because publishing does not consult the registry at all; part 2's rule 6 records why the window stays accepted once it does. Delete the versions first.
+3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop. It is a check and not a lock: a `POST /versions` arriving after the count is not stopped by it. In this part that is inconsequential, because publishing does not consult the registry at all; part 2's rule 6 records why the window stays accepted once it does.
 4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag.
 5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`.
-6. **`default` only considers rows with no distribution**, matched on **`versions.distribution`**, not `version_tags.distribution`. Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`distribution-na-to-null.md`](distribution-na-to-null.md)). `PostgresVersionRepository.findByTag` filters the same column, so the two agree by construction; filtering the other one would let `GET /candidates` and `GET /versions/{c}/tags/lts` disagree for the same candidate.
-7. **`default` does not filter on `visible`.** `findByTag` does not either, and `V18` knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag (it even `RAISE NOTICE`s them). Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale.
+6. **`default` only considers rows with no distribution.** Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`distribution-na-to-null.md`](distribution-na-to-null.md)). There is a trap here: `versions` and `version_tags` both carry a `distribution` column, the existing tag lookup behind `GET /versions/{c}/tags/lts` reads the one on `versions`, and reading the other one instead makes the two endpoints disagree about the same candidate. They must agree.
+7. **`default` does not filter on `visible`.** The existing tag lookup does not either, and the java supersession pass knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag, announcing them as it goes. Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale.
 8. **`java` never carries a `default`.** It is excluded by name. This is the one candidate-specific rule in the service and it exists because java is the one candidate with per-distribution tags.
-9. **`website_url` must be `https`.** Enforced on write, reusing the existing `HTTPS_URL_PATTERN` from version download URLs. That pattern is currently a private companion constant inside `VersionRequestValidator`, so reuse means hoisting it somewhere shared rather than copying it.
+9. **`website_url` must be `https`.** Rejected on write otherwise. It is the same rule the service already applies to version download URLs, and the same pattern, though that one is private to the version validator today and so is not reachable as it stands.
 10. **Candidate identifiers are lowercase and case-sensitive.** `Java` is not `java`; it is rejected by the pattern.
 11. **Ordering is ascending by `candidate`**, matching the sort the Mongo repository applied.
 12. **The vendor authorisation scope is unaffected.** `vendors.candidates` remains a free-form `TEXT[]` and a vendor may still be scoped to a candidate that does not exist. Nothing is foreign-keyed to this table, so that is not an exception to a rule; it is the same rule.
@@ -147,17 +147,15 @@ Structural validation only, following the accumulated-error pattern (all failure
 - `description` must be present, non-blank, at most 2000 characters, and a **single paragraph of printable ASCII**: every character in `0x20`–`0x7E`, no control characters, no line breaks, and no runs of consecutive spaces.
 - `website_url` must be present and match the existing HTTPS URL pattern, at most 500 characters.
 
-That is the whole of it. `VersionRequestValidator` is **not** touched by this part: its candidate check still reads `CandidateLoader.allowedCandidates`, it stays synchronous, and its constructor signature is unchanged. There is no registry holder, no cache, no TTL and no readiness state, because nothing here needs the registry in memory. All of that arrives with the cutover in [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), and shipping a holder that nothing reads would only add a failure mode.
+That is the whole of it, and it applies to the new write route alone. The publish path's own validation is untouched by this part: an unknown candidate on `POST /versions` is still refused against `candidates.txt`. Nothing here holds the registry in memory, caches it, expires it or tracks whether it has loaded. All of that arrives with the cutover in [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), where something reads it; introduced here it would be a failure mode with no reader.
 
 ## Database Schema
 
-Next free version is **V19**, but it is reserved by [`java-version-supersession.md`](java-version-supersession.md)'s all-migrated-series pass. Note that `V19` appears only on branch `spec/v19-all-migrated-series`; the copy of that spec checked out here describes `V17` and `V18` only. This feature therefore claims **V20**, and only V20. If that pass ships first, the number holds; if it never ships, V19 stays an intentional gap, which Flyway tolerates.
+**One migration, and it carries no data.** It creates an empty table. Nothing on `versions` or `version_tags` is altered, because the registry is enforced by the request validator rather than by a constraint ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)), and the rows arrive afterwards over `POST /admin/candidates` rather than inside the migration ([`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md) covers what happens to them on the way). See *Rollout*.
 
-**The number is provisional; the invariant is not.** `Migration.kt` is a bare `Flyway.configure()`, so `outOfOrder` is false and `validateOnMigrate` is true: a lower-numbered migration applied *after* a higher one fails validation and the service refuses to boot. The invariant is therefore that this migration is the highest in the tree when it merges, with nothing lower still pending. Today the highest *applied* version is `V18` and neither this migration nor the supersession pass exists as a file, so whichever is written second simply takes the next free number. `V20` is the working number here; renumber it down to `V19` if the supersession pass has been abandoned by the time this merges.
+**The number is whatever is next at merge time; the ordering invariant is not.** `Migration.kt` is a bare `Flyway.configure()`, so `outOfOrder` is false and `validateOnMigrate` is true: a lower-numbered migration applied *after* a higher one fails validation and the service refuses to boot. The invariant is therefore that this migration is the highest in the tree when it merges, with nothing lower still pending. That is a thing to check at merge rather than fix in advance, and one competitor is known: [`java-version-supersession.md`](java-version-supersession.md)'s all-migrated-series pass is specced and unshipped on branch `spec/v19-all-migrated-series`, and it also adds a migration. Whichever merges second takes the next free number; a gap left by one that never ships is harmless, because Flyway tolerates it.
 
-**One migration, and it carries no data.** `V20` creates an empty table. Nothing on `versions` or `version_tags` is altered, because the registry is enforced by the request validator rather than by a constraint ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)), and the rows arrive afterwards over `POST /admin/candidates` rather than inside the migration ([`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md) covers what happens to them on the way). See *Rollout*.
-
-`src/main/resources/db/migration/V20__create_candidates_table.sql` — the DDL, and nothing else:
+`src/main/resources/db/migration/` — one file, the DDL and nothing else:
 
 ```sql
 -- Candidate metadata, migrated from the MongoDB `candidates` collection.
@@ -174,9 +172,9 @@ Next free version is **V19**, but it is reserved by [`java-version-supersession.
 -- This migration creates the table and stops. The rows arrive over
 -- POST /admin/candidates after deploy; see the spec's Rollout section.
 --
--- (Implementer note: PostgresVersionRepository maps this column as
--- varchar("candidate", length = 20). That is a pre-existing mismap of a TEXT
--- column; do not take it as evidence of the real type.)
+-- Note: the existing version repository maps `versions.candidate` as a
+-- varchar of length 20. That is a pre-existing mismap of a TEXT column, and
+-- not evidence of what the column actually is.
 --
 -- The timestamps are TIMESTAMPTZ, following `vendors` (V13) rather than
 -- `versions` (V2) and `version_tags` (V12), which are zoneless. The two
@@ -204,12 +202,12 @@ CREATE TABLE candidates
 
 ### The table ships empty
 
-`V20` creates the table and stops. The candidate rows arrive afterwards, over `POST /admin/candidates`, driven by `candidates_migration/` in the parent workspace: it dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, normalises the descriptions, and posts them. **That retargeting is done.** The tool was originally a generator emitting the SQL seed this revision cancelled (`dc89cc2`); it was rebuilt as `{dump, migrate, verify}` in `1e1fbc9` and its suite is green. See [`../../../docs/specs/candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §8. Which candidates are in the set, and why `cuba`, `ktx` and `test` are not, is [`../../../docs/specs/candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §6.
+The migration creates the table and stops. The candidate rows arrive afterwards, over `POST /admin/candidates`, driven by `candidates_migration/` in the parent workspace: it dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, normalises the descriptions, and posts them. **That retargeting is done.** The tool was originally a generator emitting the SQL seed this revision cancelled (`dc89cc2`); it was rebuilt as `{dump, migrate, verify}` in `1e1fbc9` and its suite is green. See [`../../../docs/specs/candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §8. Which candidates are in the set, and why `cuba`, `ktx` and `test` are not, is [`../../../docs/specs/candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §6.
 
-An earlier revision carried the 81 rows as an `INSERT` at the end of `V20`. That was forced by a foreign key it no longer has: the constraint had to be added against populated tables, Flyway runs every pending migration before routing is configured, so the rows could not arrive over HTTP in between. Removing the constraint removes the reason, and three things come back with the API route ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)):
+An earlier revision carried the 81 rows as an `INSERT` at the end of the migration. That was forced by a foreign key it no longer has: the constraint had to be added against populated tables, Flyway runs every pending migration before routing is configured, so the rows could not arrive over HTTP in between. Removing the constraint removes the reason, and three things come back with the API route ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)):
 
 - **The write path is exercised in production before anything depends on it.** That was the phase 1 backfill's secondary benefit. A seeded `INSERT` would leave `POST /admin/candidates` unexercised until somebody onboarded a candidate months later.
-- **The data stays correctable.** Flyway checksums a migration once it has applied, so 81 descriptions baked into `V20` are frozen: a copy edit becomes a `V22`, or direct SQL. Registration is an upsert (business rule 2), so over the API the backfill is re-runnable and a correction is another `POST`.
+- **The data stays correctable.** Flyway checksums a migration once it has applied, so 81 descriptions baked into it are frozen: a copy edit becomes a follow-up migration, or direct SQL. Registration is an upsert (business rule 2), so over the API the backfill is re-runnable and a correction is another `POST`.
 - **No SQL escaping rules.** Descriptions carry apostrophes, and the normalisation of [`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md) is a rendering contract rather than a defence against a `'` closing a string literal or a `${` tripping Flyway's placeholder replacement, which is on by default (`Migration.kt` uses a bare `Flyway.configure()`).
 
 **There is deliberately no second migration.** The earlier revision also added `V21__add_candidate_foreign_keys.sql`, making `versions.candidate` and `version_tags.candidate` foreign keys with `ON DELETE RESTRICT`. That is not done, for the reasons in [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md). The column types above are chosen so the trade can be re-taken later as a one-line `ALTER` per table.
@@ -220,7 +218,7 @@ Every text column is `TEXT`, matching what V5 established for `versions`. The lo
 
 **One release, then the backfill.** Nothing in this part is load-bearing, so it deploys on its own with no sequencing constraint and no window to manage.
 
-1. **Deploy** — `V20` creates the empty table; `GET /candidates` and both `/admin/candidates` routes appear. `VersionRequestValidator` is unchanged and still reads `candidates.txt`, so the empty registry gates nothing. `GET /candidates` returns `[]`, which no deployed consumer reads: `sdkman-candidates` still takes candidate metadata from MongoDB, and its read flip is specced separately.
+1. **Deploy** — the migration creates the empty table; `GET /candidates` and both `/admin/candidates` routes appear. The publish path is unchanged and still reads `candidates.txt`, so the empty registry gates nothing. `GET /candidates` returns `[]`, which no deployed consumer reads: `sdkman-candidates` still takes candidate metadata from MongoDB, and its read flip is specced separately.
 2. **Backfill** — `candidates_migration/` in the parent workspace dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, normalises the descriptions, and posts the set through `POST /admin/candidates`, verifying it with `GET /candidates`. Re-runnable, because registration is an upsert.
 3. **Part 2** — [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md) moves the allow-list onto the now-populated registry and deletes `candidates.txt`. It must not ship before step 2 has verified.
 4. The Candidates Service read flip follows, specced separately.
@@ -229,7 +227,7 @@ Every text column is `TEXT`, matching what V5 established for `versions`. The lo
 
 This is the phase 1 shape: build the write path, exercise it with real data, then flip the readers. Writing it as two specs rather than one release plan inside one spec is deliberate — the split is the deliverable boundary, and a spec that describes both halves will be built as both halves.
 
-**Nothing is locked, and nothing can refuse to boot.** An earlier revision added foreign keys in a `V21`. That `ALTER TABLE` took `ACCESS EXCLUSIVE` on `versions` — the table Broker 2 reads directly on the download path ([`../../../docs/contracts.md`](../../../docs/contracts.md) §4.2) — and turned the first deploy into a pre-flight that would refuse to start if any production candidate fell outside the seeded set. Both properties go with the constraint. `V20` creates a new table and touches nothing already being read, so it takes no meaningful lock and has no precondition to fail. The health check is `SELECT 1` and enumerates no tables, so an empty registry cannot fail a deploy gate either.
+**Nothing is locked, and nothing can refuse to boot.** An earlier revision added foreign keys in a `V21`. That `ALTER TABLE` took `ACCESS EXCLUSIVE` on `versions` — the table Broker 2 reads directly on the download path ([`../../../docs/contracts.md`](../../../docs/contracts.md) §4.2) — and turned the first deploy into a pre-flight that would refuse to start if any production candidate fell outside the seeded set. Both properties go with the constraint. This migration creates a new table and touches nothing already being read, so it takes no meaningful lock and has no precondition to fail. The health check is `SELECT 1` and enumerates no tables, so an empty registry cannot fail a deploy gate either.
 
 **The local rehearsal is deleted.** `test/migration-rehearsal.sh` in the parent workspace existed to prove the `ALTER` applied cleanly against populated tables, and its `negative` phase to prove an orphan row failed cleanly rather than half-applying. With no constraint neither tests anything, and its `load` phase only existed to give them a production-shaped database. `seed/seed.sh` becomes the only local seeding mechanism.
 
@@ -237,17 +235,21 @@ This is the phase 1 shape: build the write path, exercise it with real data, the
 
 ## Auditing
 
-**None.** Candidate writes are recorded by `created_at` and `last_updated_at` on the row and nothing else. No `vendor_audit` entries, no `AuditOperation` value, no new table. Registration is a rare administrative act, and the audit machinery exists for the high-volume vendor-driven version writes. The one write worth a second thought is deletion, and it is guarded ahead of the fact by the `409` version count rather than recorded after it.
+**None.** Candidate writes are recorded by `created_at` and `last_updated_at` on the row and nothing else. No `vendor_audit` entries and no new table. Registration is a rare administrative act, and the audit machinery exists for the high-volume vendor-driven version writes. The one write worth a second thought is deletion, and it is guarded ahead of the fact by the `409` version count rather than recorded after it.
 
-## Domain & Implementation Notes
+## Findings
 
-- **Domain model:** a new `Candidate(candidate, name, description, websiteUrl, createdAt, lastUpdatedAt)`, and a read model carrying the derived `default` as an `Option<String>`.
-- **Repository:** a new `CandidateRepository` / `PostgresCandidateRepository` with `findAll()`, `findAllWithDefaults()`, `upsert(...)`, and `delete(candidate)`. `findAllWithDefaults` is a single `LEFT JOIN` against `version_tags` and `versions` — the derived default must not become a per-row query.
-- **Platform preference in SQL:** one row per candidate, restricted to the two platforms. `DISTINCT ON (candidate) ... WHERE version_tags.platform IN ('UNIVERSAL','LINUX_X64') ORDER BY candidate, CASE version_tags.platform WHEN 'UNIVERSAL' THEN 0 ELSE 1 END` is the shape. Qualify the column: both tables carry `platform`, and `findByTag` filters `version_tags.platform` alongside `versions.distribution`, so the two reads must agree on both predicates for the same reason rule 6 gives. A bare `LIMIT 1` is global, not per candidate, and returns a single row for the whole registry; an `ELSE 1` ordering without the `IN` restriction admits every platform and leaks a `MAC_ARM64`-only `lts` into `sdk list`. Both were reproduced against a real database.
-- **Delete conflict:** count the candidate's versions and return `409` on a non-zero count. With no foreign key there is nothing to catch, so this count is the only thing standing between a delete and an orphaned set of version rows, and it needs a test of its own rather than an incidental one. It does **not** serialise against a concurrent `POST /versions`, and no isolation level makes it: the publish path validates against `candidates.txt` and never touches the `candidates` table, so there is no conflict for Postgres to see. Do not write a test asserting that it does. In this part the consequence is only an unregistered candidate keeping its rows, which rule 13 already treats as the normal state; part 2 records the sharper form of the same window. A new `DomainError` (e.g. `CandidateInUse`) carries the count to the route layer.
-- **Routes:** `versionReadRoutes` installs `CachingHeaders` on the **root** route (`Routing.kt` calls it on the `routing { }` receiver), so every JSON response already carries `max-age=appConfig.cacheMaxAge`. `GET /candidates` inherits it by existing, not by joining a group, and that is intended: the registry is static in nature and every consumer should cache it. The two admin routes join the `authenticate("auth-jwt")` block alongside the vendor admin routes and must respond `Cache-Control: no-store`. **`CachingHeaders` appends rather than replaces** — the plugin ends by `append`ing every computed header — and its options block fires for any `application/json` body, so simply setting `no-store` yields *two* `Cache-Control` values plus an `Expires`. The options block must return `null` for the admin routes, or those routes must suppress the plugin. The existing `CacheHeadersAcceptanceSpec` cannot see this, because `response.headers[HttpHeaders.CacheControl]` returns only the first value. Note that `/admin/vendors` is already affected the same way, setting `no-store` by the same call. Returning `null` from the options block for `/admin` paths fixes both; suppressing the plugin on the candidate routes alone leaves vendors emitting two values. Either is acceptable, but make it a decision — only the candidate routes are in this feature's acceptance criteria.
-- **Non-admin handling:** `/admin/candidates` returns `401` for a valid non-admin token, matching `/admin/vendors` rather than the `403` used by the version write routes. Consistency with the neighbouring admin routes wins.
-- **No nullable types.** Arrow `Option` throughout, per the existing convention.
+Observations made while surveying the code this feature lands in, recorded so they are not rediscovered the hard way. They constrain what a correct solution looks like; none of them chooses one.
+
+- **The derived default cannot be a per-candidate query.** `GET /candidates` returns the whole registry, so resolving each row's `lts` separately is a query per candidate on a listing that every `sdk list` ultimately sits behind.
+
+- **Two traps are already known in that resolution, both reproduced against a real database.** Taking one row for the whole registry rather than one per candidate is the first: the restriction to `UNIVERSAL` and `LINUX_X64` is per candidate, and a global cut returns a single row for every candidate in the listing. The second is ordering the two platforms by preference without also excluding the others, which admits every platform and leaks a `MAC_ARM64`-only `lts` into `sdk list`, contradicting rule 5. Both tables in the join carry a `platform` column as well as a `distribution` one, so the ambiguity of rule 6 applies to both predicates.
+
+- **Nothing in the database stops a delete orphaning versions.** With no foreign key, the `409` of rule 3 is the only thing between a delete and a stranded set of version rows, which is why it is stated as a rule rather than left to a constraint to produce. It also does not serialise against a concurrent publish, and no isolation level would make it: in this part the publish path validates against `candidates.txt` and never touches the `candidates` table, so Postgres sees no conflict to detect. A test asserting the two serialise would be asserting a property the design does not have.
+
+- **`Cache-Control` on the admin routes is harder than it looks.** The caching plugin is installed on the root route, so every JSON response in the service already carries `max-age`. `GET /candidates` inherits it by existing rather than by opting in, which is the intent: the registry is static and every consumer should cache it. The trap is on the admin side. The plugin *appends* the headers it computes rather than replacing them, and its options block fires for any JSON body, so a route that also sets `no-store` emits two `Cache-Control` values plus an `Expires`. `/admin/vendors` is already in exactly that state today, and the existing cache-header spec cannot see it, because reading a header by name returns only the first of its values. Anything that fixes this for the candidate routes alone leaves the vendor routes still emitting two; only the candidate routes are in this feature's acceptance criteria, so that is a live choice rather than an oversight.
+
+- **`401` rather than `403` for a valid non-admin token** matches the vendor admin routes. The version write routes answer `403` in the same situation, so the service is not internally consistent here and the nearer neighbour was followed.
 
 ## Access Matrix
 
@@ -374,7 +376,6 @@ Feature: Candidate registry
     Given no candidates are registered
     When an authorized vendor posts a version of "gradle"
     Then the version is accepted
-      And the allow-list consulted was candidates.txt
 
   Scenario: Registering a candidate does not make it publishable in this part
     Given the candidate "jpx" is registered
@@ -409,7 +410,7 @@ Feature: Candidate registry
 
 ## Out of Scope
 
-- **The allow-list cutover.** Moving `POST /versions` onto the registry, the registry cache and its TTL, and the deletion of `candidates.txt` and `CandidateLoader` are all part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md).
+- **The allow-list cutover.** Moving `POST /versions` onto the registry, holding the registry in memory with a refresh interval, and deleting `candidates.txt` are all part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md).
 - The MongoDB `application` collection, `sdkman-hooks`, and Mongo retirement. Those are phase 3, [`../../../docs/specs/application-end-game.md`](../../../docs/specs/application-end-game.md).
 - The Candidates Service's read flip. Specced separately in [`../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md).
 - The backfill tool itself. It is an operator-side script driving `POST /admin/candidates` over the contract above; it lives in the parent workspace, not in this repo.
@@ -426,34 +427,33 @@ Feature: Candidate registry
 - [ ] An empty registry returns `200` with `[]`
 - [ ] Each candidate carries a derived `default` resolved from the `lts` tag, preferring `UNIVERSAL` over `LINUX_X64`, matching only rows with no distribution
 - [ ] `default` is absent when no `lts` tag resolves, and is always absent for `java`
-- [ ] The derived default is computed in a single query, not one query per candidate
+- [ ] Resolving the derived defaults does not issue a query per candidate
 - [ ] `POST /admin/candidates` registers a candidate and returns `201`; re-posting an existing candidate updates it and returns `200`
 - [ ] `POST /admin/candidates` returns `400` with accumulated failures for a blank field, a non-`https` `website_url`, or an identifier failing `^[a-z][a-z0-9]*$`
 - [ ] `POST /admin/candidates` returns `400` for a `candidate` over 20 characters, a `name` over 100, a `description` over 2000, or a `website_url` over 500
 - [ ] Malformed JSON on `POST /admin/candidates` returns `400` `ValidationErrorResponse`, not `500`
-- [ ] `201` versus `200` is decided by the upsert itself, not by a preceding existence check
+- [ ] A concurrent double-post of the same new candidate never answers `201` twice
 - [ ] `DELETE /admin/candidates/{candidate}` returns `200` and removes a candidate with no versions
 - [ ] `DELETE /admin/candidates/{candidate}` returns `409` when the candidate has versions, and `404` when it does not exist
 - [ ] Both admin routes return `401` for anonymous, vendor, and expired tokens
-- [ ] `V20` creates an empty `candidates` table and is the only migration this feature adds
-- [ ] `V20` is the highest migration in the tree when it merges, with no lower-numbered migration still pending
+- [ ] The feature adds exactly one migration, and it creates an empty `candidates` table
+- [ ] That migration is the highest in the tree when it merges, with no lower-numbered migration still pending
 - [ ] `created_at` and `last_updated_at` are `TIMESTAMPTZ`, and `CandidateAdminDto` renders them as ISO-8601 instants without assuming a server zone
 - [ ] No constraint is added to `versions` or `version_tags`, and no migration takes a lock on either
-- [ ] A single boot applies `V20` and starts cleanly against a database already carrying versions and version tags
+- [ ] A single boot applies the migration and starts cleanly against a database already carrying versions and version tags
 - [ ] A `versions` row referencing an unregistered candidate neither blocks startup nor appears in `GET /candidates`
-- [ ] The service boots with an empty registry and `POST /versions` still works, because `VersionRequestValidator` is unchanged by this part
-- [ ] `src/main/resources/candidates.txt`, `CandidateLoader` and the `ALLOWED_CANDIDATES` companion constant are left in place and unmodified
-- [ ] `VersionRequestValidator`'s constructor signature is unchanged, and no existing acceptance spec needs a candidate registered before it can post a version
+- [ ] The service boots with an empty registry and `POST /versions` still works, because publishing rights still come from `candidates.txt`
+- [ ] `src/main/resources/candidates.txt` is still on the classpath and still the allow-list; registering a candidate does not make it publishable
+- [ ] No existing acceptance spec needs a candidate registered before it can post a version
 - [ ] No registry cache, TTL configuration, refresh mechanism or readiness state is introduced
 - [ ] No candidate write produces a `vendor_audit` row
 - [ ] The derived `default` is restricted to `UNIVERSAL` and `LINUX_X64`; a candidate whose only `lts` tag is on another platform has no `default`
 - [ ] The derived `default` does not filter on `visible`, and agrees with `GET /versions/{candidate}/tags/lts` for the same candidate
-- [ ] `DELETE /admin/candidates/{candidate}` returns `409` from the service's own version count, not from a translated database error
+- [ ] The `409` on delete is covered by a test of its own, since no database constraint would produce it
 - [ ] `POST /admin/candidates` rejects a description carrying a non-ASCII character, a control character, a line break, or a run of consecutive spaces
 - [ ] `POST /admin/candidates` supports a re-runnable backfill: registering the same candidate twice is an upsert, not a conflict, and the full set is readable back through `GET /candidates`
-- [ ] Both admin routes respond with exactly one `Cache-Control`: `headers.getAll("Cache-Control")` is `["no-store"]`, and no `Expires` is sent
+- [ ] Both admin routes respond with exactly one `Cache-Control`, `no-store`, and no `Expires`; asserted over all values of the header rather than the first
 - [ ] `POST /admin/candidates` never mutates an existing candidate's identifier
 - [ ] A `500` is returned, with `ErrorResponse`, on database error for all three endpoints
 - [ ] OpenAPI documentation updated with all three endpoints and the `CandidateDto`, `CandidateAdminDto` and `CreateCandidateRequest` schemas
-- [ ] No nullable types used — follows the Arrow `Option` pattern
 - [ ] All quality gates pass (`./gradlew check`)
