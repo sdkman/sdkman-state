@@ -1,5 +1,6 @@
 package io.sdkman.state.adapter.primary.rest
 
+import arrow.core.raise.either
 import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -10,6 +11,7 @@ import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.adapter.primary.rest.dto.toAdminDto
 import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.application.validation.CandidateRequestValidator
+import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.service.CandidateService
 
 // The role the admin routes demand. `authenticatedRole` answers the claim verbatim, so a
@@ -75,6 +77,37 @@ fun Route.adminCreateCandidateRoute(candidateService: CandidateService) {
                     },
                 )
             },
+        )
+    }
+}
+
+/**
+ * Admin-only removal of a candidate. Deletion is hard: a candidate carries no history worth
+ * preserving once its versions are gone, so there is no soft-delete column to set.
+ *
+ * The refusal on a candidate that still has versions arrives as
+ * [io.sdkman.state.domain.error.DomainError.CandidateHasVersions] and leaves here as a `409`
+ * carrying the count. No database constraint stands behind it — the service count is the whole
+ * guard (business rule 3) — so this route must never bypass the service and delete directly.
+ */
+fun Route.adminDeleteCandidateRoute(candidateService: CandidateService) {
+    delete("/admin/candidates/{candidate}") {
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        val role = call.authenticatedRole()
+        if (role != ADMIN_ROLE) {
+            call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
+            return@delete
+        }
+        either {
+            val candidateId =
+                call.parameters
+                    .requiredPathParam("candidate")
+                    .mapLeft { DomainError.ValidationFailed(it.message) }
+                    .bind()
+            candidateService.delete(candidateId).bind()
+        }.fold(
+            ifLeft = { error -> call.respondDomainError(error) },
+            ifRight = { candidate -> call.respond(HttpStatusCode.OK, candidate.toAdminDto()) },
         )
     }
 }
