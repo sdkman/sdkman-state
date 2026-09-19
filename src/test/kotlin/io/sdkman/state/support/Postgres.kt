@@ -6,11 +6,13 @@ import arrow.core.getOrElse
 import arrow.core.toOption
 import io.sdkman.state.adapter.secondary.persistence.AuditTable
 import io.sdkman.state.adapter.secondary.persistence.AuditVersionData
+import io.sdkman.state.adapter.secondary.persistence.CandidatesTable
 import io.sdkman.state.adapter.secondary.persistence.VendorsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionTagsTable
 import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.toDomain
 import io.sdkman.state.domain.model.AuditOperation
+import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
@@ -70,6 +72,20 @@ fun insertVersionWithId(cv: Version): Int =
                 it[sha512sum] = cv.sha512sum.getOrNull()
             }[VersionsTable.id]
             .value
+    }
+
+fun insertCandidates(vararg registrations: CandidateRegistration) =
+    transaction {
+        registrations.forEach { registration ->
+            CandidatesTable.insert {
+                it[candidate] = registration.candidate
+                it[name] = registration.name
+                it[description] = registration.description
+                it[websiteUrl] = registration.websiteUrl
+                it[createdAt] = Instant.now()
+                it[lastUpdatedAt] = Instant.now()
+            }
+        }
     }
 
 fun insertTag(
@@ -242,6 +258,7 @@ fun withCleanDatabase(fn: suspend () -> Unit) {
         VersionTagsTable.deleteAll()
         AuditTable.deleteAll()
         VersionsTable.deleteAll()
+        CandidatesTable.deleteAll()
         VendorsTable.deleteAll()
     }
     runBlocking { fn() }
