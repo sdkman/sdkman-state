@@ -164,7 +164,15 @@ candidates {
 }
 ```
 
-Five minutes matches the candidate cache `sdkman-candidates` keeps on the other side of the same registry ([`candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md)), so the two hops of staleness are the same size and an operator reasons about one number. It bounds rule 13's delete window as well as the registration window.
+Five minutes is chosen against the write path, which is the only thing this TTL governs: how long after a `POST /admin/candidates` a sibling instance starts accepting that candidate on `POST /versions`. It bounds rule 13's delete window on the same path. It is deliberately not derived from `api.cache.control`, and it must not be read as bounding how long the registry takes to reach `sdk list` — that is a different chain with three hops:
+
+| Hop | Mechanism | Today |
+|---|---|---|
+| `sdkman-state` → the wire | HTTP `max-age` from `api.cache.control`, inherited by `GET /candidates` because `CachingHeaders` installs on the root route | 600s |
+| the wire → `sdkman-candidates` | Play WS response cache (`play.ws.cache.enabled=true`) honours that `max-age` | 600s |
+| `sdkman-candidates` → the listing | that service's own candidate cache ([`candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md)) | 300s |
+
+Worst case a newly registered candidate is **900 seconds** from appearing in `sdk list`, because the in-process refresh can re-fetch and be served the still-cached HTTP body. That is the read chain's number, not this one, and nothing here changes it. Aligning the two would mean either raising this TTL to 600s or giving `GET /candidates` its own `max-age`; both are out of scope, and the second is entangled with the `CachingHeaders` fix in *Domain & Implementation Notes*.
 
 **A refresh failure serves the last good set; a cold failure is a `500`, never a `400`.** If a refresh fails, the previous set keeps serving — the registry changes rarely enough that a briefly stale allow-list beats rejecting valid publishes. If the *first* load fails there is nothing to fall back to, and `POST /versions` must answer `500`. The allow-list used to be a classpath resource and could not fail; a transient database error must not now surface as "candidate is not valid", which reads as permanent to a retrying client.
 
