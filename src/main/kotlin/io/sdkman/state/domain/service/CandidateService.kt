@@ -19,4 +19,11 @@ interface CandidateService {
      * new, which is what tells a `201` from a `200` without a preceding read.
      */
     suspend fun register(registration: CandidateRegistration): Either<DomainError, Pair<Candidate, Boolean>>
+
+    /**
+     * Removes a candidate and answers the record as it was. Refuses with
+     * [DomainError.CandidateHasVersions] while any version is published under it (business rule 3):
+     * the count is the guard itself, because no foreign key stands behind it.
+     */
+    suspend fun delete(candidate: String): Either<DomainError, Candidate>
 }

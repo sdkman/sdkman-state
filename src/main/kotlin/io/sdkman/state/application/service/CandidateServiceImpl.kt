@@ -2,6 +2,7 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.none
 import arrow.core.raise.either
 import arrow.core.toOption
@@ -45,4 +46,26 @@ class CandidateServiceImpl(
         candidateRepository
             .upsert(registration)
             .mapLeft { DomainError.DatabaseError(it) }
+
+    override suspend fun delete(candidate: String): Either<DomainError, Candidate> =
+        either {
+            candidateRepository
+                .find(candidate)
+                .mapLeft { DomainError.DatabaseError(it) }
+                .bind()
+                .getOrElse { raise(DomainError.CandidateNotFound(candidate)) }
+            // The count is the whole guard: no foreign key stands behind it, so a delete that
+            // skipped this would strand every version row published under the candidate.
+            val versionCount =
+                candidateRepository
+                    .countVersions(candidate)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+            if (versionCount > 0) raise(DomainError.CandidateHasVersions(candidate, versionCount))
+            candidateRepository
+                .delete(candidate)
+                .mapLeft { DomainError.DatabaseError(it) }
+                .bind()
+                .getOrElse { raise(DomainError.CandidateNotFound(candidate)) }
+        }
 }
