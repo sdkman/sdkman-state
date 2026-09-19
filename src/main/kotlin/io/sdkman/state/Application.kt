@@ -4,11 +4,13 @@ import io.ktor.server.application.*
 import io.sdkman.state.adapter.primary.rest.*
 import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
 import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
+import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
+import io.sdkman.state.application.service.CandidateServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
@@ -37,6 +39,7 @@ fun Application.module() {
     val tagsRepo = PostgresTagRepository()
     val auditRepo = PostgresAuditRepository()
     val vendorRepo = PostgresVendorRepository()
+    val candidatesRepo = PostgresCandidateRepository()
     val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
     val transactional = ExposedTransactional()
     val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
@@ -59,4 +62,6 @@ fun Application.module() {
         appConfig = appConfig,
         versionRequestValidator = versionRequestValidator,
     )
+
+    configureCandidateRouting(candidateService = CandidateServiceImpl(candidatesRepo))
 }
