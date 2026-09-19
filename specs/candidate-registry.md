@@ -92,7 +92,11 @@ Request body (`CreateCandidateRequest`):
 | `401 Unauthorized` | `ErrorResponse` | Missing, invalid, or non-admin token |
 | `500 Internal Server Error` | `ErrorResponse` | Database error |
 
-`CandidateAdminDto` is `CandidateDto` without the derived `default`, plus `created_at` and `updated_at` as ISO-8601 instants. The JSON field is `updated_at`, matching `VendorResponse`; the column behind it is `last_updated_at`, matching `versions` and `version_tags`. The two conventions already disagree in this codebase, so each layer follows its own.
+`201` and `200` are told apart by the upsert itself — whether the row already existed, reported by the write — not by a preceding `SELECT`. A concurrent double-post therefore cannot answer `201` twice.
+
+Malformed JSON is a `400` `ValidationErrorResponse` like any other failure, never a deserialisation `500`. That means taking the raw body and mapping the parse failure into the accumulated-error shape, as `VersionRequestValidator.validateRequest` already does. It is explicitly *not* the `call.receive<CreateVendorRequest>()` the neighbouring vendor admin routes use, which throws before the handler can shape a response. This is the one place where following the vendor precedent gives the wrong status.
+
+`CandidateAdminDto` is `CandidateDto` without the derived `default`, plus `created_at` and `updated_at` as ISO-8601 instants. The JSON field is `updated_at`, matching `VendorResponse`; the column behind it is `last_updated_at`, matching `versions` and `version_tags`. The two conventions already disagree in this codebase, so each layer follows its own. The column *type* follows `vendors` too: `TIMESTAMPTZ`, so rendering an instant is a conversion rather than an assumption about the server's zone. See *Database Schema*.
 
 ### `DELETE /admin/candidates/{candidate}`
 
@@ -119,7 +123,7 @@ Deletion is hard, not soft — unlike vendors, a candidate carries no history wo
 
 1. **The registry is the allow-list.** `POST /versions` accepts a candidate if and only if it is registered. There is no second list, no classpath resource, and no configuration override.
 2. **Registration is an upsert.** `POST /admin/candidates` for an existing candidate updates `name`, `description` and `website_url` and refreshes `last_updated_at`. The identifier itself is never mutated; renaming a candidate is a delete plus a create.
-3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop, and the count is taken inside the delete's transaction so it cannot race a concurrent `POST /versions`. Delete the versions first.
+3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop. It is a check and not a lock: a `POST /versions` arriving after the count is not stopped by it, and rule 13 records why that window is accepted. Delete the versions first.
 4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag.
 5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`.
 6. **`default` only considers rows with no distribution**, matched on **`versions.distribution`**, not `version_tags.distribution`. Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`distribution-na-to-null.md`](distribution-na-to-null.md)). `PostgresVersionRepository.findByTag` filters the same column, so the two agree by construction; filtering the other one would let `GET /candidates` and `GET /versions/{c}/tags/lts` disagree for the same candidate.
@@ -129,7 +133,7 @@ Deletion is hard, not soft — unlike vendors, a candidate carries no history wo
 10. **Candidate identifiers are lowercase and case-sensitive.** `Java` is not `java`; it is rejected by the pattern.
 11. **Ordering is ascending by `candidate`**, matching the sort the Mongo repository applied.
 12. **The vendor authorisation scope is unaffected.** `vendors.candidates` remains a free-form `TEXT[]` and a vendor may still be scoped to a candidate that does not exist. Nothing is foreign-keyed to this table, so that is not an exception to a rule; it is the same rule.
-13. **`versions.candidate` is not a foreign key, and an orphan row would be inert.** A version whose candidate is absent from the registry never appears in `GET /candidates`, so `sdk list` cannot reach it, but it still resolves by exact identifier on the download path, which does not consult the registry. No such row exists in production today — every `versions` row names a registered candidate — so this is a consequence the design accepts rather than one it has observed. (`cuba` and `ktx` are the inverse case, not an example: Postgres holds none of their rows, while Mongo still lists the candidates.) Consumers reading `versions` directly must not assume the join holds ([`../../../docs/contracts.md`](../../../docs/contracts.md) §4.6).
+13. **`versions.candidate` is not a foreign key, and an orphan row would be inert.** A version whose candidate is absent from the registry never appears in `GET /candidates`, so `sdk list` cannot reach it, but it still resolves by exact identifier on the download path, which does not consult the registry. Rule 3's `409` is a check rather than a lock, so the concrete way an orphan can now arise is a `DELETE /admin/candidates/{candidate}` racing a `POST /versions`: the count sees no versions, the delete commits, and the publish lands after it. **That race is accepted, not closed.** No isolation level closes it, because the publish path reads the in-memory registry and never touches the `candidates` table, so Postgres has no read/write conflict to detect; closing it would take either the foreign key [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md) declined or a registry read inside the publish transaction, which is the database read the in-memory allow-list exists to avoid. The window is also wider than a transaction: the publishing instance keeps accepting the deleted candidate until its cached set next refreshes (see *Validation*). The trade is taken knowingly — deletion is a rare administrative act, and the outcome is an inert row rather than a broken read. No such row exists in production today — every `versions` row names a registered candidate — so this remains a consequence the design accepts rather than one it has observed. (`cuba` and `ktx` are the inverse case, not an example: Postgres holds none of their rows, while Mongo still lists the candidates.) Consumers reading `versions` directly must not assume the join holds ([`../../../docs/contracts.md`](../../../docs/contracts.md) §4.6).
 14. **Descriptions are a single paragraph of printable ASCII.** Enforced on write, and applied to the backfilled set by `candidates_migration/`. `sdk list` renders descriptions into a fixed-width terminal box, where an embedded newline breaks the layout and a non-ASCII codepoint is mojibake under a non-UTF-8 locale. See [`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md).
 
 ## Validation
@@ -147,13 +151,28 @@ Structural validation only, following the accumulated-error pattern (all failure
 
 **The set must not be loaded once for the process lifetime.** `CandidateLoader` loads `by lazy`, which is right for a classpath resource and wrong for a table that `POST /admin/candidates` mutates. Inheriting that would mean a candidate registered through the API is rejected by `POST /versions` until the service restarts — the `jpx` / `ksrc` failure the merged registry exists to remove, surviving the migration in a new form.
 
-**Freshness is bounded, not instantaneous.** A successful `POST /admin/candidates` refreshes the set in the process that served it. A TTL refresh backs that up, because eager invalidation is only complete on a single instance: a sibling that did not serve the write keeps its own copy until its TTL expires. The observable contract is therefore *a newly registered candidate becomes publishable within the TTL, without a restart*. `sdkman-candidates` warms and refreshes the same registry on the same pattern ([`candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §10).
+**Freshness is bounded, not instantaneous.** A successful `POST /admin/candidates` **or `DELETE /admin/candidates/{candidate}`** refreshes the set in the process that served it — both writes evict, not just the register, or a deleted candidate stays publishable on the very instance that removed it. A TTL refresh backs that up, because eager invalidation is only complete on a single instance: a sibling that did not serve the write keeps its own copy until its TTL expires. The observable contract is therefore *a newly registered candidate becomes publishable within the TTL, a deleted one stops being publishable within the TTL, and neither needs a restart*. `sdkman-candidates` warms and refreshes the same registry on the same pattern ([`candidates-end-game.md`](../../../docs/specs/candidates-end-game.md) §10).
+
+**The TTL is five minutes, and it is configuration.** The default lives once, in `application.conf`, per the service's [HOCON rule](../.claude/rules/hocon.md); no Kotlin fallback literal mirrors it.
+
+```hocon
+candidates {
+    registry {
+        refreshIntervalMs = 300000
+        refreshIntervalMs = ${?CANDIDATE_REGISTRY_REFRESH_INTERVAL_MS}
+    }
+}
+```
+
+Five minutes matches the candidate cache `sdkman-candidates` keeps on the other side of the same registry ([`candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md)), so the two hops of staleness are the same size and an operator reasons about one number. It bounds rule 13's delete window as well as the registration window.
 
 **A refresh failure serves the last good set; a cold failure is a `500`, never a `400`.** If a refresh fails, the previous set keeps serving — the registry changes rarely enough that a briefly stale allow-list beats rejecting valid publishes. If the *first* load fails there is nothing to fall back to, and `POST /versions` must answer `500`. The allow-list used to be a classpath resource and could not fail; a transient database error must not now surface as "candidate is not valid", which reads as permanent to a retrying client.
 
 ## Database Schema
 
 Next free version is **V19**, but it is reserved by [`java-version-supersession.md`](java-version-supersession.md)'s all-migrated-series pass. Note that `V19` appears only on branch `spec/v19-all-migrated-series`; the copy of that spec checked out here describes `V17` and `V18` only. This feature therefore claims **V20**, and only V20. If that pass ships first, the number holds; if it never ships, V19 stays an intentional gap, which Flyway tolerates.
+
+**`V19` must land before `V20` or not at all.** `Migration.kt` is a bare `Flyway.configure()`, so `outOfOrder` is false and `validateOnMigrate` is true: a `V19` applied *after* `V20` fails validation and the service refuses to boot. An unfilled gap is harmless; a late fill is not. The two sit on different branches (`spec/v19-all-migrated-series` and this one), so the ordering is a release dependency to check at merge, not one to assume. If the supersession pass is still unmerged when this is ready, renumber this migration above it rather than leaving V19 to land late.
 
 **One migration, and it carries no data.** `V20` creates an empty table. Nothing on `versions` or `version_tags` is altered, because the registry is enforced by the request validator rather than by a constraint ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)), and the rows arrive afterwards over `POST /admin/candidates` rather than inside the migration ([`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md) covers what happens to them on the way). See *Rollout*.
 
@@ -178,6 +197,13 @@ Next free version is **V19**, but it is reserved by [`java-version-supersession.
 -- varchar("candidate", length = 20). That is a pre-existing mismap of a TEXT
 -- column; do not take it as evidence of the real type.)
 --
+-- The timestamps are TIMESTAMPTZ, following `vendors` (V13) rather than
+-- `versions` (V2) and `version_tags` (V12), which are zoneless. The two
+-- conventions already disagree in this schema, and this table follows the one
+-- whose output shape matches: CandidateAdminDto renders these as ISO-8601
+-- instants exactly as VendorResponse does, and an instant cannot be rendered
+-- from a zoneless column without silently assuming the server's zone.
+--
 -- Deliberately absent:
 --   `default`      -- derived from version_tags at read time, never stored
 --   `distribution` -- the Mongo platform classification (UNIVERSAL /
@@ -190,8 +216,8 @@ CREATE TABLE candidates
     name            TEXT         NOT NULL,
     description     TEXT         NOT NULL,
     website_url     TEXT         NOT NULL,
-    created_at      TIMESTAMP    NOT NULL DEFAULT now(),
-    last_updated_at TIMESTAMP    NOT NULL DEFAULT now()
+    created_at      TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    last_updated_at TIMESTAMPTZ  NOT NULL DEFAULT now()
 );
 ```
 
@@ -213,7 +239,7 @@ Every text column is `TEXT`, matching what V5 established for `versions`. The lo
 
 **Two state releases with a backfill between them.** The registry becomes load-bearing only in the second, which is what keeps the sequence free of any window in which publishing is refused.
 
-1. **Release A** — `V20` creates the empty table; `GET /candidates` and both `/admin/candidates` routes appear. `VersionRequestValidator` is **unchanged** and still reads `candidates.txt`, so the empty registry gates nothing. `GET /candidates` returns `[]`, which no deployed consumer reads yet.
+1. **Release A** — `V20` creates the empty table; `GET /candidates` and both `/admin/candidates` routes appear. `VersionRequestValidator` is **unchanged** and still reads `candidates.txt`, so the empty registry gates nothing. `GET /candidates` returns `[]`, which no deployed consumer reads yet. The registry holder, its TTL configuration and its readiness state are **release B**: nothing in A consults the table for validation, and shipping a holder nothing reads would only add a failure mode. A's only new database reads are the three routes' own.
 2. **Backfill** — `candidates_migration/` posts the 81 candidates through `POST /admin/candidates` and verifies the result with `GET /candidates`. Re-runnable, because registration is an upsert.
 3. **Release B** — the validator switches to the registry; `candidates.txt`, `CandidateLoader` and the `ALLOWED_CANDIDATES` companion constant are deleted.
 4. The Candidates Service read flip follows, specced separately.
@@ -237,12 +263,12 @@ This is the phase 1 shape: build the write path, exercise it with real data, the
 - **Domain model:** a new `Candidate(candidate, name, description, websiteUrl, createdAt, lastUpdatedAt)`, and a read model carrying the derived `default` as an `Option<String>`.
 - **Repository:** a new `CandidateRepository` / `PostgresCandidateRepository` with `findAll()`, `findAllWithDefaults()`, `upsert(...)`, and `delete(candidate)`. `findAllWithDefaults` is a single `LEFT JOIN` against `version_tags` and `versions` — the derived default must not become a per-row query.
 - **Platform preference in SQL:** one row per candidate, restricted to the two platforms. `DISTINCT ON (candidate) ... WHERE version_tags.platform IN ('UNIVERSAL','LINUX_X64') ORDER BY candidate, CASE version_tags.platform WHEN 'UNIVERSAL' THEN 0 ELSE 1 END` is the shape. Qualify the column: both tables carry `platform`, and `findByTag` filters `version_tags.platform` alongside `versions.distribution`, so the two reads must agree on both predicates for the same reason rule 6 gives. A bare `LIMIT 1` is global, not per candidate, and returns a single row for the whole registry; an `ELSE 1` ordering without the `IN` restriction admits every platform and leaks a `MAC_ARM64`-only `lts` into `sdk list`. Both were reproduced against a real database.
-- **Delete conflict:** count the candidate's versions inside the delete's transaction and return `409` on a non-zero count. With no foreign key there is nothing to catch, so this count is the only thing standing between a delete and an orphaned set of version rows; it needs a test of its own rather than an incidental one, and it must be inside the transaction or it races a concurrent `POST /versions`. A new `DomainError` (e.g. `CandidateInUse`) carries it to the route layer.
+- **Delete conflict:** count the candidate's versions and return `409` on a non-zero count. With no foreign key there is nothing to catch, so this count is the only thing standing between a delete and an orphaned set of version rows, and it needs a test of its own rather than an incidental one. It does **not** serialise against a concurrent `POST /versions`, and no isolation level makes it: the publish path reads the in-memory registry and never touches the `candidates` table, so there is no conflict for Postgres to see. Do not write a test asserting that it does. Rule 13 accepts the window. A new `DomainError` (e.g. `CandidateInUse`) carries the count to the route layer.
 - **Validator: a frozen `Set<String>` at construction does not work.** The tempting move is to mirror `semverishCandidates: Set<String>`, which `Application.kt` reads once at startup. It cannot satisfy this feature. An immutable set captured at construction can be neither refreshed on write nor expired on a TTL, and it cannot represent "never loaded" as distinct from "loaded and genuinely empty" — which is the distinction the `500`-vs-`400` rule depends on. Whatever shape is chosen must therefore carry a *live* view plus a readiness state, not a value. Candidates for the implementation plan: inject the holder itself; inject a `() -> Set<String>` supplier; pass the set per call; or rebuild the validator on each refresh. Each trades purity against signature churn differently, and the choice is out of scope here. What the spec fixes is the behaviour: synchronous, no database read on the happy path, refreshable, and readiness-aware.
 - **Registry holder:** a new component owns the set — startup load, configurable TTL refresh, eager refresh after a successful `POST /admin/candidates`. A failed refresh leaves the previous set in place. A failed *first* load leaves the holder unready, and `POST /versions` must answer `500` while it stays that way. That readiness check has to sit somewhere validation cannot swallow into a `ValidationError`, since the route maps those to `400`: either the route consults the holder before validating, or a distinct error type carries `500` out of it.
 - **Every construction site gains an argument.** There are six, all currently single-argument: `Application.kt`, the test `support/Application.kt`, `HealthCheckAcceptanceSpec`, `LoginRateLimitDisabledAcceptanceSpec`, `VersionRequestValidatorSpec` and `VersionRequestSemverishValidatorSpec`. The last two also depend on `candidates.txt` today through `ALLOWED_CANDIDATES` — they use `java` heavily, plus `gradle`, `kotlin`, `maven` and `scala` — so each case with a valid candidate must now be handed a set containing it. This is signature churn, but it is not `suspend` churn, which is the expensive kind.
 - **The rejection message needs a defined order.** `InvalidCandidateError.allowedCandidates` is a `List<String>` rendered with `joinToString(", ")`, and today's order is `candidates.txt` file order. A `Set` has no defined iteration order, so the message must enumerate the registry **sorted ascending**, matching `GET /candidates`. `VersionRequestValidatorSpec` asserts only that the message contains `"Allowed values:"`, so nothing currently catches a scrambled list.
-- **Routes:** `versionReadRoutes` installs `CachingHeaders` on the **root** route (`Routing.kt` calls it on the `routing { }` receiver), so every JSON response already carries `max-age=appConfig.cacheMaxAge`. `GET /candidates` inherits it by existing, not by joining a group, and that is intended: the registry is static in nature and every consumer should cache it. The two admin routes join the `authenticate("auth-jwt")` block alongside the vendor admin routes and must respond `Cache-Control: no-store`. **`CachingHeaders` appends rather than replaces** — the plugin ends by `append`ing every computed header — and its options block fires for any `application/json` body, so simply setting `no-store` yields *two* `Cache-Control` values plus an `Expires`. The options block must return `null` for the admin routes, or those routes must suppress the plugin. The existing `CacheHeadersAcceptanceSpec` cannot see this, because `response.headers[HttpHeaders.CacheControl]` returns only the first value.
+- **Routes:** `versionReadRoutes` installs `CachingHeaders` on the **root** route (`Routing.kt` calls it on the `routing { }` receiver), so every JSON response already carries `max-age=appConfig.cacheMaxAge`. `GET /candidates` inherits it by existing, not by joining a group, and that is intended: the registry is static in nature and every consumer should cache it. The two admin routes join the `authenticate("auth-jwt")` block alongside the vendor admin routes and must respond `Cache-Control: no-store`. **`CachingHeaders` appends rather than replaces** — the plugin ends by `append`ing every computed header — and its options block fires for any `application/json` body, so simply setting `no-store` yields *two* `Cache-Control` values plus an `Expires`. The options block must return `null` for the admin routes, or those routes must suppress the plugin. The existing `CacheHeadersAcceptanceSpec` cannot see this, because `response.headers[HttpHeaders.CacheControl]` returns only the first value. Note that `/admin/vendors` is already affected the same way, setting `no-store` by the same call. Returning `null` from the options block for `/admin` paths fixes both; suppressing the plugin on the candidate routes alone leaves vendors emitting two values. Either is acceptable, but make it a decision — only the candidate routes are in this feature's acceptance criteria.
 - **Non-admin handling:** `/admin/candidates` returns `401` for a valid non-admin token, matching `/admin/vendors` rather than the `403` used by the version write routes. Consistency with the neighbouring admin routes wins.
 - **No nullable types.** Arrow `Option` throughout, per the existing convention.
 - **Existing tests need a registered candidate.** Nothing in the suite seeds an allow-list today: the acceptance specs rely on `candidates.txt` being on the classpath with `java`, `gradle` and friends already in it. Once the validator reads the registry, an acceptance spec posting a version against a fresh Testcontainers database finds it empty and gets a `400`. The ~14 specs that post versions need a shared fixture registering the candidate first — one helper in `support/`, not fourteen ad-hoc inserts. (26 of 55 test files touch `versions`; only those going through `POST /versions` are affected, because a direct insert no longer meets a constraint.) Two things soften this relative to a foreign-key design: unit tests of the validator are untouched, because they construct it with an explicit set, and a test that wants an orphan version row can still insert one directly, since the database will not stop it.
@@ -347,6 +373,12 @@ Feature: Candidate registry
     Then the response status is 400
       And the error enumerates the registered candidates
 
+  Scenario: The rejection message enumerates candidates in ascending order
+    Given the candidates "scala", "ant" and "gradle" are registered
+    When an authorized vendor posts a version of "nonesuch"
+    Then the response status is 400
+      And the error lists "ant, gradle, scala" in that order
+
   Scenario: A non-https website url is rejected
     When an admin registers a candidate with website_url "http://jbang.dev/"
     Then the response status is 400
@@ -372,6 +404,12 @@ Feature: Candidate registry
   Scenario: Deleting an unknown candidate
     When an admin sends DELETE /admin/candidates/nonesuch
     Then the response status is 404
+
+  Scenario: Deleting a candidate stops it being publishable, without a restart
+    Given the candidate "jbang" is registered
+      And "jbang" has no versions
+    When an admin sends DELETE /admin/candidates/jbang
+    Then posting a version of "jbang" to the same instance returns 400
 
   Scenario: A vendor cannot register a candidate
     Given a vendor token authorized for "gradle"
@@ -407,6 +445,15 @@ Feature: Candidate registry
   Scenario: A description containing a line break is rejected
     When an admin registers a candidate whose description spans two lines
     Then the response status is 400
+
+  Scenario: An over-long description is rejected
+    When an admin registers a candidate with a 2001-character description
+    Then the response status is 400
+
+  Scenario: Malformed JSON is a validation failure, not a server error
+    When an admin sends POST /admin/candidates with a body that is not valid JSON
+    Then the response status is 400
+      And the body is a ValidationErrorResponse
 ```
 
 ## Out of Scope
@@ -430,12 +477,17 @@ Feature: Candidate registry
 - [ ] The derived default is computed in a single query, not one query per candidate
 - [ ] `POST /admin/candidates` registers a candidate and returns `201`; re-posting an existing candidate updates it and returns `200`
 - [ ] `POST /admin/candidates` returns `400` with accumulated failures for a blank field, a non-`https` `website_url`, or an identifier failing `^[a-z][a-z0-9]*$`
+- [ ] `POST /admin/candidates` returns `400` for a `candidate` over 20 characters, a `name` over 100, a `description` over 2000, or a `website_url` over 500
+- [ ] Malformed JSON on `POST /admin/candidates` returns `400` `ValidationErrorResponse`, not `500`
+- [ ] `201` versus `200` is decided by the upsert itself, not by a preceding existence check
 - [ ] `DELETE /admin/candidates/{candidate}` returns `200` and removes a candidate with no versions
 - [ ] `DELETE /admin/candidates/{candidate}` returns `409` when the candidate has versions, and `404` when it does not exist
 - [ ] Both admin routes return `401` for anonymous, vendor, and expired tokens
 - [ ] `POST /versions` accepts a candidate registered through the API without a restart, and rejects an unregistered one with `400`
 - [ ] `src/main/resources/candidates.txt` and `CandidateLoader` no longer exist
 - [ ] `V20` creates an empty `candidates` table and is the only migration this feature adds
+- [ ] `V20` is the highest migration in the tree when it merges, with no lower-numbered migration still pending
+- [ ] `created_at` and `last_updated_at` are `TIMESTAMPTZ`, and `CandidateAdminDto` renders them as ISO-8601 instants without assuming a server zone
 - [ ] No constraint is added to `versions` or `version_tags`, and no migration takes a lock on either
 - [ ] A single boot applies `V20` and starts cleanly against a database already carrying versions and version tags
 - [ ] A `versions` row referencing an unregistered candidate neither blocks startup nor appears in `GET /candidates`
@@ -449,8 +501,12 @@ Feature: Candidate registry
 - [ ] `VersionRequestValidator.validate` and `validateRequest` remain synchronous
 - [ ] The registry is not loaded once for the process lifetime: a candidate registered through `POST /admin/candidates` is publishable without a restart
 - [ ] The registry refreshes on a TTL as well as on write, so an instance that did not serve the write picks the candidate up within the TTL
+- [ ] `DELETE /admin/candidates/{candidate}` refreshes the registry in the serving process, so the deleted candidate stops being publishable there without waiting for the TTL
+- [ ] The refresh interval is read from `application.conf` and defaults to five minutes; no Kotlin literal duplicates it
+- [ ] No test asserts that the delete `409` serialises against a concurrent `POST /versions`; rule 13 records that window as accepted
 - [ ] A registry refresh failure keeps serving the last good set rather than rejecting valid publishes
 - [ ] `POST /versions` returns `500`, not `400`, when the registry has never loaded successfully
+- [ ] `InvalidCandidateError` enumerates the registry sorted ascending, asserted on the order rather than only on the `"Allowed values:"` prefix
 - [ ] `POST /admin/candidates` rejects a description carrying a non-ASCII character, a control character, a line break, or a run of consecutive spaces
 - [ ] `POST /admin/candidates` supports a re-runnable backfill: registering the same candidate twice is an upsert, not a conflict, and the full set is readable back through `GET /candidates`
 - [ ] Both admin routes respond with exactly one `Cache-Control`: `headers.getAll("Cache-Control")` is `["no-store"]`, and no `Expires` is sent
