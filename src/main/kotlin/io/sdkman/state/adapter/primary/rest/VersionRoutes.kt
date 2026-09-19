@@ -29,9 +29,13 @@ fun Route.versionReadRoutes(
     appConfig: AppConfig,
 ) {
     install(CachingHeaders) {
-        options { _, content ->
+        options { call, content ->
+            // The plugin appends its headers, so a route that already declared its own
+            // Cache-Control (no-store on the admin routes) must not also get max-age.
+            val declaredCacheControl = call.response.headers[HttpHeaders.CacheControl].toOption()
             content.contentType
                 .toOption()
+                .filter { declaredCacheControl.isNone() }
                 .map { it.withoutParameters() }
                 .filter { it == ContentType.Application.Json }
                 .map {
