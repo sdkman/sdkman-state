@@ -8,6 +8,7 @@ import arrow.core.some
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
+import io.sdkman.state.domain.model.CandidateRegistrationResult
 import io.sdkman.state.domain.repository.CandidateRepository
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -20,6 +21,7 @@ import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
+import java.sql.Connection
 import java.sql.ResultSet
 
 internal object CandidatesTable : Table(name = "candidates") {
@@ -37,8 +39,24 @@ class PostgresCandidateRepository : CandidateRepository {
     private companion object {
         const val LTS_TAG = "lts"
 
+        val UPSERT_SQL =
+            """
+            INSERT INTO candidates (candidate, name, description, website_url, created_at, last_updated_at)
+            VALUES (?, ?, ?, ?, NOW(), NOW())
+            ON CONFLICT (candidate) DO UPDATE SET
+                name = EXCLUDED.name,
+                description = EXCLUDED.description,
+                website_url = EXCLUDED.website_url,
+                last_updated_at = NOW()
+            RETURNING *, (xmax = 0) AS is_new
+            """.trimIndent()
+
+        const val DELETE_SQL = "DELETE FROM candidates WHERE candidate = ? RETURNING *"
+
         val PLATFORM_RESOLUTION_ORDER = listOf("UNIVERSAL", "LINUX_X64")
     }
+
+    private fun connection(): Connection = TransactionManager.current().connection.connection as Connection
 
     private fun ResultRow.toCandidate(): Candidate =
         Candidate(
@@ -93,34 +111,25 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    override suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, Pair<Candidate, Boolean>> =
+    private fun ResultSet.toRegistrationResult(): CandidateRegistrationResult =
+        when {
+            getBoolean("is_new") -> CandidateRegistrationResult.Registered(toCandidate())
+            else -> CandidateRegistrationResult.Updated(toCandidate())
+        }
+
+    override suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, CandidateRegistrationResult> =
         Either
             .catch {
                 dbQuery {
-                    val conn = TransactionManager.current().connection.connection as java.sql.Connection
+                    connection().prepareStatement(UPSERT_SQL).use { statement ->
+                        statement.setString(1, registration.candidate)
+                        statement.setString(2, registration.name)
+                        statement.setString(3, registration.description)
+                        statement.setString(4, registration.websiteUrl)
 
-                    val sql =
-                        """
-                        INSERT INTO candidates (candidate, name, description, website_url, created_at, last_updated_at)
-                        VALUES (?, ?, ?, ?, NOW(), NOW())
-                        ON CONFLICT (candidate) DO UPDATE SET
-                            name = EXCLUDED.name,
-                            description = EXCLUDED.description,
-                            website_url = EXCLUDED.website_url,
-                            last_updated_at = NOW()
-                        RETURNING *, (xmax = 0) AS is_new
-                        """.trimIndent()
-
-                    conn.prepareStatement(sql).use { stmt ->
-                        stmt.setString(1, registration.candidate)
-                        stmt.setString(2, registration.name)
-                        stmt.setString(3, registration.description)
-                        stmt.setString(4, registration.websiteUrl)
-
-                        val rs = stmt.executeQuery()
-                        rs.next()
-
-                        Pair(rs.toCandidate(), rs.getBoolean("is_new"))
+                        val resultSet = statement.executeQuery()
+                        resultSet.next()
+                        resultSet.toRegistrationResult()
                     }
                 }
             }.mapLeft { error ->
@@ -134,15 +143,11 @@ class PostgresCandidateRepository : CandidateRepository {
         Either
             .catch {
                 dbQuery {
-                    val conn = TransactionManager.current().connection.connection as java.sql.Connection
+                    connection().prepareStatement(DELETE_SQL).use { statement ->
+                        statement.setString(1, candidate)
 
-                    val sql = "DELETE FROM candidates WHERE candidate = ? RETURNING *"
-
-                    conn.prepareStatement(sql).use { stmt ->
-                        stmt.setString(1, candidate)
-
-                        val rs = stmt.executeQuery()
-                        if (rs.next()) rs.toCandidate().some() else none()
+                        val resultSet = statement.executeQuery()
+                        if (resultSet.next()) resultSet.toCandidate().some() else none()
                     }
                 }
             }.mapLeft { error ->
