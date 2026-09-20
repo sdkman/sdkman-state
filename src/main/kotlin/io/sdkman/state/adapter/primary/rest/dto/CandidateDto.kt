@@ -6,6 +6,7 @@ import arrow.core.Option
 import arrow.core.none
 import arrow.core.serialization.OptionSerializer
 import io.sdkman.state.domain.model.Candidate
+import io.sdkman.state.domain.model.ListedCandidate
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -55,13 +56,13 @@ data class CandidateConflictResponse(
     val versionCount: Long,
 )
 
-fun Candidate.toDto(default: Option<String>): CandidateDto =
+fun ListedCandidate.toDto(): CandidateDto =
     CandidateDto(
-        candidate = candidate,
-        name = name,
-        description = description,
-        websiteUrl = websiteUrl,
-        defaultVersion = default,
+        candidate = candidate.candidate,
+        name = candidate.name,
+        description = candidate.description,
+        websiteUrl = candidate.websiteUrl,
+        defaultVersion = defaultVersion,
     )
 
 fun Candidate.toAdminDto(): CandidateAdminDto =

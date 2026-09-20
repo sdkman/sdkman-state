@@ -5,13 +5,14 @@ import arrow.core.Option
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
+import io.sdkman.state.domain.model.CandidateRegistrationResult
 
 interface CandidateRepository {
     suspend fun findAll(): Either<DatabaseFailure, List<Candidate>>
 
     suspend fun find(candidate: String): Either<DatabaseFailure, Option<Candidate>>
 
-    suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, Pair<Candidate, Boolean>>
+    suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, CandidateRegistrationResult>
 
     suspend fun delete(candidate: String): Either<DatabaseFailure, Option<Candidate>>
 
