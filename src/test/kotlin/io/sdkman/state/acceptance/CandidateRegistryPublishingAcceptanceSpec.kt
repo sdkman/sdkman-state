@@ -28,6 +28,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
         should("accept a version for a candidate that the registry does not hold") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: a clean database, so the registry holds no candidate at all
                     val version =
                         Version(
                             candidate = "gradle",
@@ -38,6 +39,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             distribution = none(),
                         )
 
+                    // when: a vendor scoped to gradle publishes it
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -45,6 +47,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             bearerAuth(JwtTestSupport.vendorToken(candidates = listOf("gradle")))
                         }
 
+                    // then: the publish path never consults the registry (rules 1 and 13)
                     response.status shouldBe HttpStatusCode.NoContent
                 }
             }
@@ -53,6 +56,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
         should("refuse a version for a registered candidate that the allow-list omits") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: nonesuch is registered, which the 400 below would pass vacuously without
                     val registration =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -71,6 +75,7 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             distribution = none(),
                         )
 
+                    // when: an admin publishes a version for it
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -78,16 +83,19 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a registry row authorises nothing; candidates.txt still decides
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
         }
 
         should("name gradle in the publish allow-list") {
+            // then: the accepted publish above turns on the file, not on a registry row
             CandidateLoader.allowedCandidates shouldContain "gradle"
         }
 
         should("omit nonesuch from the publish allow-list") {
+            // then: the refused publish above turns on the file, not on a missing registry row
             CandidateLoader.allowedCandidates shouldNotContain "nonesuch"
         }
     })

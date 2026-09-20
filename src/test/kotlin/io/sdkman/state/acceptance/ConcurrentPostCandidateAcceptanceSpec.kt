@@ -55,8 +55,10 @@ class ConcurrentPostCandidateAcceptanceSpec :
         should("answer 201 exactly once when the same new candidate is posted concurrently") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: two admins register the same unregistered candidate at the same time
                     val statuses = postConcurrently()
 
+                    // then: only the caller whose insert actually created the row is told 201
                     withClue("statuses were $statuses") {
                         statuses.count { it == HttpStatusCode.Created } shouldBe 1
                     }
@@ -67,8 +69,10 @@ class ConcurrentPostCandidateAcceptanceSpec :
         should("answer 200 to the other caller of a concurrent double post") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: two admins register the same unregistered candidate at the same time
                     val statuses = postConcurrently()
 
+                    // then: the loser of the race updates the row it lost to, and is told so
                     withClue("statuses were $statuses") {
                         statuses.count { it == HttpStatusCode.OK } shouldBe 1
                     }
@@ -79,10 +83,13 @@ class ConcurrentPostCandidateAcceptanceSpec :
         should("list a concurrently registered candidate once") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: two admins register the same unregistered candidate at the same time
                     postConcurrently()
 
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the upsert collapsed both writes onto a single registry row
                     val entries = response.bodyAsText().candidateEntries()
                     val identifiers = entries.map { it.getValue("candidate").jsonPrimitive.content }
                     identifiers.count { it == "jbang" } shouldBe 1

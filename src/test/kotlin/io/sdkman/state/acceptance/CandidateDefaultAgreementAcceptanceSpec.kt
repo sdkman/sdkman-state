@@ -38,10 +38,14 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 )
 
             withCleanDatabase {
+                // given: a retired gradle row the lts tag still points at — the window the java
+                // supersession pass leaves open, where the two reads must not disagree
                 val versionId = insertVersionWithId(version)
                 insertTag("gradle", "lts", none(), Platform.UNIVERSAL, versionId)
 
                 withTestApplication {
+                    // given: gradle registered over the admin route, so the comparison runs
+                    // against a row the service itself wrote
                     client
                         .post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -55,6 +59,7 @@ class CandidateDefaultAgreementAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.Created
 
+                    // when: the tag route resolves lts at the platform the default prefers
                     val tagResponse = client.get("/versions/gradle/tags/lts?platform=UNIVERSAL")
                     tagResponse.status shouldBe HttpStatusCode.OK
                     val resolved =
@@ -63,6 +68,7 @@ class CandidateDefaultAgreementAcceptanceSpec :
                             .getValue("version")
                             .jsonPrimitive.content
 
+                    // then: the listing derives the very same version as its default
                     val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
                     val gradleEntry = listing.map { it.jsonObject }.single()
                     val derived = gradleEntry["default"].toOption().map { it.jsonPrimitive.content }
