@@ -67,9 +67,12 @@ class GetCandidatesAcceptanceSpec :
 
         should("return an empty array when no candidate is registered") {
             withCleanDatabase {
+                // given: an empty registry, which is the state the table ships in
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the listing is empty rather than an error
                     response.status shouldBe HttpStatusCode.OK
                     response.bodyAsText().candidateEntries() shouldBe emptyList()
                 }
@@ -78,6 +81,7 @@ class GetCandidatesAcceptanceSpec :
 
         should("list every registered candidate ascending by identifier") {
             withCleanDatabase {
+                // given: three candidates registered out of order
                 insertCandidates(
                     registrationOf("gradle"),
                     registrationOf("scala"),
@@ -85,8 +89,10 @@ class GetCandidatesAcceptanceSpec :
                 )
 
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: ascending by identifier, which is part of the public contract
                     response.bodyAsText().candidateEntries().identifiers() shouldBe listOf("ant", "gradle", "scala")
                 }
             }
@@ -94,12 +100,15 @@ class GetCandidatesAcceptanceSpec :
 
         should("derive the default of a candidate from its lts tag on UNIVERSAL") {
             withCleanDatabase {
+                // given: a registered candidate whose UNIVERSAL row carries the lts tag
                 insertCandidates(registrationOf("gradle"))
                 insertVersionTaggedLts("gradle", "8.14", Platform.UNIVERSAL)
 
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the default is derived from `version_tags`, never stored
                     response.bodyAsText().candidateEntries().defaultOf("gradle") shouldBe "8.14".some()
                 }
             }
@@ -107,6 +116,8 @@ class GetCandidatesAcceptanceSpec :
 
         should("fall back to the LINUX_X64 lts tag when no UNIVERSAL row is tagged") {
             withCleanDatabase {
+                // given: an untagged UNIVERSAL row alongside the tagged LINUX_X64 one, separating
+                // "no UNIVERSAL row tagged lts" from "no UNIVERSAL row at all"
                 insertCandidates(registrationOf("kuml"))
                 insertVersionWithId(
                     Version(
@@ -120,8 +131,10 @@ class GetCandidatesAcceptanceSpec :
                 insertVersionTaggedLts("kuml", "0.20.5", Platform.LINUX_X64)
 
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the second platform of the resolution order answers
                     response.bodyAsText().candidateEntries().defaultOf("kuml") shouldBe "0.20.5".some()
                 }
             }
@@ -129,12 +142,16 @@ class GetCandidatesAcceptanceSpec :
 
         should("omit the default of java even when its lts row would otherwise resolve") {
             withCleanDatabase {
+                // given: a java row satisfying every other rule — no distribution, on UNIVERSAL —
+                // so only the by-name exclusion can keep the default away
                 insertCandidates(registrationOf("java"))
                 insertVersionTaggedLts("java", "25.0.4", Platform.UNIVERSAL)
 
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: java is listed — `single` fails if not — with the field absent, not null
                     val javaEntry = response.bodyAsText().candidateEntries().single()
                     javaEntry.keys shouldNotContain "default"
                 }
@@ -143,6 +160,8 @@ class GetCandidatesAcceptanceSpec :
 
         should("omit a candidate that has versions but is not registered") {
             withCleanDatabase {
+                // given: a version row for `cuba`, which no registry row names — the normal state
+                // of the service until the backfill runs
                 insertCandidates(registrationOf("gradle"))
                 insertVersions(
                     Version(
@@ -155,8 +174,11 @@ class GetCandidatesAcceptanceSpec :
                 )
 
                 withTestApplication {
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the orphan is inert — unreachable from `sdk list`, still resolvable
+                    // by exact identifier on the download path
                     response.bodyAsText().candidateEntries().identifiers() shouldNotContain "cuba"
                 }
             }
@@ -167,8 +189,10 @@ class GetCandidatesAcceptanceSpec :
                 insertCandidates(registrationOf("gradle"))
 
                 withTestApplication {
+                    // when: a client with no token lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the plugin value arrives alone — the route declares none of its own
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("max-age=600")
                 }
             }

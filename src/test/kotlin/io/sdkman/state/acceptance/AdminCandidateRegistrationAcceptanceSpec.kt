@@ -41,6 +41,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 201 when the candidate is new") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers an unknown candidate
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -48,6 +49,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: the upsert reports a new row
                     response.status shouldBe HttpStatusCode.Created
                 }
             }
@@ -56,14 +58,17 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("list a newly registered candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: an admin registers a candidate
                     client.post("/admin/candidates") {
                         contentType(ContentType.Application.Json)
                         setBody(registrationBody())
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
+                    // when: a client lists the candidates
                     val response = client.get("/candidates")
 
+                    // then: the write reached the table the public read serves
                     response.bodyAsText().candidateEntries().nameOf("jbang") shouldBe "JBang"
                 }
             }
@@ -72,12 +77,14 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 200 when the candidate already exists") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: the candidate is already registered
                     client.post("/admin/candidates") {
                         contentType(ContentType.Application.Json)
                         setBody(registrationBody())
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
+                    // when: an admin posts the same identifier with a new name
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -85,6 +92,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a repeat post updates rather than conflicts
                     response.status shouldBe HttpStatusCode.OK
                 }
             }
@@ -93,18 +101,21 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("update the listed metadata when the candidate is re-registered") {
             withCleanDatabase {
                 withTestApplication {
+                    // given: the candidate is already registered under its original name
                     client.post("/admin/candidates") {
                         contentType(ContentType.Application.Json)
                         setBody(registrationBody())
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
+                    // when: an admin posts the same identifier with a new name
                     client.post("/admin/candidates") {
                         contentType(ContentType.Application.Json)
                         setBody(registrationBody(name = "JBang!"))
                         bearerAuth(JwtTestSupport.adminToken())
                     }
 
+                    // then: `single` in `nameOf` fails if the upsert inserted a duplicate
                     val response = client.get("/candidates")
                     response.bodyAsText().candidateEntries().nameOf("jbang") shouldBe "JBang!"
                 }
@@ -114,6 +125,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject a website_url that is not https") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate with a plain http website
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -121,6 +133,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: the https rule covers `website_url` too
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -129,6 +142,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject an uppercase candidate identifier") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers `JBang` rather than `jbang`
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -136,6 +150,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: identifiers are case-sensitive, so this is not a spelling of `jbang`
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -144,6 +159,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject an over-long description") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate described in 2001 characters
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -151,6 +167,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: the bound is refused at the route, not at the column
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -159,6 +176,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject a description carrying a trademark symbol") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate described with a non-ASCII codepoint
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -166,6 +184,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a non-ASCII codepoint is mojibake in `sdk list`'s terminal box
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -174,6 +193,8 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject a description spanning two lines") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: a description carries a line break. The `\n` is a JSON escape, so
+                    // the decoded string holds a real newline rather than two characters
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -181,6 +202,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a description is a single paragraph
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -189,6 +211,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("reject a description carrying consecutive spaces") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate described with a double space
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -196,6 +219,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a run of spaces is refused on write rather than normalised
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -204,6 +228,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 400 for malformed JSON") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin posts a body that is not valid JSON
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -211,6 +236,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: a bad body is an ordinary validation failure, not a `500`
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
@@ -219,6 +245,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer a ValidationErrorResponse body for malformed JSON") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin posts a body that is not valid JSON
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -226,6 +253,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: the strict decode is itself the assertion that this is no `ErrorResponse`
                     val body = Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
                     body.failures.map { it.field } shouldBe listOf("request")
                 }
@@ -235,12 +263,14 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 401 to an anonymous client") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: a client with no token registers a candidate
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
                             setBody(registrationBody())
                         }
 
+                    // then: the route is admin-only
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
@@ -249,6 +279,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 401 to a vendor token") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: a vendor authorised for a candidate registers one
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -256,6 +287,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.vendorToken(candidates = listOf("jbang")))
                         }
 
+                    // then: the token authenticates, so this refusal is the route's role check
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
@@ -264,6 +296,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("answer 401 to an expired token") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin presents a token that has expired
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -271,6 +304,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.expiredToken())
                         }
 
+                    // then: the admin role in the claims does not outlive the expiry
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
@@ -279,6 +313,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("return exactly one Cache-Control value of no-store") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -286,6 +321,8 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: asserted over all values — reading by name would return the first
+                    // and hide a `max-age` appended after it
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
                 }
             }
@@ -294,6 +331,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
         should("return no Expires header") {
             withCleanDatabase {
                 withTestApplication {
+                    // when: an admin registers a candidate
                     val response =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -301,6 +339,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
+                    // then: nothing makes an admin write cacheable, not even a past expiry
                     response.headers[HttpHeaders.Expires].toOption() shouldBe none()
                 }
             }
