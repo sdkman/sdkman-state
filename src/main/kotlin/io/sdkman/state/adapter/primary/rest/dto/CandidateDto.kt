@@ -14,11 +14,6 @@ import java.time.format.DateTimeFormatter
 
 private val ISO_FORMATTER: DateTimeFormatter = DateTimeFormatter.ISO_INSTANT
 
-/**
- * Every field is required by the contract, yet modelled as [Option] so a missing one reaches
- * [io.sdkman.state.application.validation.CandidateRequestValidator] as an accumulated validation
- * failure rather than a deserialisation exception, which would surface as a `500`.
- */
 @Serializable
 data class CreateCandidateRequest(
     val candidate: Option<String> = none(),
@@ -28,7 +23,6 @@ data class CreateCandidateRequest(
     val websiteUrl: Option<String> = none(),
 )
 
-/** [defaultVersion] is derived per request from `version_tags` and never stored. */
 @Serializable
 data class CandidateDto(
     val candidate: String,
@@ -40,8 +34,6 @@ data class CandidateDto(
     val defaultVersion: Option<String> = none(),
 )
 
-/** The JSON field is `updated_at`, matching `VendorResponse`; the column behind it is
- * `last_updated_at`, matching `versions`. The two conventions disagree by design. */
 @Serializable
 data class CandidateAdminDto(
     val candidate: String,
@@ -63,7 +55,6 @@ data class CandidateConflictResponse(
     val versionCount: Long,
 )
 
-/** The default is passed in rather than read off [Candidate]: it is not stored on the row. */
 fun Candidate.toDto(default: Option<String>): CandidateDto =
     CandidateDto(
         candidate = candidate,

@@ -15,10 +15,7 @@ interface CandidateRepository {
 
     suspend fun delete(candidate: String): Either<DatabaseFailure, Option<Candidate>>
 
-    /** Counts every version under [candidate], visible or not. No foreign key stands behind
-     * the delete guard, so this count *is* the guard. */
     suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long>
 
-    /** Resolves every candidate's `lts` default in one query, keyed by candidate. */
     suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>>
 }

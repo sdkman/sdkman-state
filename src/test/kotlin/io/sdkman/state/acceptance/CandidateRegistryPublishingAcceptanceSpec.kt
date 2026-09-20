@@ -17,28 +17,9 @@ import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * End-to-end cover of the publish path against the registry.
- *
- * `POST /versions` accepts a candidate if and only if `candidates.txt` names it, and the registry
- * table takes no part in that decision (business rule 1). The two are allowed to disagree in both
- * directions, so both directions are proven here: `gradle` publishes with the registry empty, and
- * `nonesuch` is still refused after it is registered.
- *
- * `nonesuch` is deliberately not a real candidate. The refused direction needs a name the
- * allow-list omits, and the obvious choices are the names it omits *by accident* — `jpx` and
- * `ksrc`. Those are exactly the names a future commit fixes: `jpx` was added to the file
- * upstream and broke this spec. A synthetic identifier cannot be adopted, so the premise holds
- * however the file is edited. The assertion below guards it rather than assuming it.
- *
- * Rule 13 makes the first of those the *normal* state rather than an edge case — the table ships
- * empty while `versions` already holds rows, so every publish until the backfill runs names a
- * candidate the registry does not hold.
- */
 @Tags("acceptance")
 class CandidateRegistryPublishingAcceptanceSpec :
     ShouldSpec({
-
         fun registrationBody(candidate: String): String =
             """
             {"candidate":"$candidate","name":"Nonesuch","description":"A candidate the allow-list does not name.","website_url":"https://nonesuch.example.com/"}
@@ -47,7 +28,6 @@ class CandidateRegistryPublishingAcceptanceSpec :
         should("accept a version for a candidate that the registry does not hold") {
             withCleanDatabase {
                 withTestApplication {
-                    // given: a clean database, so the registry holds no candidate at all
                     val version =
                         Version(
                             candidate = "gradle",
@@ -58,7 +38,6 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             distribution = none(),
                         )
 
-                    // when: a vendor scoped to gradle publishes it
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -66,7 +45,6 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             bearerAuth(JwtTestSupport.vendorToken(candidates = listOf("gradle")))
                         }
 
-                    // then: the publish path never consults the registry (rules 1 and 13)
                     response.status shouldBe HttpStatusCode.NoContent
                 }
             }
@@ -75,7 +53,6 @@ class CandidateRegistryPublishingAcceptanceSpec :
         should("refuse a version for a registered candidate that the allow-list omits") {
             withCleanDatabase {
                 withTestApplication {
-                    // given: nonesuch is registered, which the 400 below would pass vacuously without
                     val registration =
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -94,7 +71,6 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             distribution = none(),
                         )
 
-                    // when: an admin publishes a version for it
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -102,19 +78,16 @@ class CandidateRegistryPublishingAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
-                    // then: a registry row authorises nothing; candidates.txt still decides
                     response.status shouldBe HttpStatusCode.BadRequest
                 }
             }
         }
 
         should("name gradle in the publish allow-list") {
-            // then: the accepted publish above turns on the file, not on a registry row
             CandidateLoader.allowedCandidates shouldContain "gradle"
         }
 
         should("omit nonesuch from the publish allow-list") {
-            // then: the refused publish above turns on the file, not on a missing registry row
             CandidateLoader.allowedCandidates shouldNotContain "nonesuch"
         }
     })

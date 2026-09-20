@@ -37,8 +37,7 @@ class PostgresCandidateRepository : CandidateRepository {
     private companion object {
         const val LTS_TAG = "lts"
 
-        // Resolution order, not merely a sort: no platform outside these two is consulted.
-        val DEFAULT_PLATFORMS = listOf("UNIVERSAL", "LINUX_X64")
+        val PLATFORM_RESOLUTION_ORDER = listOf("UNIVERSAL", "LINUX_X64")
     }
 
     private fun ResultRow.toCandidate(): Candidate =
@@ -61,7 +60,6 @@ class PostgresCandidateRepository : CandidateRepository {
             lastUpdatedAt = getTimestamp("last_updated_at").toInstant(),
         )
 
-    // Ascending by identifier: the order is part of the public contract.
     override suspend fun findAll(): Either<DatabaseFailure, List<Candidate>> =
         Either
             .catch {
@@ -95,8 +93,6 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // `(xmax = 0)` tells an insert from an update without a preceding SELECT, so two concurrent
-    // registrations of one new candidate still yield exactly one 201.
     override suspend fun upsert(registration: CandidateRegistration): Either<DatabaseFailure, Pair<Candidate, Boolean>> =
         Either
             .catch {
@@ -134,7 +130,6 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // One statement, so the caller cannot race a concurrent delete between a SELECT and a DELETE.
     override suspend fun delete(candidate: String): Either<DatabaseFailure, Option<Candidate>> =
         Either
             .catch {
@@ -157,7 +152,6 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // Visible or not: the delete guard asks what was published, not what is currently listed.
     override suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long> =
         Either
             .catch {
@@ -174,13 +168,6 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    // One query for the whole registry, never one per candidate.
-    //
-    // The filters mirror `PostgresVersionRepository.findByTag` exactly, and must: both tables
-    // carry a `distribution` column, so reading `version_tags.distribution` rather than the
-    // *version's* would make this endpoint and `GET /versions/{c}/tags/lts` disagree about the
-    // same candidate. `visible` goes unfiltered for the same reason -- the two must agree even
-    // while a retired row still holds the tag.
     override suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>> =
         Either
             .catch {
@@ -194,11 +181,11 @@ class PostgresCandidateRepository : CandidateRepository {
                         .where {
                             (VersionTagsTable.tag eq LTS_TAG) and
                                 VersionsTable.distribution.isNull() and
-                                (VersionTagsTable.platform inList DEFAULT_PLATFORMS)
+                                (VersionTagsTable.platform inList PLATFORM_RESOLUTION_ORDER)
                         }.groupBy { it[VersionTagsTable.candidate] }
                         .mapValues { (_, tagged) ->
                             tagged
-                                .sortedBy { DEFAULT_PLATFORMS.indexOf(it[VersionTagsTable.platform]) }
+                                .sortedBy { PLATFORM_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.platform]) }
                                 .first()[VersionsTable.version]
                         }
                 }
