@@ -22,11 +22,15 @@
       "name": "Base Environment",
       "data": {
         "base_url": "http://localhost:8080",
-        "username": "testuser",
-        "password": "password123"
+        "admin_email": "admin@sdkman.io",
+        "admin_password": ""
       },
       "dataPropertyOrder": {
-        "&": ["base_url", "username", "password"]
+        "&": [
+          "base_url",
+          "username",
+          "password"
+        ]
       },
       "color": null,
       "isPrivate": false,
@@ -56,7 +60,9 @@
         "base_url": "https://state.sdkman.io"
       },
       "dataPropertyOrder": {
-        "&": ["base_url"]
+        "&": [
+          "base_url"
+        ]
       },
       "color": "#7ecf5a",
       "isPrivate": false,
@@ -130,9 +136,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -143,7 +149,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_get_universal",
@@ -155,7 +162,12 @@
       "description": "GET scala/3.1.0 and verify fields",
       "method": "GET",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "platform",
+          "value": "UNIVERSAL"
+        }
+      ],
       "headers": [
         {
           "name": "Accept",
@@ -195,9 +207,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -208,7 +220,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_platform_version",
@@ -240,9 +253,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -253,7 +266,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_get_platform",
@@ -268,7 +282,7 @@
       "parameters": [
         {
           "name": "platform",
-          "value": "darwinx64"
+          "value": "MAC_X64"
         },
         {
           "name": "distribution",
@@ -314,9 +328,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -327,7 +341,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_visibility",
@@ -359,9 +374,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -372,7 +387,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_get_hidden",
@@ -385,6 +401,10 @@
       "method": "GET",
       "body": {},
       "parameters": [
+        {
+          "name": "platform",
+          "value": "UNIVERSAL"
+        },
         {
           "name": "visible",
           "value": "all"
@@ -429,9 +449,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -442,7 +462,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_tags",
@@ -474,9 +495,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -487,7 +508,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_get_tagged",
@@ -502,7 +524,7 @@
       "parameters": [
         {
           "name": "platform",
-          "value": "linuxx64"
+          "value": "LINUX_X64"
         },
         {
           "name": "distribution",
@@ -548,9 +570,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -561,7 +583,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_delete_tag_21",
@@ -584,9 +607,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 4,
       "isPrivate": false,
@@ -597,7 +620,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_delete_tagged_version",
@@ -620,9 +644,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 5,
       "isPrivate": false,
@@ -633,7 +657,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_tag_conflict",
@@ -665,9 +690,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -678,7 +703,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_delete_conflict_fails",
@@ -701,9 +727,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 2,
       "isPrivate": false,
@@ -714,7 +740,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 409', () => {\n  insomnia.expect(insomnia.response.code).to.equal(409);\n});\n\ninsomnia.test('Response contains conflict details', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Conflict');\n  insomnia.expect(body.message).to.contain('Cannot delete version with active tags');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n});"
+      "afterResponseScript": "insomnia.test('Status is 409', () => {\n  insomnia.expect(insomnia.response.code).to.equal(409);\n});\n\ninsomnia.test('Response contains conflict details', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Conflict');\n  insomnia.expect(body.message).to.contain('Cannot delete version with active tags');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_delete_conflict_tag",
@@ -737,9 +764,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -750,7 +777,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_delete_conflict_cleanup",
@@ -773,9 +801,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 4,
       "isPrivate": false,
@@ -786,7 +814,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_idempotency",
@@ -818,9 +847,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -831,7 +860,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_idempotent_create2",
@@ -854,9 +884,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 2,
       "isPrivate": false,
@@ -867,7 +897,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_idempotent_update",
@@ -890,9 +921,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -903,7 +934,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_idempotent_verify",
@@ -915,7 +947,12 @@
       "description": "GET maven/3.9.0 and verify URL was updated",
       "method": "GET",
       "body": {},
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "platform",
+          "value": "UNIVERSAL"
+        }
+      ],
       "headers": [
         {
           "name": "Accept",
@@ -955,9 +992,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 5,
       "isPrivate": false,
@@ -968,7 +1005,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});"
+      "afterResponseScript": "insomnia.test('Status is 204', () => {\n  insomnia.expect(insomnia.response.code).to.equal(204);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "fld_validation_errors",
@@ -1000,9 +1038,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 1,
       "isPrivate": false,
@@ -1013,7 +1051,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('Distribution');\n});"
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('Distribution');\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_validation_missing_fields",
@@ -1036,9 +1075,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 2,
       "isPrivate": false,
@@ -1049,7 +1088,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation errors for required fields', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('candidate');\n  insomnia.expect(body).to.contain('version');\n  insomnia.expect(body).to.contain('platform');\n  insomnia.expect(body).to.contain('url');\n});"
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation errors for required fields', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n  insomnia.expect(body).to.contain('candidate');\n  insomnia.expect(body).to.contain('version');\n  insomnia.expect(body).to.contain('platform');\n  insomnia.expect(body).to.contain('url');\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_validation_invalid_tag",
@@ -1072,9 +1112,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 3,
       "isPrivate": false,
@@ -1085,7 +1125,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n});"
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Response contains validation error', () => {\n  const body = insomnia.response.body;\n  insomnia.expect(body).to.contain('Validation failed');\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_validation_no_auth_post",
@@ -1140,9 +1181,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 5,
       "isPrivate": false,
@@ -1153,7 +1194,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});"
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_validation_no_auth_delete",
@@ -1208,9 +1250,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 7,
       "isPrivate": false,
@@ -1221,7 +1263,8 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});"
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     },
     {
       "_id": "req_validation_delete_tag_no_auth",
@@ -1276,9 +1319,9 @@
         }
       ],
       "authentication": {
-        "type": "basic",
-        "username": "{{ _.username }}",
-        "password": "{{ _.password }}"
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
       },
       "metaSortKey": 9,
       "isPrivate": false,
@@ -1289,7 +1332,469 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});\n\ninsomnia.test('Response contains not found message', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Not Found');\n  insomnia.expect(body.message).to.contain('nonexistent');\n});"
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});\n\ninsomnia.test('Response contains not found message', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Not Found');\n  insomnia.expect(body.message).to.contain('nonexistent');\n});",
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "fld_authenticate",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "0. Authenticate",
+      "description": "Obtain a JWT. Every authenticated request also logs in via its own pre-request script, so this is for manual use.",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_login",
+      "parentId": "fld_authenticate",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/login",
+      "name": "POST Login",
+      "description": "Authenticate as admin and store the JWT as bearerToken",
+      "method": "POST",
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('A token is returned', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.token).to.be.a('string');\n  insomnia.variables.set('bearerToken', body.token);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.admin_email }}\",\n  \"password\": \"{{ _.admin_password }}\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {}
+    },
+    {
+      "_id": "fld_candidate_registry",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "9. Test Candidate Registry",
+      "description": "Self-contained registry lifecycle using the synthetic candidate 'insomniatest', which exists in no environment and is removed by the final step.",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_cand_register",
+      "parentId": "fld_candidate_registry",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "1. Register Candidate",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 201', () => {\n  insomnia.expect(insomnia.response.code).to.equal(201);\n});\n\ninsomnia.test('Body is the registered record', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('insomniatest');\n  insomnia.expect(body.name).to.equal('Insomnia Test');\n  insomnia.expect(body.created_at).to.be.a('string');\n  insomnia.expect(body.updated_at).to.be.a('string');\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"A synthetic candidate used by the Insomnia suite.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_upsert",
+      "parentId": "fld_candidate_registry",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "2. Re-register Candidate (Upsert)",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200, not 201', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Metadata is updated in place', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('insomniatest');\n  insomnia.expect(body.name).to.equal('Insomnia Test Renamed');\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test Renamed\",\n  \"description\": \"A synthetic candidate used by the Insomnia suite.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_list",
+      "parentId": "fld_candidate_registry",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/candidates",
+      "name": "3. Verify Candidate in Registry",
+      "description": "",
+      "method": "GET",
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('The registered candidate is listed with its updated name', () => {\n  const body = JSON.parse(insomnia.response.body);\n  const entry = body.find(c => c.candidate === 'insomniatest');\n  insomnia.expect(entry).to.not.equal(undefined);\n  insomnia.expect(entry.name).to.equal('Insomnia Test Renamed');\n  insomnia.expect(entry.website_url).to.equal('https://insomnia.example.com/');\n});\n\ninsomnia.test('Rows are ascending by candidate', () => {\n  const names = JSON.parse(insomnia.response.body).map(c => c.candidate);\n  insomnia.expect(names).to.deep.equal([...names].sort());\n});\n\ninsomnia.test('java never carries a default', () => {\n  const java = JSON.parse(insomnia.response.body).find(c => c.candidate === 'java');\n  if (java !== undefined) {\n    insomnia.expect(java.default).to.equal(undefined);\n  }\n});",
+      "authentication": {}
+    },
+    {
+      "_id": "req_cand_delete",
+      "parentId": "fld_candidate_registry",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates/insomniatest",
+      "name": "4. Cleanup Candidate",
+      "description": "",
+      "method": "DELETE",
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Body is the removed record', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('insomniatest');\n});",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_gone",
+      "parentId": "fld_candidate_registry",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates/insomniatest",
+      "name": "5. Verify Candidate Removed",
+      "description": "",
+      "method": "DELETE",
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "fld_candidate_errors",
+      "parentId": "wrk_sdkman_state",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "name": "10. Candidate Validation Errors",
+      "description": "Standalone rejection cases. Every request here is refused, so nothing is written and no cleanup is needed.",
+      "_type": "request_group"
+    },
+    {
+      "_id": "req_cand_err_http",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Non-HTTPS Website URL -> 400",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"A synthetic candidate used by the Insomnia suite.\",\n  \"website_url\": \"http://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_err_upper",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Uppercase Identifier -> 400",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 2,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"InsomniaTest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"A synthetic candidate used by the Insomnia suite.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_err_ascii",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Non-ASCII Description -> 400",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 3,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"Apache Tomcat\\u00ae software.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_err_newline",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Description With Line Break -> 400",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 4,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"First line.\\nSecond line.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_err_json",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Malformed JSON -> 400",
+      "description": "Malformed JSON is a validation failure, never a deserialisation 500",
+      "method": "POST",
+      "metaSortKey": 5,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 400', () => {\n  insomnia.expect(insomnia.response.code).to.equal(400);\n});\n\ninsomnia.test('Body is a ValidationErrorResponse, not a server error', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.error).to.equal('Validation failed');\n  insomnia.expect(body.failures).to.be.an('array');\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{ \"candidate\": \"insomniatest\", "
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
+    },
+    {
+      "_id": "req_cand_err_noauth",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates",
+      "name": "POST Without Auth -> 401",
+      "description": "",
+      "method": "POST",
+      "metaSortKey": 6,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 401', () => {\n  insomnia.expect(insomnia.response.code).to.equal(401);\n});",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"candidate\": \"insomniatest\",\n  \"name\": \"Insomnia Test\",\n  \"description\": \"A synthetic candidate used by the Insomnia suite.\",\n  \"website_url\": \"https://insomnia.example.com/\"\n}"
+      },
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {}
+    },
+    {
+      "_id": "req_cand_err_delnoauth",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates/insomniatest",
+      "name": "DELETE Without Auth -> 401",
+      "description": "",
+      "method": "DELETE",
+      "metaSortKey": 7,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 401', () => {\n  insomnia.expect(insomnia.response.code).to.equal(401);\n});",
+      "authentication": {}
+    },
+    {
+      "_id": "req_cand_err_404",
+      "parentId": "fld_candidate_errors",
+      "modified": 1710403200000,
+      "created": 1710403200000,
+      "url": "{{ _.base_url }}/admin/candidates/nosuchcandidate",
+      "name": "DELETE Unknown Candidate -> 404",
+      "description": "",
+      "method": "DELETE",
+      "metaSortKey": 8,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global",
+      "_type": "request",
+      "afterResponseScript": "insomnia.test('Status is 404', () => {\n  insomnia.expect(insomnia.response.code).to.equal(404);\n});",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.bearerToken }}",
+        "prefix": ""
+      },
+      "preRequestScript": "// Log in once per run. The login rate limiter records every attempt, successful\n// or not, and allows only 5 per minute per IP - a login per request would 429.\nif (!insomnia.variables.get(\"bearerToken\")) {\n  const resp = await new Promise((resolve, reject) => {\n    insomnia.sendRequest(\n      {\n        url: insomnia.variables.get(\"base_url\") + \"/login\",\n        method: \"POST\",\n        header: { \"Content-Type\": \"application/json\" },\n        body: {\n          mode: \"raw\",\n          raw: JSON.stringify({\n            email: insomnia.variables.get(\"admin_email\"),\n            password: insomnia.variables.get(\"admin_password\")\n          })\n        }\n      },\n      (err, resp) => {\n        if (err != null) {\n          reject(err);\n        } else {\n          resolve(resp);\n        }\n      }\n    );\n  });\n\n  insomnia.variables.set(\"bearerToken\", resp.json().token);\n}"
     }
   ]
 }
