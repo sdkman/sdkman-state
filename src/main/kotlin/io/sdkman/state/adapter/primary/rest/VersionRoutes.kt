@@ -29,8 +29,6 @@ fun Route.versionReadRoutes(
     appConfig: AppConfig,
 ) {
     install(CachingHeaders) {
-        // The plugin appends rather than replaces, so a route that already declared its own
-        // `Cache-Control` is skipped here — otherwise it emits two values plus an `Expires`.
         options { call, content ->
             val declaredCacheControl = call.response.headers[HttpHeaders.CacheControl].toOption()
             content.contentType

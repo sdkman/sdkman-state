@@ -45,7 +45,6 @@ import java.sql.Connection
 @Tags("acceptance")
 class HealthCheckAcceptanceSpec :
     ShouldSpec({
-
         should("return SUCCESS status when database is available") {
             withCleanDatabase {
                 withTestApplication {

@@ -35,11 +35,6 @@ fun Application.configureRouting(
     }
 }
 
-/**
- * A second `routing` block rather than an eighth parameter on [configureRouting]. Ktor resolves
- * both against the same routing root, so the read route still inherits the `CachingHeaders`
- * plugin installed by `versionReadRoutes`.
- */
 fun Application.configureCandidateRouting(candidateService: CandidateService) {
     routing {
         candidateReadRoute(candidateService)

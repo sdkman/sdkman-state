@@ -9,7 +9,6 @@ import io.sdkman.state.support.shouldBeRight
 
 class CandidateRequestValidatorSpec :
     ShouldSpec({
-
         fun requestJson(
             candidate: String = "scala",
             name: String = "Scala",
@@ -25,15 +24,11 @@ class CandidateRequestValidatorSpec :
             """.trimIndent()
 
         context("validateRequest") {
-
             should("accept a well-formed registration") {
-                // given: a request satisfying every structural rule
                 val json = requestJson()
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the registration carrying every posted field
                 result shouldBeRight
                     CandidateRegistration(
                         candidate = "scala",
@@ -44,65 +39,50 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject an identifier containing an uppercase letter") {
-                // given: an identifier that breaks `^[a-z][a-z0-9]*$`
                 val json = requestJson(candidate = "Scala")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the identifier-shape error mirroring the table CHECK
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe InvalidCandidateIdentifierError(candidate = "Scala")
             }
 
             should("reject an identifier of 21 characters") {
-                // given: an identifier one character past the 20-character bound
                 val json = requestJson(candidate = "a".repeat(21))
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the length error reporting both bounds
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe FieldTooLongError("candidate", 20, 21)
             }
 
             should("reject a blank name") {
-                // given: a name of whitespace only
                 val json = requestJson(name = "   ")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the empty-field error on `name`
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe EmptyFieldError("name")
             }
 
             should("reject a name of 101 characters") {
-                // given: a name one character past the 100-character bound
                 val json = requestJson(name = "n".repeat(101))
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the length error on `name`
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe FieldTooLongError("name", 100, 101)
             }
 
             should("reject a website url that is not https") {
-                // given: a url on the plain http scheme
                 val json = requestJson(websiteUrl = "http://www.scala-lang.org/")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the url error naming the JSON field the client posted
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe
@@ -110,27 +90,21 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a website url of 501 characters") {
-                // given: a well-formed https url one character past `UrlRules.MAX_LENGTH`
                 val prefix = "https://example.com/"
                 val json = requestJson(websiteUrl = prefix + "u".repeat(501 - prefix.length))
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: the length bound is reported before the pattern is consulted
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe FieldTooLongError("website_url", UrlRules.MAX_LENGTH, 501)
             }
 
             should("reject a description containing a trademark symbol") {
-                // given: a description with a codepoint outside 0x20-0x7E
                 val json = requestJson(description = "Java\\u2122 is a programming language.")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the printable-ASCII rejection
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe
@@ -140,13 +114,10 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a description containing a line break") {
-                // given: a description spanning two lines
                 val json = requestJson(description = "Scala is a language.\\nIt runs on the JVM.")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: the ASCII range check rejects the control character
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe
@@ -156,13 +127,10 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a description containing consecutive spaces") {
-                // given: a description with a double space
                 val json = requestJson(description = "Scala is a  programming language.")
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the consecutive-spaces rejection
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe
@@ -170,26 +138,20 @@ class CandidateRequestValidatorSpec :
             }
 
             should("reject a description of 2001 characters") {
-                // given: a description one character past the 2000-character bound
                 val json = requestJson(description = "d".repeat(2001))
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: returns the length error on `description`
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first() shouldBe FieldTooLongError("description", 2000, 2001)
             }
 
             should("reject a body that is not valid JSON") {
-                // given: a body the decoder cannot parse
                 val json = "not json at all"
 
-                // when: validating the request
                 val result = CandidateRequestValidator.validateRequest(json)
 
-                // then: malformed JSON is one accumulated failure, never a deserialisation 500
                 val errors = result.shouldBeLeft()
                 errors.size shouldBe 1
                 errors.first().shouldBeInstanceOf<DeserializationError>().field shouldBe "request"

@@ -22,21 +22,9 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/**
- * The derived `default` and `GET /versions/{candidate}/tags/lts` must name the *same* version.
- * Each endpoint has its own spec, and both would stay green if the two drifted apart, so the
- * agreement needs a case that reads both and compares.
- *
- * The fixture is `visible = false` on purpose: a default that filtered on visibility would find
- * nothing while the tag route still resolves. The companion trap — reading
- * `version_tags.distribution` rather than `versions.distribution` — needs a row whose two columns
- * disagree, which the write path cannot produce, so it is pinned by
- * `PostgresCandidateDefaultsIntegrationSpec` instead.
- */
 @Tags("acceptance")
 class CandidateDefaultAgreementAcceptanceSpec :
     ShouldSpec({
-
         should("derive the same default as the lts tag route resolves") {
             val version =
                 Version(
@@ -50,14 +38,10 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 )
 
             withCleanDatabase {
-                // given: a retired gradle row the lts tag still points at — the window the java
-                // supersession pass leaves open, where the two reads must not disagree
                 val versionId = insertVersionWithId(version)
                 insertTag("gradle", "lts", none(), Platform.UNIVERSAL, versionId)
 
                 withTestApplication {
-                    // given: gradle registered over the admin route, so the comparison runs
-                    // against a row the service itself wrote
                     client
                         .post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
@@ -71,7 +55,6 @@ class CandidateDefaultAgreementAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.Created
 
-                    // when: the tag route resolves lts at the platform the default prefers
                     val tagResponse = client.get("/versions/gradle/tags/lts?platform=UNIVERSAL")
                     tagResponse.status shouldBe HttpStatusCode.OK
                     val resolved =
@@ -80,7 +63,6 @@ class CandidateDefaultAgreementAcceptanceSpec :
                             .getValue("version")
                             .jsonPrimitive.content
 
-                    // then: the listing derives the very same version as its default
                     val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
                     val gradleEntry = listing.map { it.jsonObject }.single()
                     val derived = gradleEntry["default"].toOption().map { it.jsonPrimitive.content }

@@ -12,8 +12,6 @@ import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.repository.CandidateRepository
 import io.sdkman.state.domain.service.CandidateService
 
-// Excluded from `default`: java's `lts` tag exists once per distribution, so one value would
-// be arbitrary. It still appears in the listing.
 private const val JAVA_CANDIDATE = "java"
 
 class CandidateServiceImpl(

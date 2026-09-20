@@ -31,7 +31,6 @@ import io.sdkman.state.support.withCleanDatabase
 @Tags("acceptance")
 class LoginRateLimitDisabledAcceptanceSpec :
     ShouldSpec({
-
         should("never return 429 when the rate limiter is disabled") {
             withCleanDatabase {
                 // given: an application booted with the rate limiter toggled off
