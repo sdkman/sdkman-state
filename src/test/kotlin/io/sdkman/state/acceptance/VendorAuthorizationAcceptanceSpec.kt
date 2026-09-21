@@ -11,6 +11,7 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
@@ -31,6 +32,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to POST version for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
                     val response =
                         client.post("/versions") {
@@ -47,6 +50,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to DELETE version for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     insertVersions(authorizedVersion)
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
                     val response =
@@ -66,6 +71,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to DELETE tag for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     // given: create version with tags
                     val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
@@ -95,6 +102,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow admin to POST version for any candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -110,6 +119,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor POSTs version for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("kotlin"))
                     val response =
                         client.post("/versions") {
@@ -126,6 +137,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor DELETEs version for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     insertVersions(authorizedVersion)
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("kotlin"))
                     val response =
@@ -145,6 +158,8 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor DELETEs tag for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     // given: create version with tags using admin
                     val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
                     client.post("/versions") {

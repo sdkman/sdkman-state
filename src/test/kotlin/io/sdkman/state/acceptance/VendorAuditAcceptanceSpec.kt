@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.extractTags
+import io.sdkman.state.support.registerCandidates
 import kotlin.time.Duration.Companion.seconds
 
 @Tags("acceptance")
@@ -38,6 +39,8 @@ class VendorAuditAcceptanceSpec :
             withCleanDatabase {
                 // when: POST /versions is called
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -86,6 +89,8 @@ class VendorAuditAcceptanceSpec :
 
                 // when: DELETE /versions is called
                 withTestApplication {
+                    registerCandidates("kotlin")
+
                     val response =
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
@@ -122,6 +127,8 @@ class VendorAuditAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("gradle")
+
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
@@ -154,6 +161,8 @@ class VendorAuditAcceptanceSpec :
                         .now()
 
                 withTestApplication {
+                    registerCandidates("maven")
+
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
@@ -194,6 +203,8 @@ class VendorAuditAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -237,6 +248,8 @@ class VendorAuditAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("scala")
+
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(version.toJsonString())
@@ -271,6 +284,8 @@ class VendorAuditAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -311,6 +326,8 @@ class VendorAuditAcceptanceSpec :
 
                 // when: deleting version with distribution
                 withTestApplication {
+                    registerCandidates("java")
+
                     client.delete("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody("""{"candidate":"java","version":"17.0.0","platform":"LINUX_X64","distribution":"TEMURIN"}""")
