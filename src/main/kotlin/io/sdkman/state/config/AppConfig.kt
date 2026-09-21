@@ -21,6 +21,7 @@ interface AppConfig {
     val jwtExpiry: Int
     val semverishCandidates: Set<String>
     val rateLimitEnabled: Boolean
+    val candidateRefreshIntervalMs: Long
 }
 
 class DefaultAppConfig(
@@ -49,4 +50,6 @@ class DefaultAppConfig(
         config.getCommaSeparatedSet("validation.semverish.candidates")
     override val rateLimitEnabled: Boolean =
         config.property("auth.rateLimit.enabled").getString().toBooleanStrict()
+    override val candidateRefreshIntervalMs: Long =
+        config.property("candidates.refresh.intervalMs").getString().toLong()
 }
