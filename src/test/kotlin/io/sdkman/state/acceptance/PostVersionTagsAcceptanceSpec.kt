@@ -9,6 +9,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.extractTags
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
@@ -31,6 +32,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val postResponse =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -77,6 +80,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -130,6 +135,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -183,6 +190,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -236,6 +245,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -296,6 +307,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -344,6 +357,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -377,6 +392,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("gradle")
+
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -409,6 +426,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -439,6 +458,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -470,6 +491,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -500,6 +523,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -530,6 +555,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -562,6 +589,8 @@ class PostVersionTagsAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)

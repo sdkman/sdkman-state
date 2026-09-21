@@ -11,6 +11,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
@@ -34,6 +35,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -65,6 +68,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -95,6 +100,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("scala")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -127,6 +134,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("kotlin")
+
                     // First POST creates with visible=true
                     val response1 =
                         client.post("/versions") {
@@ -169,6 +178,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("groovy")
+
                     // First POST creates with visible=false
                     val response1 =
                         client.post("/versions") {
@@ -211,6 +222,8 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("gradle")
+
                     // First POST creates with visible=false
                     val response1 =
                         client.post("/versions") {
