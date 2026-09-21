@@ -95,7 +95,7 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request - Validation failed. For opted-in candidates, this includes semverish format violations on the version field."
+          description: "Bad Request - Validation failed. The candidate must be registered in the candidate registry; an unregistered candidate is rejected here, and the message enumerates the registered candidates sorted ascending. For opted-in candidates, this includes semverish format violations on the version field."
           content:
             'application/json':
               schema:
@@ -431,7 +431,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /admin/candidates:
     post:
-      description: "Register a candidate. The write is an upsert keyed on the identifier: an existing candidate has its name, description and website_url updated and its timestamp refreshed, and the identifier itself is never mutated - renaming a candidate is a delete plus a create. 201 and 200 are told apart by what the upsert reports rather than by a preceding read, so a concurrent double post cannot answer 201 twice. Registration does not authorise publishing: POST /versions still validates its candidate against its own allow-list."
+      description: "Register a candidate. The write is an upsert keyed on the identifier: an existing candidate has its name, description and website_url updated and its timestamp refreshed, and the identifier itself is never mutated - renaming a candidate is a delete plus a create. 201 and 200 are told apart by what the upsert reports rather than by a preceding read, so a concurrent double post cannot answer 201 twice. Registration grants publishing rights: POST /versions validates its candidate against this registry, so a newly registered candidate becomes publishable within the refresh interval, with no deploy and no restart."
       security:
         - bearerAuth: []
       requestBody:
@@ -488,7 +488,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /admin/candidates/{candidate}:
     delete:
-      description: "Remove a candidate from the registry. Deletion is hard, not soft: a candidate carries no history worth preserving once its versions are gone, so the body is the removed record. A candidate that still has versions is refused with 409 and the count of those versions; the count is the whole guard, and no database constraint stands behind it."
+      description: "Remove a candidate from the registry. Deletion is hard, not soft: a candidate carries no history worth preserving once its versions are gone, so the body is the removed record. A candidate that still has versions is refused with 409 and the count of those versions; the count is the whole guard, and no database constraint stands behind it. Deletion revokes publishing rights: POST /versions validates its candidate against this registry, so a deleted candidate stops being publishable within the refresh interval."
       security:
         - bearerAuth: []
       parameters:
