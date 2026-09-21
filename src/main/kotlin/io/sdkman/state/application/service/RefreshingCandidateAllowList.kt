@@ -7,6 +7,7 @@ import io.sdkman.state.domain.repository.CandidateRepository
 import io.sdkman.state.domain.service.CandidateAllowList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import org.slf4j.LoggerFactory
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -21,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference
 class RefreshingCandidateAllowList(
     private val candidateRepository: CandidateRepository,
 ) : CandidateAllowList {
+    private val logger = LoggerFactory.getLogger(RefreshingCandidateAllowList::class.java)
     private val registeredCandidates = AtomicReference<Option<Set<String>>>(none())
     private val refreshLock = Mutex()
 
@@ -32,6 +34,8 @@ class RefreshingCandidateAllowList(
                 .findAll()
                 .onRight { candidates ->
                     registeredCandidates.set(candidates.map { it.candidate }.toSet().some())
+                }.onLeft { failure ->
+                    logger.warn("Database error during candidate registry refresh: ${failure.message}")
                 }
         }
     }
