@@ -20,6 +20,7 @@ import io.sdkman.state.support.deserializeVersionData
 import io.sdkman.state.support.insertTag
 import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectAuditRecordsByOperation
 import io.sdkman.state.support.selectTagNames
 import io.sdkman.state.support.selectVersion
@@ -37,7 +38,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(migrated)
-                withTestApplication { postVersion(hidden).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(hidden).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(migrated) shouldBe true.some()
             }
@@ -48,7 +52,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(liberica("26.0.2").copy(visible = false.some()), current)
-                withTestApplication { postVersion(current).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(current).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(current) shouldBe true.some()
             }
@@ -59,7 +66,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(liberica("26.0.2").copy(visible = false.some()), current)
-                withTestApplication { postVersion(current).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(current).status shouldBe HttpStatusCode.NoContent
+                }
 
                 selectAuditRecordsByOperation(AuditOperation.RETIRE) shouldHaveSize 0
             }
@@ -70,7 +80,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(migrated)
-                withTestApplication { postVersion(liberica("26.0.2-jfr+1.1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(liberica("26.0.2-jfr+1.1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(migrated) shouldBe true.some()
             }
@@ -81,7 +94,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(previous)
-                withTestApplication { postVersion(gradle("8.14")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("gradle")
+                    postVersion(gradle("8.14")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(previous) shouldBe true.some()
             }
@@ -93,7 +109,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
             withCleanDatabase {
                 val taggedId = insertVersionWithId(tagged)
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, taggedId)
-                withTestApplication { postVersion(temurin("21.0.12+1.1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(temurin("21.0.12+1.1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(tagged) shouldBe false.some()
             }
@@ -103,7 +122,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
             withCleanDatabase {
                 val taggedId = insertVersionWithId(temurin("21.0.12"))
                 insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, taggedId)
-                withTestApplication { postVersion(temurin("21.0.12+1.1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(temurin("21.0.12+1.1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 selectTagNames(taggedId) shouldBe listOf("lts")
             }
@@ -112,7 +134,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         should("record one RETIRE audit entry per retired version") {
             withCleanDatabase {
                 insertVersions(kona("25.0.1+1"), kona("25.0.2+1"))
-                withTestApplication { postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 selectAuditRecordsByOperation(AuditOperation.RETIRE) shouldHaveSize 2
             }
@@ -121,7 +146,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         should("audit the identifier of every retired version") {
             withCleanDatabase {
                 insertVersions(kona("25.0.1+1"), kona("25.0.2+1"))
-                withTestApplication { postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 selectAuditRecordsByOperation(AuditOperation.RETIRE)
                     .map { deserializeVersionData(it.versionData).version }
@@ -132,7 +160,10 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
         should("attribute every RETIRE audit entry to the posting vendor") {
             withCleanDatabase {
                 insertVersions(kona("25.0.1+1"), kona("25.0.2+1"))
-                withTestApplication { postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(kona("25.0.4+1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 selectAuditRecordsByOperation(AuditOperation.RETIRE)
                     .map { it.vendorId } shouldBe listOf(JwtTestSupport.NIL_UUID, JwtTestSupport.NIL_UUID)
