@@ -13,6 +13,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
@@ -37,6 +38,8 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -68,6 +71,8 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("maven")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -99,6 +104,8 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("kotlin")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -131,6 +138,8 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
