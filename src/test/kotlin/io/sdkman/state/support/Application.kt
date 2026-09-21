@@ -45,6 +45,7 @@ fun testApplicationConfig(): MapApplicationConfig =
         "jwt.expiry" to "10",
         "validation.semverish.candidates" to "java",
         "auth.rateLimit.enabled" to "true",
+        "candidates.refresh.intervalMs" to "300000",
     )
 
 private val sharedTestAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }
