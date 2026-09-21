@@ -149,6 +149,13 @@ private fun Route.versionCreateRoute(
 ) {
     post("/versions") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
+        if (!versionRequestValidator.allowListLoaded()) {
+            call.respond(
+                HttpStatusCode.InternalServerError,
+                ErrorResponse("Internal Server Error", "Candidate registry unavailable"),
+            )
+            return@post
+        }
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         val role = call.authenticatedRole()
