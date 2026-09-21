@@ -8,13 +8,18 @@ import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 
 class VersionRequestValidatorSpec :
     ShouldSpec({
 
-        val validator = VersionRequestValidator(semverishCandidates = emptySet())
+        val validator =
+            VersionRequestValidator(
+                semverishCandidates = emptySet(),
+                candidateAllowList = allowList("java", "gradle", "kotlin", "maven", "scala"),
+            )
 
         context("Happy path tests") {
 

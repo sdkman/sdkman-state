@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.NonEmptyList
 import arrow.core.None
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.left
 import arrow.core.nel
 import arrow.core.raise.either
@@ -11,17 +12,17 @@ import arrow.core.right
 import arrow.core.some
 import arrow.core.toNonEmptyListOrNone
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
-import io.sdkman.state.config.CandidateLoader
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.domain.service.CandidateAllowList
 import kotlinx.serialization.json.Json
 
 class VersionRequestValidator(
     private val semverishCandidates: Set<String>,
+    private val candidateAllowList: CandidateAllowList,
 ) {
     companion object {
-        private val ALLOWED_CANDIDATES = CandidateLoader.allowedCandidates
         private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
         private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
         private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
@@ -93,12 +94,13 @@ class VersionRequestValidator(
         candidate.fold(
             { EmptyFieldError("candidate").nel().left() },
             { value ->
+                val registeredCandidates = candidateAllowList.registered().getOrElse { emptySet() }
                 when {
                     value.isBlank() -> EmptyFieldError("candidate").nel().left()
-                    value !in ALLOWED_CANDIDATES ->
+                    value !in registeredCandidates ->
                         InvalidCandidateError(
                             candidate = value,
-                            allowedCandidates = ALLOWED_CANDIDATES,
+                            allowedCandidates = registeredCandidates.sorted(),
                         ).nel()
                             .left()
 

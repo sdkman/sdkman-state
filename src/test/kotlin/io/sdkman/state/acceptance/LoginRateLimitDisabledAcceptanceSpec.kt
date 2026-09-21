@@ -64,7 +64,7 @@ class LoginRateLimitDisabledAcceptanceSpec :
                             authService = authService,
                             vendorRepository = vendorRepo,
                             appConfig = appConfig,
-                            versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
+                            versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates, allowList()),
                         )
                         configureCandidateRouting(candidateService, allowList())
                     }

@@ -3,13 +3,18 @@ package io.sdkman.state.application.validation
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 
 class VersionRequestSemverishValidatorSpec :
     ShouldSpec({
 
-        val validator = VersionRequestValidator(semverishCandidates = setOf("java"))
+        val validator =
+            VersionRequestValidator(
+                semverishCandidates = setOf("java"),
+                candidateAllowList = allowList("java", "gradle", "kotlin", "maven", "scala"),
+            )
 
         should("reject non-semverish version for opted-in candidate java") {
             // given: a non-semverish version for java
