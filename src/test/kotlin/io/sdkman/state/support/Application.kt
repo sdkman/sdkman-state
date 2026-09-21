@@ -92,10 +92,11 @@ fun withTestApplication(
             val rateLimiter = RateLimiter(sharedTestAppConfig.rateLimitEnabled)
             val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
 
-            val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)
-
             val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
             runBlocking { candidateAllowList.refresh() }
+
+            val versionRequestValidator =
+                VersionRequestValidator(sharedTestAppConfig.semverishCandidates, candidateAllowList)
 
             configureRouting(
                 versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),

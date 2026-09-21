@@ -51,12 +51,12 @@ fun Application.module() {
     }
     val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
-    val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates)
-
     val candidateRepo = PostgresCandidateRepository()
     val candidateService = CandidateServiceImpl(candidateRepo)
     val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
     scheduleCandidateRefresh(candidateAllowList, appConfig.candidateRefreshIntervalMs)
+
+    val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates, candidateAllowList)
 
     configureRouting(
         versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
