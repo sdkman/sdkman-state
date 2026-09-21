@@ -12,6 +12,7 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
 import io.sdkman.state.application.service.RateLimiter
+import io.sdkman.state.application.service.RefreshingCandidateAllowList
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.application.validation.VersionRequestValidator
@@ -52,7 +53,9 @@ fun Application.module() {
 
     val versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates)
 
-    val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
+    val candidateRepo = PostgresCandidateRepository()
+    val candidateService = CandidateServiceImpl(candidateRepo)
+    val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
 
     configureRouting(
         versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
@@ -63,5 +66,5 @@ fun Application.module() {
         appConfig = appConfig,
         versionRequestValidator = versionRequestValidator,
     )
-    configureCandidateRouting(candidateService)
+    configureCandidateRouting(candidateService, candidateAllowList)
 }

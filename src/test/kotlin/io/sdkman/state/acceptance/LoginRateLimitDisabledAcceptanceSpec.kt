@@ -25,6 +25,7 @@ import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
+import io.sdkman.state.support.allowList
 import io.sdkman.state.support.testApplicationConfig
 import io.sdkman.state.support.withCleanDatabase
 
@@ -65,7 +66,7 @@ class LoginRateLimitDisabledAcceptanceSpec :
                             appConfig = appConfig,
                             versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
                         )
-                        configureCandidateRouting(candidateService)
+                        configureCandidateRouting(candidateService, allowList())
                     }
 
                     // when: far more than MAX_ATTEMPTS rapid logins from the same client

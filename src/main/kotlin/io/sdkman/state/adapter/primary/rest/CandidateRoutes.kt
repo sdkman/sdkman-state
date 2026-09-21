@@ -15,6 +15,7 @@ import io.sdkman.state.application.validation.CandidateRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
+import io.sdkman.state.domain.service.CandidateAllowList
 import io.sdkman.state.domain.service.CandidateService
 
 private const val ADMIN_ROLE = "admin"
@@ -28,7 +29,10 @@ fun Route.candidateReadRoute(candidateService: CandidateService) {
     }
 }
 
-fun Route.adminCreateCandidateRoute(candidateService: CandidateService) {
+fun Route.adminCreateCandidateRoute(
+    candidateService: CandidateService,
+    candidateAllowList: CandidateAllowList,
+) {
     post("/admin/candidates") {
         call.declineCaching()
         if (!call.isAuthenticatedAdmin()) {
@@ -37,12 +41,15 @@ fun Route.adminCreateCandidateRoute(candidateService: CandidateService) {
         }
         CandidateRequestValidator.validateRequest(call.receiveText()).fold(
             ifLeft = { errors -> call.respondValidationFailure(errors.map { ValidationFailure(it.field, it.message) }) },
-            ifRight = { registration -> call.respondRegistration(candidateService, registration) },
+            ifRight = { registration -> call.respondRegistration(candidateService, candidateAllowList, registration) },
         )
     }
 }
 
-fun Route.adminDeleteCandidateRoute(candidateService: CandidateService) {
+fun Route.adminDeleteCandidateRoute(
+    candidateService: CandidateService,
+    candidateAllowList: CandidateAllowList,
+) {
     delete("/admin/candidates/{candidate}") {
         call.declineCaching()
         if (!call.isAuthenticatedAdmin()) {
@@ -58,17 +65,24 @@ fun Route.adminDeleteCandidateRoute(candidateService: CandidateService) {
             candidateService.delete(candidateId).bind()
         }.fold(
             ifLeft = { error -> call.respondDomainError(error) },
-            ifRight = { candidate -> call.respond(HttpStatusCode.OK, candidate.toAdminDto()) },
+            ifRight = { candidate ->
+                candidateAllowList.refresh()
+                call.respond(HttpStatusCode.OK, candidate.toAdminDto())
+            },
         )
     }
 }
 
 private suspend fun ApplicationCall.respondRegistration(
     candidateService: CandidateService,
+    candidateAllowList: CandidateAllowList,
     registration: CandidateRegistration,
 ) = candidateService.register(registration).fold(
     ifLeft = { error -> respondDomainError(error) },
-    ifRight = { result -> respond(result.status(), result.candidate.toAdminDto()) },
+    ifRight = { result ->
+        candidateAllowList.refresh()
+        respond(result.status(), result.candidate.toAdminDto())
+    },
 )
 
 private suspend fun ApplicationCall.respondValidationFailure(failures: List<ValidationFailure>) =

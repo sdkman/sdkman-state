@@ -32,6 +32,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.createHikariDataSource
+import io.sdkman.state.support.allowList
 import io.sdkman.state.support.sharedTestDatabase
 import io.sdkman.state.support.testApplicationConfig
 import io.sdkman.state.support.withCleanDatabase
@@ -110,7 +111,7 @@ class HealthCheckAcceptanceSpec :
                             appConfig = appConfig,
                             versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates),
                         )
-                        configureCandidateRouting(candidateService)
+                        configureCandidateRouting(candidateService, allowList())
                     }
 
                     client.get("/meta/health").apply {

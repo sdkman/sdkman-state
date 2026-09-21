@@ -16,12 +16,15 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
 import io.sdkman.state.application.service.RateLimiter
+import io.sdkman.state.application.service.RefreshingCandidateAllowList
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.createHikariDataSource
+import io.sdkman.state.domain.service.CandidateAllowList
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.DatabaseConfig
 import org.jetbrains.exposed.v1.jdbc.Database
 import java.sql.Connection
@@ -66,7 +69,10 @@ val sharedTestDatabase: Database by lazy {
     )
 }
 
-fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
+fun withTestApplication(
+    candidateAllowList: CandidateAllowList = RefreshingCandidateAllowList(PostgresCandidateRepository()),
+    fn: suspend (ApplicationTestBuilder.() -> Unit),
+) {
     sharedTestDatabase
     testApplication {
         environment {
@@ -89,6 +95,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
             val versionRequestValidator = VersionRequestValidator(sharedTestAppConfig.semverishCandidates)
 
             val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
+            runBlocking { candidateAllowList.refresh() }
 
             configureRouting(
                 versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
@@ -99,7 +106,7 @@ fun withTestApplication(fn: suspend (ApplicationTestBuilder.() -> Unit)) {
                 appConfig = sharedTestAppConfig,
                 versionRequestValidator = versionRequestValidator,
             )
-            configureCandidateRouting(candidateService)
+            configureCandidateRouting(candidateService, candidateAllowList)
         }
         fn(this)
     }
