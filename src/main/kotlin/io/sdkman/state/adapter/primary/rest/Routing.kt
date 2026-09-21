@@ -8,6 +8,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.repository.HealthRepository
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
+import io.sdkman.state.domain.service.CandidateAllowList
 import io.sdkman.state.domain.service.CandidateService
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.VersionService
@@ -35,12 +36,15 @@ fun Application.configureRouting(
     }
 }
 
-fun Application.configureCandidateRouting(candidateService: CandidateService) {
+fun Application.configureCandidateRouting(
+    candidateService: CandidateService,
+    candidateAllowList: CandidateAllowList,
+) {
     routing {
         candidateReadRoute(candidateService)
         authenticate("auth-jwt") {
-            adminCreateCandidateRoute(candidateService)
-            adminDeleteCandidateRoute(candidateService)
+            adminCreateCandidateRoute(candidateService, candidateAllowList)
+            adminDeleteCandidateRoute(candidateService, candidateAllowList)
         }
     }
 }
