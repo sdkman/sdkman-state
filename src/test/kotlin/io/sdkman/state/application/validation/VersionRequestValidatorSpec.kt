@@ -414,6 +414,33 @@ class VersionRequestValidatorSpec :
                 }
             }
 
+            should("enumerate the registered candidates sorted ascending") {
+                // given: a validator whose registry is held in a deliberately unsorted order
+                val unsortedValidator =
+                    VersionRequestValidator(
+                        semverishCandidates = emptySet(),
+                        candidateAllowList = allowList("scala", "ant", "gradle"),
+                    )
+                val json =
+                    """
+                    {
+                        "candidate": "nonesuch",
+                        "version": "1.0.0",
+                        "platform": "LINUX_X64",
+                        "url": "https://example.com/file.tar.gz"
+                    }
+                    """.trimIndent()
+
+                // when: validating a request naming an unregistered candidate
+                val result = unsortedValidator.validateRequest(json)
+
+                // then: the rejection enumerates them ascending, not in registry order
+                result.shouldBeLeft()
+                result.onLeft { errors ->
+                    errors.head.message shouldContain "Allowed values: ant, gradle, scala"
+                }
+            }
+
             should("fail when URL is not HTTPS") {
                 // given: JSON with HTTP URL
                 val json =
