@@ -14,6 +14,7 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJson
 import io.sdkman.state.support.toJsonString
@@ -33,7 +34,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(migrated)
-                withTestApplication { postVersion(republished).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(republished).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(migrated) shouldBe false.some()
             }
@@ -45,7 +49,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(migrated)
-                withTestApplication { postVersion(republished).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(republished).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(republished) shouldBe true.some()
             }
@@ -57,7 +64,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(previous)
-                withTestApplication { postVersion(current).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(current).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(previous) shouldBe false.some()
             }
@@ -79,6 +89,8 @@ class JavaVersionSupersessionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(kona("25.0.1+1"), kona("25.0.2+1"), kona("25.0.3+1"))
                 withTestApplication {
+                    registerCandidates("java")
+
                     postVersion(published).status shouldBe HttpStatusCode.NoContent
 
                     client.get("/versions/java?platform=LINUX_X64&distribution=KONA&visible=true").apply {
@@ -95,7 +107,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(fxVariant)
-                withTestApplication { postVersion(plain).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(plain).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(fxVariant) shouldBe true.some()
             }
@@ -107,7 +122,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(liberica("26.0.2", Platform.LINUX_X64), otherPlatform)
-                withTestApplication { postVersion(published).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(published).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(otherPlatform) shouldBe true.some()
             }
@@ -127,6 +145,8 @@ class JavaVersionSupersessionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(zulu)
                 withTestApplication {
+                    registerCandidates("java")
+
                     postVersion(liberica("26.0.2+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
                 }
 
@@ -149,7 +169,10 @@ class JavaVersionSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 insertVersions(previousMajor)
-                withTestApplication { postVersion(openjdk("26.0.2+1.1")).status shouldBe HttpStatusCode.NoContent }
+                withTestApplication {
+                    registerCandidates("java")
+                    postVersion(openjdk("26.0.2+1.1")).status shouldBe HttpStatusCode.NoContent
+                }
 
                 visibilityOf(previousMajor) shouldBe true.some()
             }
@@ -161,6 +184,8 @@ class JavaVersionSupersessionAcceptanceSpec :
             withCleanDatabase {
                 insertVersions(migrated)
                 withTestApplication {
+                    registerCandidates("java")
+
                     postVersion(liberica("26.0.2+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
 
                     client.get("/versions/java/26.0.2?platform=LINUX_X64&distribution=LIBERICA").apply {

@@ -17,6 +17,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
@@ -37,6 +38,8 @@ class ConcurrentSupersessionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val token = JwtTestSupport.adminToken()
                     val statuses =
                         coroutineScope {

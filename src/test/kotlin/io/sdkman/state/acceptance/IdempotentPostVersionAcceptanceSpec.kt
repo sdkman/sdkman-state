@@ -15,6 +15,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
@@ -39,6 +40,8 @@ class IdempotentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     // First POST
                     val response1 =
                         client.post("/versions") {
@@ -92,6 +95,8 @@ class IdempotentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     // First POST
                     val response1 =
                         client.post("/versions") {
@@ -134,6 +139,8 @@ class IdempotentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("scala")
+
                     // First POST
                     val response1 =
                         client.post("/versions") {
