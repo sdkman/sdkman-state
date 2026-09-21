@@ -56,6 +56,7 @@ fun Application.module() {
     val candidateRepo = PostgresCandidateRepository()
     val candidateService = CandidateServiceImpl(candidateRepo)
     val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
+    scheduleCandidateRefresh(candidateAllowList, appConfig.candidateRefreshIntervalMs)
 
     configureRouting(
         versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
