@@ -130,7 +130,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
-          description: "Internal Server Error"
+          description: "Internal Server Error - a database error, or a candidate registry that has never loaded successfully. The registry answers the candidate check, so until it loads once no publish can be validated; this is reported here and never as a validation failure."
           content:
             '*/*':
               schema:
@@ -141,6 +141,11 @@ paths:
                   value:
                     error: "Database error"
                     message: "null"
+                registry_unavailable:
+                  description: "The candidate registry has never loaded successfully"
+                  value:
+                    error: "Internal Server Error"
+                    message: "Candidate registry unavailable"
   /versions/tags:
     delete:
       description: "Remove a tag by its unique scope (candidate, tag, distribution, platform)"

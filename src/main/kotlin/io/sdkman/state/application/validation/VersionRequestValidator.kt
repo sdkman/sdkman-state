@@ -29,6 +29,10 @@ class VersionRequestValidator(
         private val json = Json { explicitNulls = false }
     }
 
+    // A registry that has never loaded is not a validation failure: reporting it as one would
+    // surface a transient database fault to a publisher as "candidate is not valid".
+    fun allowListLoaded(): Boolean = candidateAllowList.registered().isSome()
+
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
             val request =
