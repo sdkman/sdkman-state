@@ -6,6 +6,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
@@ -16,6 +17,8 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when no token is provided") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -30,6 +33,8 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when token is expired") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -45,6 +50,8 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when token has invalid signature") {
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)

@@ -8,6 +8,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
@@ -31,6 +32,8 @@ class SemverishVersionValidationAcceptanceSpec :
             // when: posting the version
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -59,6 +62,8 @@ class SemverishVersionValidationAcceptanceSpec :
             // when: posting the version
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("java")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -90,6 +95,8 @@ class SemverishVersionValidationAcceptanceSpec :
             // when: posting the version
             withCleanDatabase {
                 withTestApplication {
+                    registerCandidates("scala")
+
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
