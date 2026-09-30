@@ -11,6 +11,11 @@ import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.repository.CandidateRepository
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 
 private val FIXED_INSTANT: Instant = Instant.parse("2026-09-19T00:00:00Z")
@@ -96,5 +101,26 @@ class RefreshingCandidateAllowListUnitSpec :
 
             // then: the holder becomes ready without a restart
             allowList.registered() shouldBe setOf("scala").some()
+        }
+
+        should("keep the newer copy when a slower refresh finishes last") {
+            // given: a first registry read that stalls, and a second that sees a newly registered candidate
+            val firstReadReleased = CompletableDeferred<Unit>()
+            coEvery { candidatesRepo.findAll() } coAnswers {
+                firstReadReleased.await()
+                Either.Right(listOf(candidate("groovy")))
+            } andThen Either.Right(listOf(candidate("groovy"), candidate("jpx")))
+            val allowList = RefreshingCandidateAllowList(candidatesRepo)
+
+            // when: the second refresh starts while the first is still reading, then the first read completes
+            coroutineScope {
+                val slowRefresh = async(start = CoroutineStart.UNDISPATCHED) { allowList.refresh() }
+                val fastRefresh = async(start = CoroutineStart.UNDISPATCHED) { allowList.refresh() }
+                firstReadReleased.complete(Unit)
+                awaitAll(slowRefresh, fastRefresh)
+            }
+
+            // then: the stale read of the slower refresh has not overwritten the newer set
+            allowList.registered() shouldBe setOf("groovy", "jpx").some()
         }
     })
