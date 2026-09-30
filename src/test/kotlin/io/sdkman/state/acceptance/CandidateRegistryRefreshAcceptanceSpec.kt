@@ -6,7 +6,6 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.bearerAuth
-import io.ktor.client.request.get
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -97,8 +96,24 @@ class CandidateRegistryRefreshAcceptanceSpec :
                         configureCandidateRouting(CandidateServiceImpl(candidateRepo), candidateAllowList)
                     }
 
-                    // given: the application is running, so its first refresh has read an empty registry
-                    client.get("/meta/health")
+                    val body =
+                        Version(
+                            candidate = "groovy",
+                            version = "4.0.0",
+                            platform = Platform.UNIVERSAL,
+                            url = "https://groovy.example.com/groovy-4.0.0.zip",
+                            visible = true.some(),
+                        ).toJsonString()
+
+                    // given: the startup load has read an empty registry, so groovy is rejected
+                    eventually(2.seconds) {
+                        client
+                            .post("/versions") {
+                                contentType(ContentType.Application.Json)
+                                setBody(body)
+                                bearerAuth(JwtTestSupport.adminToken())
+                            }.status shouldBe HttpStatusCode.BadRequest
+                    }
 
                     // when: a registration lands in the table without any admin write to this instance
                     insertCandidates(
@@ -111,15 +126,6 @@ class CandidateRegistryRefreshAcceptanceSpec :
                     )
 
                     // then: the periodic refresh grants publishing rights without a restart
-                    val body =
-                        Version(
-                            candidate = "groovy",
-                            version = "4.0.0",
-                            platform = Platform.UNIVERSAL,
-                            url = "https://groovy.example.com/groovy-4.0.0.zip",
-                            visible = true.some(),
-                        ).toJsonString()
-
                     eventually(2.seconds) {
                         client
                             .post("/versions") {
