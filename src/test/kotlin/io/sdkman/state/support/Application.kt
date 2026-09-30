@@ -1,5 +1,6 @@
 package io.sdkman.state.support
 
+import io.ktor.server.application.Application
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
@@ -79,36 +80,40 @@ fun withTestApplication(
             config = testApplicationConfig()
         }
         application {
-            configureHTTP()
-            configureSerialization()
-            configureJwtAuthentication(sharedTestAppConfig)
-
-            val versionsRepo = PostgresVersionRepository()
-            val tagsRepo = PostgresTagRepository()
-            val auditRepo = PostgresAuditRepository()
-            val vendorRepo = PostgresVendorRepository()
-            val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
-            val transactional = ExposedTransactional()
-            val rateLimiter = RateLimiter(sharedTestAppConfig.rateLimitEnabled)
-            val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
-
-            val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
             runBlocking { candidateAllowList.refresh() }
-
-            val versionRequestValidator =
-                VersionRequestValidator(sharedTestAppConfig.semverishCandidates, candidateAllowList)
-
-            configureRouting(
-                versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
-                tagService = tagService,
-                healthRepo = PostgresHealthRepository(),
-                authService = authService,
-                vendorRepository = vendorRepo,
-                appConfig = sharedTestAppConfig,
-                versionRequestValidator = versionRequestValidator,
-            )
-            configureCandidateRouting(candidateService, candidateAllowList)
+            configureTestApplication(candidateAllowList)
         }
         fn(this)
     }
+}
+
+fun Application.configureTestApplication(candidateAllowList: CandidateAllowList) {
+    configureHTTP()
+    configureSerialization()
+    configureJwtAuthentication(sharedTestAppConfig)
+
+    val versionsRepo = PostgresVersionRepository()
+    val tagsRepo = PostgresTagRepository()
+    val auditRepo = PostgresAuditRepository()
+    val vendorRepo = PostgresVendorRepository()
+    val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
+    val transactional = ExposedTransactional()
+    val rateLimiter = RateLimiter(sharedTestAppConfig.rateLimitEnabled)
+    val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
+
+    val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
+
+    val versionRequestValidator =
+        VersionRequestValidator(sharedTestAppConfig.semverishCandidates, candidateAllowList)
+
+    configureRouting(
+        versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        tagService = tagService,
+        healthRepo = PostgresHealthRepository(),
+        authService = authService,
+        vendorRepository = vendorRepo,
+        appConfig = sharedTestAppConfig,
+        versionRequestValidator = versionRequestValidator,
+    )
+    configureCandidateRouting(candidateService, candidateAllowList)
 }

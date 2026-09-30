@@ -12,31 +12,14 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
-import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
-import io.sdkman.state.adapter.primary.rest.configureHTTP
-import io.sdkman.state.adapter.primary.rest.configureRouting
-import io.sdkman.state.adapter.primary.rest.configureSerialization
-import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
-import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
-import io.sdkman.state.application.service.AuthServiceImpl
-import io.sdkman.state.application.service.CandidateServiceImpl
-import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.RefreshingCandidateAllowList
-import io.sdkman.state.application.service.TagServiceImpl
-import io.sdkman.state.application.service.VersionServiceImpl
-import io.sdkman.state.application.validation.VersionRequestValidator
-import io.sdkman.state.config.DefaultAppConfig
-import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.scheduleCandidateRefresh
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.configureTestApplication
 import io.sdkman.state.support.insertCandidates
 import io.sdkman.state.support.sharedTestDatabase
 import io.sdkman.state.support.testApplicationConfig
@@ -59,41 +42,14 @@ class CandidateRegistryRefreshAcceptanceSpec :
         should("accept a version of a candidate another instance registered, once the refresh interval elapses") {
             withCleanDatabase {
                 sharedTestDatabase
-                val config = testApplicationConfig()
-                val appConfig = DefaultAppConfig(config)
                 testApplication {
                     environment {
-                        this.config = config
+                        config = testApplicationConfig()
                     }
                     application {
-                        configureHTTP()
-                        configureSerialization()
-                        configureJwtAuthentication(appConfig)
-
-                        val versionsRepo = PostgresVersionRepository()
-                        val tagsRepo = PostgresTagRepository()
-                        val auditRepo = PostgresAuditRepository()
-                        val vendorRepo = PostgresVendorRepository()
-                        val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
-                        val transactional = ExposedTransactional()
-                        val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
-                        val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
-
-                        val candidateRepo = PostgresCandidateRepository()
-                        val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
+                        val candidateAllowList = RefreshingCandidateAllowList(PostgresCandidateRepository())
+                        configureTestApplication(candidateAllowList)
                         scheduleCandidateRefresh(candidateAllowList, intervalMs = 200)
-
-                        configureRouting(
-                            versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
-                            tagService = tagService,
-                            healthRepo = PostgresHealthRepository(),
-                            authService = authService,
-                            vendorRepository = vendorRepo,
-                            appConfig = appConfig,
-                            versionRequestValidator =
-                                VersionRequestValidator(appConfig.semverishCandidates, candidateAllowList),
-                        )
-                        configureCandidateRouting(CandidateServiceImpl(candidateRepo), candidateAllowList)
                     }
 
                     val body =
