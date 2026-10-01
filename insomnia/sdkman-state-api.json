@@ -239,11 +239,11 @@
       "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
       "name": "1. Create Platform-Specific Version",
-      "description": "POST java/17.0.1 TEMURIN MAC_X64",
+      "description": "POST java/17.0.1.0 TEMURIN MAC_X64",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"MAC_X64\",\n  \"url\": \"https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.1/OpenJDK17U-jdk_x64_mac_hotspot_17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"3bc0c1d7b4805831680ee5a8690ebb6e\",\n  \"sha256sum\": \"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1.0\",\n  \"platform\": \"MAC_X64\",\n  \"url\": \"https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.1/OpenJDK17U-jdk_x64_mac_hotspot_17.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"md5sum\": \"3bc0c1d7b4805831680ee5a8690ebb6e\",\n  \"sha256sum\": \"a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -274,9 +274,9 @@
       "parentId": "fld_platform_version",
       "modified": 1710403200000,
       "created": 1710403200000,
-      "url": "{{ _.base_url }}/versions/java/17.0.1",
+      "url": "{{ _.base_url }}/versions/java/17.0.1.0",
       "name": "2. Verify Platform-Specific Version",
-      "description": "GET java/17.0.1 with platform and distribution query params",
+      "description": "GET java/17.0.1.0 with platform and distribution query params",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -305,7 +305,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version fields are correct', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('17.0.1');\n  insomnia.expect(body.platform).to.equal('MAC_X64');\n  insomnia.expect(body.distribution).to.equal('TEMURIN');\n  insomnia.expect(body.visible).to.equal(true);\n  insomnia.expect(body.md5sum).to.equal('3bc0c1d7b4805831680ee5a8690ebb6e');\n});"
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version fields are correct', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('17.0.1.0');\n  insomnia.expect(body.platform).to.equal('MAC_X64');\n  insomnia.expect(body.distribution).to.equal('TEMURIN');\n  insomnia.expect(body.visible).to.equal(true);\n  insomnia.expect(body.md5sum).to.equal('3bc0c1d7b4805831680ee5a8690ebb6e');\n});"
     },
     {
       "_id": "req_delete_platform",
@@ -314,11 +314,11 @@
       "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
       "name": "3. Cleanup Platform-Specific Version",
-      "description": "DELETE java/17.0.1 TEMURIN MAC_X64",
+      "description": "DELETE java/17.0.1.0 TEMURIN MAC_X64",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"MAC_X64\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1.0\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"MAC_X64\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -481,11 +481,11 @@
       "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
       "name": "1. Create Version with Tags",
-      "description": "POST java/21.0.1 TEMURIN LINUX_X64 tags=[\"latest\",\"21\"]",
+      "description": "POST java/21.0.1.0 TEMURIN LINUX_X64 tags=[\"latest\",\"21\"]",
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"latest\", \"21\"]\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1.0\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"TEMURIN\",\n  \"tags\": [\"latest\", \"21\"]\n}"
       },
       "parameters": [],
       "headers": [
@@ -516,9 +516,9 @@
       "parentId": "fld_tags",
       "modified": 1710403200000,
       "created": 1710403200000,
-      "url": "{{ _.base_url }}/versions/java/21.0.1",
+      "url": "{{ _.base_url }}/versions/java/21.0.1.0",
       "name": "2. Verify Tags on Version",
-      "description": "GET java/21.0.1 and verify tags",
+      "description": "GET java/21.0.1.0 and verify tags",
       "method": "GET",
       "body": {},
       "parameters": [
@@ -547,7 +547,7 @@
       "settingRebuildPath": true,
       "settingFollowRedirects": "global",
       "_type": "request",
-      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version has correct tags', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('21.0.1');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n  insomnia.expect(body.tags).to.include('21');\n});"
+      "afterResponseScript": "insomnia.test('Status is 200', () => {\n  insomnia.expect(insomnia.response.code).to.equal(200);\n});\n\ninsomnia.test('Version has correct tags', () => {\n  const body = JSON.parse(insomnia.response.body);\n  insomnia.expect(body.candidate).to.equal('java');\n  insomnia.expect(body.version).to.equal('21.0.1.0');\n  insomnia.expect(body.tags).to.be.an('array');\n  insomnia.expect(body.tags).to.include('latest');\n  insomnia.expect(body.tags).to.include('21');\n});"
     },
     {
       "_id": "req_delete_tag_latest",
@@ -630,11 +630,11 @@
       "created": 1710403200000,
       "url": "{{ _.base_url }}/versions",
       "name": "5. Cleanup Tagged Version",
-      "description": "DELETE java/21.0.1 (after tags removed)",
+      "description": "DELETE java/21.0.1.0 (after tags removed)",
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"21.0.1.0\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"LINUX_X64\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -1028,7 +1028,7 @@
       "method": "POST",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"INVALID_DISTRO\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1.0\",\n  \"platform\": \"LINUX_X64\",\n  \"url\": \"https://example.com/java.tar.gz\",\n  \"visible\": true,\n  \"distribution\": \"INVALID_DISTRO\"\n}"
       },
       "parameters": [],
       "headers": [
@@ -1208,7 +1208,7 @@
       "method": "DELETE",
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"MAC_X64\"\n}"
+        "text": "{\n  \"candidate\": \"java\",\n  \"version\": \"17.0.1.0\",\n  \"distribution\": \"TEMURIN\",\n  \"platform\": \"MAC_X64\"\n}"
       },
       "parameters": [],
       "headers": [
