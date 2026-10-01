@@ -109,6 +109,39 @@ class SemverishValidatorSpec :
                 // then: validation succeeds
                 result shouldBeRight version
             }
+
+            should("accept four-part version with patch component") {
+                // given: a JEP 322 version carrying its patch counter in the fourth component
+                val version = "25.0.2.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept four-part version with build metadata") {
+                // given: a padded early-access version
+                val version = "29.0.0.0+ea.10"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept four-part version with variant and build metadata") {
+                // given: a padded variant version with a rebuild counter
+                val version = "25.0.2.0-fx+1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
         }
 
         context("invalid semverish versions") {
@@ -161,9 +194,20 @@ class SemverishValidatorSpec :
                 result.shouldBeLeft()
             }
 
-            should("reject version with rebuild counter in wrong section") {
-                // given: a version with fourth dot-separated component
-                val version = "25.0.2.1"
+            should("reject version with five numeric core components") {
+                // given: a version whose fifth numeric element belongs in build metadata
+                val version = "25.0.2.1.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject version with leading zero in fourth component") {
+                // given: a version with a zero-padded fourth component
+                val version = "25.0.2.00"
 
                 // when: validating the version
                 val result = SemverishValidator.validate(version)
