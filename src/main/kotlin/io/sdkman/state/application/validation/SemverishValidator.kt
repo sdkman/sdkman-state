@@ -5,11 +5,11 @@ import arrow.core.left
 import arrow.core.right
 
 object SemverishValidator {
+    private const val NUMERIC = "(?:0|[1-9]\\d*)"
     private const val IDENTIFIER = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?"
     private val SEMVERISH_PATTERN =
         Regex(
-            "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)" +
-                "(?:\\.(?:0|[1-9]\\d*))?" +
+            "^$NUMERIC\\.$NUMERIC\\.$NUMERIC\\.$NUMERIC" +
                 "(?:-(?:fx|crac))?" +
                 "(?:\\+$IDENTIFIER(?:\\.$IDENTIFIER)*)?$",
         )
