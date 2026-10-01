@@ -178,6 +178,42 @@ class JavaVersionSupersessionAcceptanceSpec :
             }
         }
 
+        should("retire a stored three-component semverish row when its four-component rebuild is published") {
+            // given: a three-component semverish row stored before the four-component core became mandatory
+            val stored = liberica("26.0.2-fx+1.1", Platform.LINUX_X64)
+
+            withCleanDatabase {
+                insertVersions(stored)
+                withTestApplication {
+                    registerCandidates("java")
+
+                    // when: the four-component spelling is published into the same fx series
+                    postVersion(liberica("26.0.2.0-fx+1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
+                }
+
+                // then: the three-component row is superseded
+                visibilityOf(stored) shouldBe false.some()
+            }
+        }
+
+        should("retire a bare four-component legacy row when a later build joins its series") {
+            // given: a migrated row whose fourth component is now read as the patch, so it joins the major-11 series
+            val legacy = semeru("11.0.14.1", Platform.LINUX_X64)
+
+            withCleanDatabase {
+                insertVersions(legacy)
+                withTestApplication {
+                    registerCandidates("java")
+
+                    // when: a later build is published into the major-11 series
+                    postVersion(semeru("11.0.25.0", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
+                }
+
+                // then: the legacy row is superseded
+                visibilityOf(legacy) shouldBe false.some()
+            }
+        }
+
         should("resolve a retired version by its explicit identifier") {
             val migrated = liberica("26.0.2", Platform.LINUX_X64)
 
@@ -208,6 +244,19 @@ private fun liberica(
         url = "https://example.com/java-$version-librca.tar.gz",
         visible = true.some(),
         distribution = Distribution.LIBERICA.some(),
+    )
+
+private fun semeru(
+    version: String,
+    platform: Platform,
+): Version =
+    Version(
+        candidate = "java",
+        version = version,
+        platform = platform,
+        url = "https://example.com/java-$version-sem.tar.gz",
+        visible = true.some(),
+        distribution = Distribution.SEMERU.some(),
     )
 
 private suspend fun ApplicationTestBuilder.postVersion(version: Version): HttpResponse =
