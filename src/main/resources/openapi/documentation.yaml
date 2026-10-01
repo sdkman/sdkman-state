@@ -84,7 +84,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P[-variant][+build-metadata]. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries exactly three numeric core components with an optional 'fx' or 'crac' variant; build metadata is not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
+      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P.Q[-variant][+build-metadata]; a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
       security:
         - bearerAuth: []
       requestBody:
@@ -114,7 +114,7 @@ paths:
                     error: "Validation failed"
                     failures:
                       - field: "version"
-                        message: "Version '25.0.2.fx' does not conform to the semverish format: M.N.P[-variant][+build-metadata]"
+                        message: "Version '29.0.0+ea.10' does not conform to the semverish format: M.N.P.Q[-variant][+build-metadata]"
         "204":
           description: "No Content"
           content:
@@ -1134,7 +1134,7 @@ components:
           type: "string"
         version:
           type: "string"
-          description: "Version identifier. For candidates opted in to semverish validation, must conform to M.N.P[-variant][+build-metadata] where M, N, P are non-negative integers without leading zeros, variant is dash-separated dot-delimited identifiers [a-zA-Z0-9-]+, and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
+          description: "Version identifier. For candidates opted in to semverish validation, must conform to M.N.P.Q[-variant][+build-metadata] where M, N, P, Q are four mandatory non-negative integers without leading zeros, variant is exactly one of 'fx' or 'crac' (case-sensitive), and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
         platform:
           type: "string"
           enum:
