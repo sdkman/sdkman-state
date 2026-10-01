@@ -27,9 +27,9 @@ class PostVersionAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "17.0.1",
+                    version = "17.0.1.0",
                     platform = Platform.MAC_X64,
-                    url = "https://java-17.0.1-tem",
+                    url = "https://java-17.0.1.0-tem",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some(),
@@ -128,7 +128,7 @@ class PostVersionAcceptanceSpec :
                 """
                 {
                     "candidate": "java",
-                    "version": "17.0.1",
+                    "version": "17.0.1.0",
                     "platform": "LINUX_X64",
                     "url": "https://example.com/java.tar.gz",
                     "visible": true,
