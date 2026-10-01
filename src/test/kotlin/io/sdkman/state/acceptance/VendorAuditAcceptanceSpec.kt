@@ -189,9 +189,9 @@ class VendorAuditAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "21.0.0",
+                    version = "21.0.0.0",
                     platform = Platform.LINUX_ARM64,
-                    url = "https://example.com/java-21.0.0.tar.gz",
+                    url = "https://example.com/java-21.0.0.0.tar.gz",
                     visible = false.some(),
                     distribution = Distribution.ZULU.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -274,10 +274,10 @@ class VendorAuditAcceptanceSpec :
                 """
                 {
                     "candidate": "java",
-                    "version": "27.0.2",
+                    "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
