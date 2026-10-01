@@ -80,6 +80,72 @@ class SemverishVersionValidationAcceptanceSpec :
             }
         }
 
+        should("reject three-component version for opted-in candidate java") {
+            // given: a three-component core, valid before java required a fourth component
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "29.0.0+ea.10",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java-29.0.0+ea.10.tar.gz"
+                }
+                """.trimIndent()
+
+            // when: posting the version
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: the version is rejected with a validation error
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val errorResponse =
+                        Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
+                    errorResponse.failures.any { it.field == "version" } shouldBe true
+                }
+            }
+        }
+
+        should("reject variant outside the fx or crac vocabulary for opted-in candidate java") {
+            // given: a four-component core carrying a variant other than fx or crac
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "25.0.2.0-graal",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java-25.0.2.0-graal.tar.gz"
+                }
+                """.trimIndent()
+
+            // when: posting the version
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: the version is rejected with a validation error
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val errorResponse =
+                        Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
+                    errorResponse.failures.any { it.field == "version" } shouldBe true
+                }
+            }
+        }
+
         should("accept non-conforming version for non-opted-in candidate scala") {
             // given: a non-conforming version for scala (not opted-in)
             val requestBody =
