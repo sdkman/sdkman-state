@@ -55,17 +55,6 @@ class SemverishValidatorSpec :
                 result shouldBeRight version
             }
 
-            should("accept version with dot-separated variant identifiers") {
-                // given: a version with combined variants
-                val version = "25.0.2-fx.crac"
-
-                // when: validating the version
-                val result = SemverishValidator.validate(version)
-
-                // then: validation succeeds
-                result shouldBeRight version
-            }
-
             should("accept version with build metadata") {
                 // given: a version with early-access build metadata
                 val version = "27.0.0+ea.16"
@@ -257,6 +246,39 @@ class SemverishValidatorSpec :
                 val result = SemverishValidator.validate(version)
 
                 // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject version with combined variants") {
+                // given: a version combining both variants in one section
+                val version = "25.0.2.0-fx.crac"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails because the variant is exactly one of fx or crac
+                result.shouldBeLeft()
+            }
+
+            should("reject version with variant outside the fx or crac vocabulary") {
+                // given: a version with an unknown variant
+                val version = "25.0.4.0-graal"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject version with upper-case variant") {
+                // given: a version with a variant in the wrong case
+                val version = "25.0.2.0-FX"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails because the vocabulary is case-sensitive
                 result.shouldBeLeft()
             }
 
