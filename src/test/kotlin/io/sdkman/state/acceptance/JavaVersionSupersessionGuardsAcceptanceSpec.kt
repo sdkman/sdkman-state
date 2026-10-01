@@ -75,17 +75,17 @@ class JavaVersionSupersessionGuardsAcceptanceSpec :
             }
         }
 
-        should("leave the series alone when the posted variant is outside the series vocabulary") {
-            val migrated = liberica("26.0.2")
+        should("leave a stored row visible when its variant is outside the series vocabulary") {
+            val graal = liberica("26.0.2-graal")
 
             withCleanDatabase {
-                insertVersions(migrated)
+                insertVersions(graal)
                 withTestApplication {
                     registerCandidates("java")
-                    postVersion(liberica("26.0.2-jfr+1.1")).status shouldBe HttpStatusCode.NoContent
+                    postVersion(liberica("26.0.2+1.1")).status shouldBe HttpStatusCode.NoContent
                 }
 
-                visibilityOf(migrated) shouldBe true.some()
+                visibilityOf(graal) shouldBe true.some()
             }
         }
 

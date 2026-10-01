@@ -10,7 +10,7 @@ object SemverishValidator {
         Regex(
             "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)" +
                 "(?:\\.(?:0|[1-9]\\d*))?" +
-                "(?:-$IDENTIFIER(?:\\.$IDENTIFIER)*)?" +
+                "(?:-(?:fx|crac))?" +
                 "(?:\\+$IDENTIFIER(?:\\.$IDENTIFIER)*)?$",
         )
 

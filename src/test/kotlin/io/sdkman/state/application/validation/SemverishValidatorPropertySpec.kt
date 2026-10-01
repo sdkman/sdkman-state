@@ -46,7 +46,7 @@ class SemverishValidatorPropertySpec :
         val arbOptionalVariant: Arb<String> =
             Arb.choice(
                 Arb.constant(""),
-                arbIdentifierList.map { "-$it" },
+                Arb.of("fx", "crac").map { "-$it" },
             )
 
         val arbOptionalBuildMetadata: Arb<String> =
