@@ -2,6 +2,7 @@ package io.sdkman.state.application.validation
 
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
@@ -36,6 +37,26 @@ class VersionRequestSemverishValidatorSpec :
             errors.size shouldBe 1
             errors.head.shouldBeInstanceOf<InvalidVersionFormatError>()
             errors.head.field shouldBe "version"
+        }
+
+        should("describe the four-component format in the version failure message") {
+            // given: a three-component version for java
+            val json =
+                """
+                {
+                    "candidate": "java",
+                    "version": "29.0.0+ea.10",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java.tar.gz"
+                }
+                """.trimIndent()
+
+            // when: validating the request
+            val result = validator.validateRequest(json)
+
+            // then: the version failure names the four-component format
+            val errors = result.shouldBeLeft()
+            errors.head.message shouldContain "M.N.P.Q[-variant][+build-metadata]"
         }
 
         should("not produce semverish error when candidate validation already failed") {
