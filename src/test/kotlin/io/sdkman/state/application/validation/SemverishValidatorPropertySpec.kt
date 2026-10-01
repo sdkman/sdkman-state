@@ -29,7 +29,8 @@ class SemverishValidatorPropertySpec :
                 arbNumericComponent,
                 arbNumericComponent,
                 arbNumericComponent,
-            ) { major, minor, patch -> "$major.$minor.$patch" }
+                arbNumericComponent,
+            ) { major, minor, patch, q -> "$major.$minor.$patch.$q" }
 
         val arbIdentifier: Arb<String> =
             Arb.bind(
