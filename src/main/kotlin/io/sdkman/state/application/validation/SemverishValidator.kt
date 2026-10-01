@@ -3,6 +3,7 @@ package io.sdkman.state.application.validation
 import arrow.core.Either
 import arrow.core.left
 import arrow.core.right
+import io.sdkman.state.domain.model.SeriesKey
 
 object SemverishValidator {
     private const val NUMERIC = "(?:0|[1-9]\\d*)"
@@ -10,7 +11,7 @@ object SemverishValidator {
     private val SEMVERISH_PATTERN =
         Regex(
             "^$NUMERIC\\.$NUMERIC\\.$NUMERIC\\.$NUMERIC" +
-                "(?:-(?:fx|crac))?" +
+                "(?:-(?:${SeriesKey.VARIANT_VOCABULARY}))?" +
                 "(?:\\+$IDENTIFIER(?:\\.$IDENTIFIER)*)?$",
         )
 
