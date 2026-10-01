@@ -23,9 +23,9 @@ class SemverishVersionValidationAcceptanceSpec :
                 """
                 {
                     "candidate": "java",
-                    "version": "25.0.2-fx",
+                    "version": "29.0.0.0+ea.10",
                     "platform": "LINUX_X64",
-                    "url": "https://example.com/java-25.0.2-fx.tar.gz"
+                    "url": "https://example.com/java-29.0.0.0+ea.10.tar.gz"
                 }
                 """.trimIndent()
 
