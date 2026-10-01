@@ -23,7 +23,7 @@ import java.time.Instant
 
 internal object VersionsTable : IntIdTable(name = "versions") {
     val candidate = varchar("candidate", length = 20)
-    val version = varchar("version", length = 25)
+    val version = text("version")
     val distribution = text("distribution").nullable()
     val platform = varchar("platform", length = 15)
     val url = varchar("url", length = 500)
