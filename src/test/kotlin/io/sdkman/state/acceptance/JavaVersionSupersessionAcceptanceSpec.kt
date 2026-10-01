@@ -30,7 +30,7 @@ class JavaVersionSupersessionAcceptanceSpec :
 
         should("retire the migrated counterpart when its semverish rebuild is published") {
             val migrated = liberica("26.0.2", Platform.LINUX_X64)
-            val republished = liberica("26.0.2+1.1", Platform.LINUX_X64)
+            val republished = liberica("26.0.2.0+1.1", Platform.LINUX_X64)
 
             withCleanDatabase {
                 insertVersions(migrated)
@@ -45,7 +45,7 @@ class JavaVersionSupersessionAcceptanceSpec :
 
         should("keep the published version visible when it supersedes its series") {
             val migrated = liberica("26.0.2", Platform.LINUX_X64)
-            val republished = liberica("26.0.2+1.1", Platform.LINUX_X64)
+            val republished = liberica("26.0.2.0+1.1", Platform.LINUX_X64)
 
             withCleanDatabase {
                 insertVersions(migrated)
@@ -60,7 +60,7 @@ class JavaVersionSupersessionAcceptanceSpec :
 
         should("retire an older build in the same major line") {
             val previous = liberica("17.0.19-crac", Platform.LINUX_X64)
-            val current = liberica("17.0.20-crac+1.2", Platform.LINUX_X64)
+            val current = liberica("17.0.20.0-crac+1.2", Platform.LINUX_X64)
 
             withCleanDatabase {
                 insertVersions(previous)
@@ -84,7 +84,7 @@ class JavaVersionSupersessionAcceptanceSpec :
                     distribution = Distribution.KONA.some(),
                 )
             }
-            val published = kona("25.0.4+1")
+            val published = kona("25.0.4.0+1")
 
             withCleanDatabase {
                 insertVersions(kona("25.0.1+1"), kona("25.0.2+1"), kona("25.0.3+1"))
@@ -103,7 +103,7 @@ class JavaVersionSupersessionAcceptanceSpec :
 
         should("leave the fx variant alone when a plain build is published") {
             val fxVariant = liberica("26.0.2-fx+1.1", Platform.LINUX_X64)
-            val plain = liberica("26.0.2+1.1", Platform.LINUX_X64)
+            val plain = liberica("26.0.2.0+1.1", Platform.LINUX_X64)
 
             withCleanDatabase {
                 insertVersions(fxVariant)
@@ -118,7 +118,7 @@ class JavaVersionSupersessionAcceptanceSpec :
 
         should("leave the same version on another platform alone") {
             val otherPlatform = liberica("26.0.2", Platform.MAC_ARM64)
-            val published = liberica("26.0.2+1.1", Platform.LINUX_X64)
+            val published = liberica("26.0.2.0+1.1", Platform.LINUX_X64)
 
             withCleanDatabase {
                 insertVersions(liberica("26.0.2", Platform.LINUX_X64), otherPlatform)
@@ -147,7 +147,7 @@ class JavaVersionSupersessionAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("java")
 
-                    postVersion(liberica("26.0.2+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
+                    postVersion(liberica("26.0.2.0+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
                 }
 
                 visibilityOf(zulu) shouldBe true.some()
@@ -171,7 +171,7 @@ class JavaVersionSupersessionAcceptanceSpec :
                 insertVersions(previousMajor)
                 withTestApplication {
                     registerCandidates("java")
-                    postVersion(openjdk("26.0.2+1.1")).status shouldBe HttpStatusCode.NoContent
+                    postVersion(openjdk("26.0.2.0+1.1")).status shouldBe HttpStatusCode.NoContent
                 }
 
                 visibilityOf(previousMajor) shouldBe true.some()
@@ -186,7 +186,7 @@ class JavaVersionSupersessionAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("java")
 
-                    postVersion(liberica("26.0.2+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
+                    postVersion(liberica("26.0.2.0+1.1", Platform.LINUX_X64)).status shouldBe HttpStatusCode.NoContent
 
                     client.get("/versions/java/26.0.2?platform=LINUX_X64&distribution=LIBERICA").apply {
                         Json.decodeFromString<JsonObject>(bodyAsText()) shouldBe

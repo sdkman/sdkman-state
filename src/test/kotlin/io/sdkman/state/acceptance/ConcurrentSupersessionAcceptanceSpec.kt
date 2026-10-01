@@ -34,7 +34,7 @@ class ConcurrentSupersessionAcceptanceSpec :
 
         should("leave exactly one visible row when a release series is published concurrently") {
             val concurrentRequests = 20
-            val series = (1..concurrentRequests).map { java("25.0.$it+1") }
+            val series = (1..concurrentRequests).map { java("25.0.$it.0+1") }
 
             withCleanDatabase {
                 withTestApplication {
