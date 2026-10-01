@@ -57,6 +57,43 @@ class PostVersionAcceptanceSpec :
             }
         }
 
+        should("store a valid version longer than the former 25-character column limit") {
+            // given: a grammatically valid java version of 26 characters
+            val version =
+                Version(
+                    candidate = "java",
+                    version = "25.0.2.0-crac+1.r25.ea.123",
+                    platform = Platform.LINUX_X64,
+                    url = "https://java-25.0.2.0-crac-zulu",
+                    visible = true.some(),
+                    distribution = Distribution.ZULU.some(),
+                )
+            val requestBody = version.toJsonString()
+
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+
+                    // when: the version is posted
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: it is accepted rather than failing on storage length
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+                selectVersion(
+                    candidate = version.candidate,
+                    version = version.version,
+                    distribution = version.distribution,
+                    platform = version.platform,
+                ) shouldBe version.some()
+            }
+        }
+
         should("POST a new version without distribution") {
             val version =
                 Version(
