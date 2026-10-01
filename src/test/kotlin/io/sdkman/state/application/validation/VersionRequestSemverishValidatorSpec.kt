@@ -105,7 +105,7 @@ class VersionRequestSemverishValidatorSpec :
                 """
                 {
                     "candidate": "java",
-                    "version": "25.0.2-fx",
+                    "version": "25.0.2.0-fx",
                     "platform": "LINUX_X64",
                     "url": "https://example.com/java.tar.gz"
                 }
