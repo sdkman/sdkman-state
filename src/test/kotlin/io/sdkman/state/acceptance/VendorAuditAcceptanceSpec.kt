@@ -27,9 +27,9 @@ class VendorAuditAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "17.0.1",
+                    version = "17.0.1.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.1.tar.gz",
+                    url = "https://example.com/java-17.0.1.0.tar.gz",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     sha256sum = "abc123def456abc123def456abc123def456abc123def456abc123def456abc1".some(),
