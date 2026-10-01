@@ -46,9 +46,9 @@ class ConcurrentPostVersionWithTagsAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "21.0.5",
+                    version = "21.0.5.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-21.0.5-temurin",
+                    url = "https://java-21.0.5.0-temurin",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     tags = tags.some(),

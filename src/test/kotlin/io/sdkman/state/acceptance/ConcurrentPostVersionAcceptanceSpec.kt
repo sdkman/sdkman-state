@@ -44,9 +44,9 @@ class ConcurrentPostVersionAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "21.0.4",
+                    version = "21.0.4.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-21.0.4-temurin",
+                    url = "https://java-21.0.4.0-temurin",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),

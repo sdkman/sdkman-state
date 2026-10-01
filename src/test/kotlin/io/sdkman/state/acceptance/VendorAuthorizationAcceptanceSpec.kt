@@ -22,9 +22,9 @@ class VendorAuthorizationAcceptanceSpec :
         val authorizedVersion =
             Version(
                 candidate = "java",
-                version = "17.0.1",
+                version = "17.0.1.0",
                 platform = Platform.LINUX_X64,
-                url = "https://java-17.0.1",
+                url = "https://java-17.0.1.0",
                 visible = true.some(),
                 distribution = Distribution.TEMURIN.some(),
             )
@@ -58,7 +58,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","version":"17.0.1","platform":"LINUX_X64","distribution":"TEMURIN"}""",
+                                """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
                             )
                             bearerAuth(vendorToken)
                         }
@@ -145,7 +145,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","version":"17.0.1","platform":"LINUX_X64","distribution":"TEMURIN"}""",
+                                """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
                             )
                             bearerAuth(vendorToken)
                         }
