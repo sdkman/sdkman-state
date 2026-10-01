@@ -9,6 +9,7 @@ object SemverishValidator {
     private val SEMVERISH_PATTERN =
         Regex(
             "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)" +
+                "(?:\\.(?:0|[1-9]\\d*))?" +
                 "(?:-$IDENTIFIER(?:\\.$IDENTIFIER)*)?" +
                 "(?:\\+$IDENTIFIER(?:\\.$IDENTIFIER)*)?$",
         )
