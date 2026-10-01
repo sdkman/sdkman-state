@@ -29,9 +29,9 @@ class IdempotentPostVersionAcceptanceSpec :
             val version =
                 Version(
                     candidate = "java",
-                    version = "17.0.2",
+                    version = "17.0.2.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.2-original",
+                    url = "https://java-17.0.2.0-original",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -74,9 +74,9 @@ class IdempotentPostVersionAcceptanceSpec :
             val originalVersion =
                 Version(
                     candidate = "java",
-                    version = "17.0.3",
+                    version = "17.0.3.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.3-original",
+                    url = "https://java-17.0.3.0-original",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -85,9 +85,9 @@ class IdempotentPostVersionAcceptanceSpec :
             val updatedVersion =
                 Version(
                     candidate = "java",
-                    version = "17.0.3",
+                    version = "17.0.3.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.3-updated",
+                    url = "https://java-17.0.3.0-updated",
                     visible = false.some(),
                     distribution = Distribution.TEMURIN.some(),
                     sha256sum = "abc123def456abc123def456abc123def456abc123def456abc123def456abc1".some(),
