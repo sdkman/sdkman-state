@@ -17,21 +17,23 @@ data class SeriesKey(
 
     private fun variantPattern(): String =
         variant
-            .map { "(?:\\.$it|-$it(?:$BUILD)?)" }
-            .getOrElse { "(?:$BUILD)?" }
+            .map { "(?:\\.$it|$FOURTH-$it(?:$BUILD)?)" }
+            .getOrElse { "$FOURTH(?:$BUILD)?" }
 
     companion object {
-        // The eligibility grammar of `specs/java-version-supersession.md`, in the syntax Kotlin
+        // The eligibility grammar of `specs/semverish-four-component-core.md`, in the syntax Kotlin
         // and POSIX regular expressions share so `versionPattern` is valid in both. `V18`
-        // mirrors it by hand; a later backlog migration must be written against this, not V18.
+        // mirrors an earlier, three-component form by hand; a later backlog migration must be
+        // written against this, not V18.
         private const val NUMERIC = "0|[1-9][0-9]*"
         private const val CORE = "($NUMERIC)\\.(?:$NUMERIC)\\.(?:$NUMERIC)"
+        private const val FOURTH = "(?:\\.(?:$NUMERIC))?"
         private const val VARIANT = "fx|crac"
         private const val IDENTIFIER = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?"
         private const val BUILD = "\\+$IDENTIFIER(?:\\.$IDENTIFIER)*"
 
         private val ELIGIBLE_PATTERN =
-            Regex("^$CORE(?:\\.($VARIANT)|-($VARIANT)(?:$BUILD)?|$BUILD)?$")
+            Regex("^$CORE(?:\\.($VARIANT)|$FOURTH(?:-($VARIANT)(?:$BUILD)?|$BUILD)?)$")
 
         private const val MAJOR_GROUP = 1
         private const val LEGACY_VARIANT_GROUP = 2

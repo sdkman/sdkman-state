@@ -76,7 +76,7 @@ class PostgresVersionRepositoryRetireIntegrationSpec :
                             .retireOtherVersionsInSeries(plainSeriesKey("26.0.2+1.1"), "26.0.2+1.1")
                             .shouldBeRight()
 
-                    retired.map { it.version } shouldContainExactlyInAnyOrder listOf("26.0.1", "26.0.2")
+                    retired.map { it.version } shouldContainExactlyInAnyOrder listOf("26.0.1", "26.0.2", "26.0.1.1")
                 }
             }
 
@@ -140,13 +140,13 @@ class PostgresVersionRepositoryRetireIntegrationSpec :
                 }
             }
 
-            should("retire no rebuild-counter row") {
+            should("retire a bare four-component row of the series") {
                 withCleanDatabase {
                     seedSeriesAndNeighbours()
 
                     repo.retireOtherVersionsInSeries(plainSeriesKey("26.0.2+1.1"), "26.0.2+1.1").shouldBeRight()
 
-                    visibilityOf("26.0.1.1") shouldBe true
+                    visibilityOf("26.0.1.1") shouldBe false
                 }
             }
 

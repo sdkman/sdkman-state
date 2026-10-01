@@ -415,9 +415,9 @@ class VersionServiceUnitSpec :
                 val version =
                     Version(
                         candidate = "java",
-                        version = "11.0.14.1",
+                        version = "25.0.4.r25",
                         platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-11.tar.gz",
+                        url = "https://example.com/java-25.tar.gz",
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)

@@ -27,6 +27,10 @@ class SeriesKeySpec :
                 Triple("26.0.2", 26, none()),
                 Triple("26.0.2.fx", 26, "fx".some()),
                 Triple("17.0.19.crac", 17, "crac".some()),
+                Triple("11.0.14.1", 11, none()),
+                Triple("26.0.2.1", 26, none()),
+                Triple("26.0.2.0-fx+1", 26, "fx".some()),
+                Triple("22.1.0.1+r17", 22, none()),
             ).forEach { (version, expectedMajor, expectedVariant) ->
                 should("derive major $expectedMajor and variant $expectedVariant from $version") {
                     // given: a stored or submitted version in an eligible shape
@@ -62,7 +66,6 @@ class SeriesKeySpec :
 
             listOf(
                 "25.0.4.r25" to "r25 is a runtime target, not a variant",
-                "11.0.14.1" to "four numeric components are a rebuild counter",
                 "25.r25" to "two core components",
                 "26.0" to "two numeric core components",
                 "26" to "one core component",
@@ -70,6 +73,9 @@ class SeriesKeySpec :
                 "26.0.2.lts" to "lts is outside the legacy variant vocabulary",
                 "26.0.2.fx+1.1" to "the legacy variant spelling carries no build metadata",
                 "26.0.2.fx.crac" to "a single variant only",
+                "21.0.5.11.1" to "five numeric components",
+                "26.0.2.1.fx" to "the legacy variant spelling has a three-component core",
+                "25.0.4-graal" to "graal is outside the variant vocabulary",
                 "" to "an empty version",
             ).forEach { (version, reason) ->
                 should("reject '$version' because $reason") {
@@ -93,6 +99,7 @@ class SeriesKeySpec :
                 "26.0.2.fx",
                 "26.0.2-fx+1.1",
                 "26.0.1.1",
+                "26.0.2.1.1",
                 "26.0.4.r25",
                 "21.0.2",
                 "260.0.2",
