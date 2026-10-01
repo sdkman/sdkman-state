@@ -116,6 +116,27 @@ class SeriesKeySpec :
                 }
             }
 
+            listOf(
+                "26.0.2.0-fx+1",
+                "26.0.2.1-fx",
+                "26.0.2.fx",
+                "26.0.2-fx",
+                "26.0.2.1.fx",
+                "26.0.2.0-crac",
+                "26.0.2.0",
+            ).forEach { version ->
+                should("agree with fx series membership for $version") {
+                    // given: the fx series of major 26
+                    val series = seriesKeyOf("26.0.2-fx+1.1").shouldBeSome()
+
+                    // when: matching a version against the series pattern
+                    val matches = Regex(series.versionPattern()).matches(version)
+
+                    // then: four-component variant members join the series like three-component ones
+                    matches shouldBe (seriesKeyOf(version) == series.some())
+                }
+            }
+
             should("admit both spellings of its variant") {
                 // given: the fx series of major 26
                 val series = seriesKeyOf("26.0.2-fx+1.1").shouldBeSome()
