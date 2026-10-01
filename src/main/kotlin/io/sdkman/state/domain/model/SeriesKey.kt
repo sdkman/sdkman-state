@@ -28,12 +28,12 @@ data class SeriesKey(
         private const val NUMERIC = "0|[1-9][0-9]*"
         private const val CORE = "($NUMERIC)\\.(?:$NUMERIC)\\.(?:$NUMERIC)"
         private const val FOURTH = "(?:\\.(?:$NUMERIC))?"
-        private const val VARIANT = "fx|crac"
+        const val VARIANT_VOCABULARY = "fx|crac"
         private const val IDENTIFIER = "[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?"
         private const val BUILD = "\\+$IDENTIFIER(?:\\.$IDENTIFIER)*"
 
         private val ELIGIBLE_PATTERN =
-            Regex("^$CORE(?:\\.($VARIANT)|$FOURTH(?:-($VARIANT)(?:$BUILD)?|$BUILD)?)$")
+            Regex("^$CORE(?:\\.($VARIANT_VOCABULARY)|$FOURTH(?:-($VARIANT_VOCABULARY)(?:$BUILD)?|$BUILD)?)$")
 
         private const val MAJOR_GROUP = 1
         private const val LEGACY_VARIANT_GROUP = 2
