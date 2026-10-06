@@ -7,7 +7,7 @@ detekt-plugin = "1.23.8"
 
 # Libraries
 ktor = "3.6.0"
-logback = "1.6.4"
+logback = "1.6.5"
 exposed = "1.5.0"
 flyway = "13.9.0"
 postgres = "42.7.13"
