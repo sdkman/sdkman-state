@@ -3,86 +3,76 @@
 `sdkman-contrib` accepts candidate registrations and releases as PRs. Before a maintainer
 merges one, its check has to know whether State would accept it. Otherwise a bad request is
 only discovered after merge, where it fails the apply and blocks every request queued behind
-it. Most of those PRs come from forks, and GitHub withholds secrets from fork PRs, so the
-check cannot log in.
+it. Those PRs come from third-party forks, and GitHub withholds secrets from fork PRs, so the
+check has no credentials and cannot log in.
 
-This feature lets anyone ask State whether a registration or a release would be accepted,
-without logging in and without writing anything.
+This feature lets anyone ask State whether a write would be accepted, without logging in and
+without writing anything. It adds no new request shape: each validation route is the exact
+twin of one write route, taking the same body and running the same validation.
 
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
 [`sdkman-contrib`](../../../community/sdkman-contrib/specs/community-contributions.md)'s PR
-check. Settled in a grilling session on 2026-10-07.
+check. Settled in grilling sessions on 2026-10-07 and 2026-10-08.
 [`community-role.md`](community-role.md) refuses java to community writes, independently.*
 
 ## Behaviour
 
-**Validation needs no login and never writes.** Anyone may call it, with or without a token,
-and a token, if sent, changes nothing.
+**Each validation route is the twin of one write route.**
 
-**It answers as the write would.** It applies the same rules the write routes apply to the
-same fields: version syntax, platform ids, description and website rules, and the registry
-check on versions. It returns the status the write would return, listing every failure at
-once rather than stopping at the first.
+| Validation route | Twin |
+|---|---|
+| `POST /validate/versions` | `POST /versions` |
+| `POST /validate/candidates` | `POST /admin/candidates` |
 
-**java is refused.** A request for java is refused with `403`, naming the reason. DISCO owns
-java, and it is not open to public contribution, so a request for it can never succeed
-whatever its content. No other candidate is refused, whatever any vendor's scope says.
+A twin takes exactly the body its write route takes, and answers exactly as the write route
+would, except that it writes nothing and needs no login.
 
-**Two kinds of request can be validated,** matching what `sdkman-contrib` applies:
+**There is one validation, not two.** A write route is its twin's validation, followed by
+authorization and the write itself. The rules are defined once and both routes run them, so
+for any body a twin's `400` is identical to its write route's `400`, and they cannot drift.
 
-- a **registration**: a candidate's identifier, name, description and website;
-- a **release**: one candidate, a list of version rows, and an optional default.
+**Validation needs no login, and authentication never depends on a flag.** Every route under
+`/validate/` is open to anyone, with or without a token, and a token, if sent, changes
+nothing. Every write route stays authenticated exactly as today. No route is sometimes open
+and sometimes not.
 
-**A release is validated as a whole.** Every row is checked, and so is the default. The
-default may name a version in the same release. A default naming no version in the release
-is validated for everything else; whether that version already exists is the caller's to
-check, through the existing public read routes.
+**java is refused.** After validation passes, a request for java is refused with `403`,
+naming the reason, in the same position the community role's java refusal takes on the write
+route. DISCO owns java, and it is not open to public contribution. No other candidate is
+refused.
 
-**Validation reads nothing from the database per request.** It works from the request itself,
-plus the candidate registry, which State holds in memory and refreshes. That makes it as
-cheap as a public read, so it is not throttled. Its answers may lag a registry change by up to
-the registry's refresh interval (five minutes today).
+**One body, one answer.** A release of 20 versions is 20 calls to `POST /validate/versions`,
+one per row, posting exactly the bodies the apply will later post. Validation is cheap enough
+for that: it reads nothing from the database per request, only the request and the candidate
+registry State holds in memory and refreshes, so it is not throttled. Its answers may lag a
+registry change by up to the registry's refresh interval (five minutes today).
 
 ## API Contract
 
-Two routes, one per request kind. Neither needs authentication or writes anything, and both
-answer `Cache-Control: no-store`, since an answer depends on the registry at that moment.
+Both routes answer `Cache-Control: no-store`, since an answer depends on the registry at
+that moment.
 
 | Status | Body | When |
 |---|---|---|
-| `200 OK` | empty object | The request would be accepted |
-| `400 Bad Request` | `ValidationErrorResponse` | One or more validation failures, all of them listed |
-| `403 Forbidden` | `ErrorResponse` | The candidate is java |
-| `500 Internal Server Error` | `ErrorResponse` | The registry has never loaded, as for `POST /versions` |
+| `204 No Content` | | The write would be accepted |
+| `400 Bad Request` | as the write route | Validation fails; identical to the write route's answer for the same body |
+| `403 Forbidden` | `ErrorResponse` | The body is valid, and the candidate is java |
+| `500 Internal Server Error` | `ErrorResponse` | `POST /validate/versions` only: the registry has never loaded, as for `POST /versions` |
 
-A **registration** body has the fields of `POST /admin/candidates`.
-
-A **release** body:
-
-| Field | Required | Notes |
-|---|---|---|
-| `candidate` | yes | applies to every row |
-| `versions` | no | rows with the fields of `POST /versions`, minus `candidate`; may be empty |
-| `default` | no | a version string; would become the `lts` tag |
-
-A release with neither versions nor a default is a `400`. A release for an unregistered
-candidate is a `400`, as `POST /versions` would answer.
+`401` never applies.
 
 ## Business Rules
 
-1. **Validation never writes and needs no login.**
-2. **It applies the write routes' own rules.** There is one definition of what is valid, and
-   validation and the writes both use it, so they cannot drift.
-3. **java is refused with `403`.** No other candidate is.
-4. **Every failure is reported at once.** A release with three bad rows lists all three, each
-   identified by its position in the release.
-5. **A release's default may name a version in the same release.** A default naming any other
-   version is not checked for existence.
-6. **It reads nothing from the database per request,** and is not throttled.
-7. **A `200` is a prediction, not a promise.** The write can still fail for reasons
-   validation does not see: a database error, a registry change in between, or
-   a default outside the release that does not exist.
+1. **Each validation route takes its write twin's body, unchanged.** No new request shape.
+2. **Validation is defined once.** The write route and its twin run the same validation, and
+   give the same `400` for the same body.
+3. **Validation routes never write and need no login.** Write routes keep their
+   authentication unchanged. No route's authentication depends on the request.
+4. **java is refused with `403` after validation passes.** No other candidate is.
+5. **Validation reads nothing from the database per request,** and is not throttled.
+6. **A `204` is a prediction, not a promise.** The write can still fail for reasons
+   validation does not see: authorization, a database error, or a registry change in between.
 
 ## Rollout
 
@@ -96,71 +86,74 @@ fails loudly; nothing is written either way.
 ## Findings
 
 - **The registry is already held in memory and refreshed** (the allow-list cutover), so the
-  registry check validation needs is the one `POST /versions` already makes, with no new
-  read.
-- **Today's validation stops at the request.** `POST /versions` validates one row per call,
-  and nothing validates several rows plus a default together. The release shape is new.
+  registry check `POST /validate/versions` needs is the one `POST /versions` already makes,
+  with no new read.
+- **Validation and the write are already separable on `POST /versions`.** It validates the
+  whole body, answering `400`, before it authorizes or writes. `POST /admin/candidates`
+  authorizes first, so on that route the twin's answer must be the validation it runs after
+  authorization.
 
 ## Examples
 
 ```gherkin
 Feature: Public validation
 
-  Scenario: A valid release validates without writing
+  Scenario: A valid version validates without writing
     Given "jpx" is registered
-    When anyone validates a release of "jpx" with versions 1.2.0 for LINUX_X64 and MAC_ARM64 and default 1.2.0
-    Then the response status is 200
+    When anyone validates the POST /versions body for "jpx 1.2.0" on LINUX_X64
+    Then the response status is 204
       And "jpx 1.2.0" does not exist
 
-  Scenario: Every failure is reported at once
-    When anyone validates a release with three invalid rows
+  Scenario: A twin answers exactly as its write route
+    Given any POST /versions body that the write route rejects with 400
+    When anyone posts the same body to POST /validate/versions
     Then the response status is 400
-      And all three failures are listed, each with its row position
+      And the body is identical to the write route's
 
-  Scenario: A release for an unregistered candidate is refused
+  Scenario: A version of an unregistered candidate is refused
     Given "jpx" is not registered
-    When anyone validates a release of "jpx"
+    When anyone validates a version of "jpx"
     Then the response status is 400
-
-  Scenario: The default may name a version in the same release
-    When anyone validates a release of "jpx" adding 1.3.0 with default 1.3.0
-    Then the response status is 200
 
   Scenario: java is refused
-    When anyone validates a release of "java"
+    When anyone validates a valid version of "java"
     Then the response status is 403
 
-  Scenario: An empty release is refused
-    When anyone validates a release of "jpx" with no versions and no default
+  Scenario: An invalid java body is a 400, not a 403
+    When anyone validates an invalid version body of "java"
     Then the response status is 400
 
   Scenario: A registration validates without writing
     Given "jpx" is not registered
-    When anyone validates a registration of "jpx"
-    Then the response status is 200
+    When anyone validates the POST /admin/candidates body for "jpx"
+    Then the response status is 204
       And "jpx" is still not registered
 
   Scenario: Validation needs no login
-    When a caller with no token validates a release
+    When a caller with no token validates a version
     Then it is answered, not refused with 401
+
+  Scenario: Write routes still need a login
+    When a caller with no token posts to POST /versions
+    Then the response status is 401
 ```
 
 ## Out of Scope
 
-- Validating deletes or tag changes. `sdkman-contrib` sends neither.
-- Checking that a default outside the release exists. The caller uses the public read routes.
+- Validating deletes or tag changes. `sdkman-contrib` sends neither through validation.
+- Validating several rows, or a default, in one call.
 - Throttling.
-- Any change to the write routes.
+- Any change to the write routes' contracts or authentication.
 
 ## Acceptance Criteria
 
-- [ ] Registration and release validation need no login, never write, and answer `no-store`
-- [ ] Validation applies the write routes' own rules, from one shared definition
-- [ ] Every failure is listed, each row failure identified by its position
-- [ ] java is refused with `403` naming the reason; no other candidate is
-- [ ] A release's default may name a version in the same release
-- [ ] A release with neither versions nor a default, or for an unregistered candidate, is a `400`
-- [ ] A never-loaded registry answers `500`, as for `POST /versions`
+- [ ] `POST /validate/versions` and `POST /validate/candidates` take exactly the bodies of `POST /versions` and `POST /admin/candidates`
+- [ ] For the same body, each validation route's `400` is identical to its write route's, proven across the write routes' existing validation cases
+- [ ] Validation logic exists once, shared by each write route and its twin
+- [ ] Validation routes need no login, never write, answer `204` on success and `no-store` always
+- [ ] Every write route still requires authentication as today
+- [ ] A valid body for java is refused with `403`; an invalid one is a `400`
+- [ ] A never-loaded registry answers `500` on `POST /validate/versions`, as on `POST /versions`
 - [ ] Validation performs no database read per request and is not throttled
 - [ ] OpenAPI documents both routes
 - [ ] All quality gates pass (`./gradlew check`)
