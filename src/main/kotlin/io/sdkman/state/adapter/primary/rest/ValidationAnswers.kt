@@ -7,7 +7,9 @@ import io.ktor.server.response.respond
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
+import io.sdkman.state.application.validation.CandidateRequestValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
+import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Version
 
 // The whole validation answer, shared by a write route and its public validation twin so
@@ -24,6 +26,13 @@ fun versionValidationAnswer(
                 ValidationErrorResponse("Validation failed", errors.map { ValidationFailure(it.field, it.message) }),
             )
         }
+    }
+
+fun candidateValidationAnswer(body: String): Either<Rejection, CandidateRegistration> =
+    CandidateRequestValidator.validateRequest(body).mapLeft { errors ->
+        Rejection.Invalid(
+            ValidationErrorResponse("Validation failed", errors.map { ValidationFailure(it.field, it.message) }),
+        )
     }
 
 suspend fun ApplicationCall.respondRejection(rejection: Rejection) =
