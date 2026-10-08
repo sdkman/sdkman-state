@@ -56,10 +56,13 @@ class PostgresVersionRepository : VersionRepository {
 
     private fun Version.withTags(tags: List<String>): Version = copy(tags = tags.some())
 
+    // Tags read back in the order they were written; without an ORDER BY Postgres may
+    // return reused heap slots first.
     private fun fetchTagNames(versionId: Int): List<String> =
         VersionTagsTable
             .select(VersionTagsTable.tag)
             .where { VersionTagsTable.versionId eq versionId }
+            .orderBy(VersionTagsTable.id)
             .map { it[VersionTagsTable.tag] }
 
     private fun batchFetchTags(versionIds: List<Int>): Map<Int, List<String>> =
@@ -69,6 +72,7 @@ class PostgresVersionRepository : VersionRepository {
             VersionTagsTable
                 .select(VersionTagsTable.versionId, VersionTagsTable.tag)
                 .where { VersionTagsTable.versionId inList versionIds }
+                .orderBy(VersionTagsTable.id)
                 .groupBy { it[VersionTagsTable.versionId] }
                 .mapValues { (_, rows) -> rows.map { it[VersionTagsTable.tag] } }
         }
