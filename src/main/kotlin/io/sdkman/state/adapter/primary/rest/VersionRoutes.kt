@@ -13,8 +13,6 @@ import io.ktor.server.routing.*
 import io.ktor.util.date.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
-import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
-import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.application.validation.UniqueVersionValidator
@@ -149,23 +147,12 @@ private fun Route.versionCreateRoute(
 ) {
     post("/versions") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        if (!versionRequestValidator.allowListLoaded()) {
-            call.respond(
-                HttpStatusCode.InternalServerError,
-                ErrorResponse("Internal Server Error", "Candidate registry unavailable"),
-            )
-            return@post
-        }
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         val role = call.authenticatedRole()
         val candidates = call.authenticatedCandidates()
-        val requestBody = call.receiveText()
-        versionRequestValidator.validateRequest(requestBody).fold(
-            ifLeft = { errors ->
-                val failures = errors.map { ValidationFailure(it.field, it.message) }
-                call.respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
-            },
+        versionValidationAnswer(versionRequestValidator, call.receiveText()).fold(
+            ifLeft = { rejection -> call.respondRejection(rejection) },
             ifRight = { validVersion ->
                 // Admin tokens bypass candidate authorization — admin can operate on any candidate
                 if (role == "vendor" && validVersion.candidate !in candidates) {
