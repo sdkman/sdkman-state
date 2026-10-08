@@ -35,6 +35,11 @@ community {
 
 Login checks the admin first, then the community account, then the `vendors` table.
 
+**The community account is optional.** It has no default credentials. A State instance with
+no community account configured starts and behaves exactly as today: a community login simply
+fails with `401`, like any wrong credential. So the release needs no deploy ordering, and the
+local stack and the tests keep working without it.
+
 **It may change every candidate.** On any candidate, registered or not, the role can do
 everything the admin can do to candidates, versions and tags. Its scope has no exceptions and
 depends on no data, so it cannot fail or go stale. Keeping community requests away from
@@ -162,6 +167,7 @@ Feature: Community role
 - [ ] Every write route refuses a role it does not explicitly admit; a token with an unknown role is refused
 - [ ] Every admin and vendor status code on every route is unchanged
 - [ ] A community account can log in and receives a token with role `community`
+- [ ] With no community account configured, State starts normally and a community login fails with `401`
 - [ ] The community role can register, update and delete candidates, subject to the existing `409` for a candidate with versions
 - [ ] The community role can post, overwrite and delete versions of every candidate
 - [ ] The community role can assign and remove any tag on every candidate
