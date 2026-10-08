@@ -536,6 +536,74 @@ paths:
             'application/json':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /validate/versions:
+    post:
+      description: "Validate a version body without writing it. Runs the same checks as POST /versions, including the candidate registry check, and answers as that route would, but persists nothing and needs no token: a sent token is never inspected, so 401 never applies. Bodies over 16384 bytes are refused with 413. Every answer carries Cache-Control: no-store, since it depends on the registry at that moment."
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: "#/components/schemas/Version"
+        required: true
+      responses:
+        "204":
+          description: "No Content - POST /versions would accept the body"
+        "400":
+          description: "Bad Request - Validation failed. The body is identical to the answer of POST /versions for the same request."
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: "Standard validation failure"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "url"
+                        message: "URL 'http://example.com' must be a valid HTTPS URL"
+        "413":
+          description: "Content Too Large - The body exceeds 16384 bytes"
+        "500":
+          description: "Internal Server Error - The candidate registry has never loaded successfully, as for POST /versions"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                registry_unavailable:
+                  description: "The candidate registry has never loaded successfully"
+                  value:
+                    error: "Internal Server Error"
+                    message: "Candidate registry unavailable"
+  /validate/candidates:
+    post:
+      description: "Validate a candidate registration body without writing it. Runs the same checks as POST /admin/candidates and answers as that route would, but persists nothing and needs no token: a sent token is never inspected, so 401 never applies. Bodies over 16384 bytes are refused with 413. Every answer carries Cache-Control: no-store."
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/CreateCandidateRequest"
+        required: true
+      responses:
+        "204":
+          description: "No Content - POST /admin/candidates would accept the body"
+        "400":
+          description: "Bad Request - Validation failure or malformed JSON. The body is identical to the answer of POST /admin/candidates for the same request."
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                validation_error:
+                  summary: "Structural validation failure"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "website_url"
+                        message: "URL 'http://gradle.org/' must be a valid HTTPS URL"
+        "413":
+          description: "Content Too Large - The body exceeds 16384 bytes"
   /versions/{candidate}:
     get:
       description: "List versions for a candidate, optionally filtered by platform, distribution, and visibility."
