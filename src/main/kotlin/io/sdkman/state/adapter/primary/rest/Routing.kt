@@ -26,6 +26,7 @@ fun Application.configureRouting(
         healthRoutes(healthRepo)
         versionReadRoutes(versionService, appConfig)
         loginRoute(authService)
+        validationRoutes(versionRequestValidator)
         authenticate("auth-jwt") {
             versionWriteRoutes(versionService, versionRequestValidator)
             tagRoutes(tagService)
