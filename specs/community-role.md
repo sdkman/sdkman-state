@@ -7,10 +7,9 @@ contribution path that replaces the archived `sdkman-db-migrations`: anyone open
 should not hold the admin's credential, and a vendor cannot register a candidate at all, so a
 vendor login could never add a new one.
 
-This feature adds a third role, **community**. It looks after every candidate except
-java: it registers, updates and deletes candidates, publishes, overwrites and deletes their
-versions, and manages their tags. It never touches java, which DISCO owns, and never manages
-vendors.
+This feature adds a third role, **community**. It looks after candidates: it registers,
+updates and deletes them, publishes, overwrites and deletes their versions, and manages their
+tags. It never manages vendors.
 
 Adding a third role exposes a defect: the version and tag routes treat any role that is not
 `vendor` as admin. That is fixed here, before a third role exists to slip through.
@@ -36,11 +35,12 @@ community {
 
 Login checks the admin first, then the community account, then the `vendors` table.
 
-**It may change every candidate except java.** On every other candidate, registered or not,
-the role can do everything the admin can do to candidates, versions and tags. Its scope is
-that fixed rule and nothing else: it does not depend on vendor scopes or any other data, so
-it cannot fail or go stale. Admin-only operations outside candidates, versions and tags, such
-as managing vendors, stay admin-only.
+**It may change every candidate.** On any candidate, registered or not, the role can do
+everything the admin can do to candidates, versions and tags. Its scope has no exceptions and
+depends on no data, so it cannot fail or go stale. Keeping community requests away from
+java, which DISCO owns, is `sdkman-contrib`'s rule and its maintainers' review, not State's.
+Admin-only operations outside candidates, versions and tags, such as managing vendors, stay
+admin-only.
 
 **Authorization fails closed.** A role gets only what it is explicitly granted. A token with a
 role State does not know is refused by every write route. Today the version and tag routes
@@ -56,18 +56,14 @@ No new routes. Existing routes admit the community role as follows:
 
 | Route | Admin | Vendor | Community |
 |---|---|---|---|
-| `POST /versions` | any candidate | own candidates | any candidate except java |
-| `DELETE /versions` | any candidate | own candidates | any candidate except java |
-| `POST /versions/tags`, `DELETE /versions/tags` | any candidate | own candidates | any candidate except java |
-| `POST /admin/candidates` | yes | no (401) | any candidate except java |
-| `DELETE /admin/candidates/{candidate}` | yes | no (401) | any candidate except java |
+| `POST /versions` | any candidate | own candidates | any candidate |
+| `DELETE /versions` | any candidate | own candidates | any candidate |
+| `POST /versions/tags`, `DELETE /versions/tags` | any candidate | own candidates | any candidate |
+| `POST /admin/candidates` | yes | no (401) | any candidate |
+| `DELETE /admin/candidates/{candidate}` | yes | no (401) | any candidate |
 | `/admin/vendors` (all) | yes | no (401) | no (401) |
 
-A community request for java is refused with `403`, naming the reason. Validation, including
-the registry check, runs first and answers `400` as today; the java refusal runs where the
-vendor scope check runs today, so no vendor's answer changes. On `POST /admin/candidates` and
-`DELETE /admin/candidates/{candidate}`, the java refusal precedes the existence check. Every other rule on these routes
-applies to the community role unchanged: validation, the registry check on `POST /versions`,
+Every rule on these routes applies to the community role unchanged: validation, the registry check on `POST /versions`,
 and the `409` that refuses to delete a candidate that still has versions.
 
 ## Business Rules
@@ -77,13 +73,11 @@ and the `409` that refuses to delete a candidate that still has versions.
    without it, the community role would pass the version and tag routes as admin. An unknown
    role gets `403` on the version and tag routes and `401` on the `/admin` routes, the same as
    each route already gives a role it doesn't allow.
-2. **java is refused.** Every community write for java is refused with `403`. No other
-   candidate is refused, whatever any vendor's scope says.
-3. **The community role cannot manage vendors.** It is refused every `/admin/vendors` route.
-4. **Everything else the admin may do to candidates, versions and tags, the community role
-   may do to every candidate except java.** That includes overwriting, deleting and
+2. **The community role cannot manage vendors.** It is refused every `/admin/vendors` route.
+3. **Everything the admin may do to candidates, versions and tags, the community role may
+   do to every candidate.** No candidate is refused, whatever any vendor's scope says. That includes overwriting, deleting and
    any tag; `sdkman-contrib` uses a subset, and State does not encode it.
-5. **Community writes are attributed to the community account.** Where a vendor's write is
+4. **Community writes are attributed to the community account.** Where a vendor's write is
    recorded in the audit trail with its identity, a community write is recorded with the
    community account's. The community token's `vendor_id` is a fixed, documented sentinel UUID,
    distinct from the admin's nil UUID, and `email` is the community account's email, so a
@@ -111,9 +105,6 @@ keep working against the previous release's fail-open routes, as admin, until th
   The `/admin/vendors` routes and the candidate admin routes test for `admin` explicitly and
   are already closed. Introducing a third role without fixing the first four would grant it
   admin rights on versions and tags.
-- **The candidate admin routes refuse a vendor with `401`, not `403`.** That stays as it is for
-  vendors. The community role's refusal for java is a `403`, because the
-  caller is allowed on the route, just not for that candidate.
 
 ## Examples
 
@@ -138,10 +129,6 @@ Feature: Community role
     When the community role assigns the tag "latest" to it
     Then the response status is 204
 
-  Scenario: java is refused
-    When the community role posts a version of "java"
-    Then the response status is 403
-
   Scenario: A vendor's candidate is not refused
     Given a live vendor's scope includes "gradle"
     When the community role posts a version of "gradle"
@@ -165,7 +152,8 @@ Feature: Community role
 ## Out of Scope
 
 - Validating a request without writing it: [`public-validation.md`](public-validation.md).
-- More than one community account, or a community scope narrower than "every candidate except java".
+- More than one community account, or a community scope narrower than every candidate.
+- Refusing java to the community role. `sdkman-contrib`'s check refuses it instead.
 - Changing what admin or vendor tokens may do.
 - The `sdkman-contrib` repo itself.
 
@@ -174,10 +162,9 @@ Feature: Community role
 - [ ] Every write route refuses a role it does not explicitly admit; a token with an unknown role is refused
 - [ ] Every admin and vendor status code on every route is unchanged
 - [ ] A community account can log in and receives a token with role `community`
-- [ ] The community role can register, update and delete candidates except java, subject to the existing `409` for a candidate with versions
-- [ ] The community role can post, overwrite and delete versions of every candidate except java
-- [ ] The community role can assign and remove any tag on every candidate except java
-- [ ] Every community write for `java` is refused with `403` naming the reason
+- [ ] The community role can register, update and delete candidates, subject to the existing `409` for a candidate with versions
+- [ ] The community role can post, overwrite and delete versions of every candidate
+- [ ] The community role can assign and remove any tag on every candidate
 - [ ] No other candidate is refused to the community role, including one in a vendor's scope
 - [ ] The community role is refused every `/admin/vendors` route
 - [ ] Community version and tag writes are recorded in `vendor_audit` under the community account; candidate writes stay unaudited, as for the admin
