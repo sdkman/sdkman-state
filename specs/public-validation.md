@@ -52,7 +52,9 @@ registry change by up to the registry's refresh interval (five minutes today).
 
 **Body size is capped.** Because the routes are open to anyone, a validation route refuses a
 body larger than a fixed limit with `413`, before reading it. A real body is a few hundred
-bytes, so the limit can be small; its exact value is left to planning.
+bytes, so the limit can be small. The limit is 16 KiB (16,384 bytes): the largest valid body,
+a candidate whose 2,000-character description escapes every character, stays well under it.
+The `413` also carries `Cache-Control: no-store`.
 
 ## API Contract
 
