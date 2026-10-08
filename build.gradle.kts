@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.ktor.server.auth.jwt)
     implementation(libs.ktor.server.caching.headers)
     implementation(libs.ktor.server.forwarded.header)
+    implementation(libs.ktor.server.body.limit)
     implementation(libs.java.jwt)
     implementation(libs.bcrypt)
     implementation(libs.arrow.core)
