@@ -12,9 +12,8 @@ without logging in and without writing anything.
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
 [`sdkman-contrib`](../../../community/sdkman-contrib/specs/community-contributions.md)'s PR
-check. Settled in a grilling session on 2026-10-07. "Off limits" is pinned in the
-[glossary](../../../docs/glossary.md); [`community-role.md`](community-role.md) applies the
-same rule to writes, independently.*
+check. Settled in a grilling session on 2026-10-07.
+[`community-role.md`](community-role.md) refuses java to community writes, independently.*
 
 ## Behaviour
 
@@ -26,9 +25,9 @@ same fields: version syntax, platform ids, description and website rules, and th
 check on versions. It returns the status the write would return, listing every failure at
 once rather than stopping at the first.
 
-**Off-limits candidates are refused.** A request for a candidate that is off limits (`java`,
-or in a live vendor's scope) is refused with `403`, naming the reason. These candidates are
-not open to public contribution, so a request for one can never succeed whatever its content.
+**java is refused.** A request for java is refused with `403`, naming the reason. DISCO owns
+java, and it is not open to public contribution, so a request for it can never succeed
+whatever its content. No other candidate is refused, whatever any vendor's scope says.
 
 **Two kinds of request can be validated,** matching what `sdkman-contrib` applies:
 
@@ -41,22 +40,20 @@ is validated for everything else; whether that version already exists is the cal
 check, through the existing public read routes.
 
 **Validation reads nothing from the database per request.** It works from the request itself,
-plus the candidate registry and the vendor scopes, which State holds in memory and refreshes.
-That makes it as cheap as a public read, so it is not throttled. Its answers may lag a
-registry or vendor-scope change by up to the registry's refresh interval (five minutes
-today).
+plus the candidate registry, which State holds in memory and refreshes. That makes it as
+cheap as a public read, so it is not throttled. Its answers may lag a registry change by up to
+the registry's refresh interval (five minutes today).
 
 ## API Contract
 
 Two routes, one per request kind. Neither needs authentication or writes anything, and both
-answer `Cache-Control: no-store`, since an answer depends on the registry and vendor scopes
-at that moment.
+answer `Cache-Control: no-store`, since an answer depends on the registry at that moment.
 
 | Status | Body | When |
 |---|---|---|
 | `200 OK` | empty object | The request would be accepted |
 | `400 Bad Request` | `ValidationErrorResponse` | One or more validation failures, all of them listed |
-| `403 Forbidden` | `ErrorResponse` | The candidate is off limits |
+| `403 Forbidden` | `ErrorResponse` | The candidate is java |
 | `500 Internal Server Error` | `ErrorResponse` | The registry has never loaded, as for `POST /versions` |
 
 A **registration** body has the fields of `POST /admin/candidates`.
@@ -77,14 +74,14 @@ candidate is a `400`, as `POST /versions` would answer.
 1. **Validation never writes and needs no login.**
 2. **It applies the write routes' own rules.** There is one definition of what is valid, and
    validation and the writes both use it, so they cannot drift.
-3. **Off-limits candidates are refused with `403`.** A deleted vendor owns nothing.
+3. **java is refused with `403`.** No other candidate is.
 4. **Every failure is reported at once.** A release with three bad rows lists all three, each
    identified by its position in the release.
 5. **A release's default may name a version in the same release.** A default naming any other
    version is not checked for existence.
 6. **It reads nothing from the database per request,** and is not throttled.
 7. **A `200` is a prediction, not a promise.** The write can still fail for reasons
-   validation does not see: a database error, a registry or vendor-scope change in between, or
+   validation does not see: a database error, a registry change in between, or
    a default outside the release that does not exist.
 
 ## Rollout
@@ -100,7 +97,7 @@ fails loudly; nothing is written either way.
 
 - **The registry is already held in memory and refreshed** (the allow-list cutover), so the
   registry check validation needs is the one `POST /versions` already makes, with no new
-  read. Vendor scopes are not held that way today.
+  read.
 - **Today's validation stops at the request.** `POST /versions` validates one row per call,
   and nothing validates several rows plus a default together. The release shape is new.
 
@@ -133,12 +130,6 @@ Feature: Public validation
     When anyone validates a release of "java"
     Then the response status is 403
 
-  Scenario: A vendor's candidate is refused
-    Given a live vendor's scope includes "gradle"
-    When anyone validates a release of "gradle"
-    Then the response status is 403
-      And the message says "gradle" is published by its vendor
-
   Scenario: An empty release is refused
     When anyone validates a release of "jpx" with no versions and no default
     Then the response status is 400
@@ -166,7 +157,7 @@ Feature: Public validation
 - [ ] Registration and release validation need no login, never write, and answer `no-store`
 - [ ] Validation applies the write routes' own rules, from one shared definition
 - [ ] Every failure is listed, each row failure identified by its position
-- [ ] Off-limits candidates are refused with `403` naming the reason; a deleted vendor owns nothing
+- [ ] java is refused with `403` naming the reason; no other candidate is
 - [ ] A release's default may name a version in the same release
 - [ ] A release with neither versions nor a default, or for an unregistered candidate, is a `400`
 - [ ] A never-loaded registry answers `500`, as for `POST /versions`
