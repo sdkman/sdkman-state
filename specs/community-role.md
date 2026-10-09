@@ -37,7 +37,10 @@ Login checks the admin first, then the community account, then the `vendors` tab
 
 **The community account is optional.** It has no default credentials. A State instance with
 no community account configured starts and behaves exactly as today: a community login simply
-fails with `401`, like any wrong credential. So the release needs no deploy ordering, and the
+fails with `401`, like any wrong credential. The account counts as configured only when both
+`community.email` and `community.password` are set; with either one missing it is treated as
+absent. *(Assumption, planning pass 2026-10-08: half a credential is a misconfiguration, and
+refusing it is the safer reading.)* So the release needs no deploy ordering, and the
 local stack and the tests keep working without it.
 
 **It may change every candidate.** On any candidate, registered or not, the role can do
@@ -85,8 +88,10 @@ and the `409` that refuses to delete a candidate that still has versions.
 4. **Community writes are attributed to the community account.** Where a vendor's write is
    recorded in the audit trail with its identity, a community write is recorded with the
    community account's. The community token's `vendor_id` is a fixed, documented sentinel UUID,
-   distinct from the admin's nil UUID, and `email` is the community account's email, so a
-   `vendor_audit` row can be attributed to the community by either column.
+   distinct from the admin's nil UUID, namely `00000000-0000-0000-0000-000000000001`, and `email` is the community account's email, so a
+   `vendor_audit` row can be attributed to the community by either column. The token's
+   `candidates` claim is an empty list, as for the admin; the role's reach comes from the role,
+   not from the claim.
 
 ## Rollout
 
