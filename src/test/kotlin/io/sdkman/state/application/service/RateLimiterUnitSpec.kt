@@ -58,7 +58,6 @@ class RateLimiterUnitSpec :
             limiter.checkAndRecord("cleanup-ip") shouldBe false
 
             limiter.cleanup()
-            // entry still present (not expired)
             limiter.checkAndRecord("cleanup-ip") shouldBe false
         }
 

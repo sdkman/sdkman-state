@@ -27,15 +27,6 @@ import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Proves the periodic refresh of rule 3: a candidate that appears in the table without this
- * instance serving the write becomes publishable within the interval, with no restart.
- *
- * The registration is inserted straight into the table rather than posted to `POST /admin/candidates`,
- * because the admin route refreshes the holder eagerly and would prove the write refresh instead.
- * The row therefore stands in for a registration served by a sibling instance, which is the only
- * case the periodic refresh exists to cover.
- */
 @Tags("acceptance")
 class CandidateRegistryRefreshAcceptanceSpec :
     ShouldSpec({

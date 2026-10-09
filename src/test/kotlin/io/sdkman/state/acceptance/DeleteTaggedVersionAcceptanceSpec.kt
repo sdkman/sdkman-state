@@ -196,7 +196,6 @@ class DeleteTaggedVersionAcceptanceSpec :
                         distribution = distribution.some(),
                     ),
                 )
-                // no tags inserted — simulates tags already moved to another version
 
                 // when: deleting the now-untagged version
                 withTestApplication {

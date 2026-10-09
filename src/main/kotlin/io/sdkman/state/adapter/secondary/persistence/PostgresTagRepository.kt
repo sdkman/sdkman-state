@@ -94,16 +94,6 @@ class PostgresTagRepository : TagRepository {
                 )
             }
 
-    // R5: replaceTags must be race-safe under concurrent same-payload writers. The previous
-    // "delete this version's tags then insert each" had two race windows: (1) the per-tag delete
-    // before insert, (2) the up-front delete-all before any insert. Both let a concurrent writer
-    // observe an empty/partial state and either re-insert (duplicate key) or wipe a sibling
-    // writer's just-inserted row. The replacement is:
-    //   1. Delete only this version's tags that are *not* in the incoming list (so removal still
-    //      works without touching tags we are about to keep).
-    //   2. UPSERT each incoming tag on the `(candidate, tag, distribution, platform)` unique
-    //      index — idempotent on same-payload re-inserts, and atomically re-points the row's
-    //      `version_id` when the tag is being moved from another version in scope.
     override suspend fun replaceTags(
         versionId: Int,
         candidate: String,
@@ -163,10 +153,6 @@ class PostgresTagRepository : TagRepository {
                 )
             }
 
-    // Assigns a single tag to a version via the same race-safe UPSERT used inside replaceTags,
-    // but without the delete-not-in-list step. This re-points the row's `version_id` when the tag
-    // is being moved from another version in scope (mutual exclusivity), is a no-op on same-payload
-    // re-assignment (idempotent), and leaves the version's other tags untouched (append, not replace).
     override suspend fun assignTag(
         versionId: Int,
         candidate: String,

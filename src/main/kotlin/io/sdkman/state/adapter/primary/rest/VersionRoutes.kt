@@ -154,7 +154,6 @@ private fun Route.versionCreateRoute(
         versionValidationAnswer(versionRequestValidator, call.receiveText()).fold(
             ifLeft = { rejection -> call.respondRejection(rejection) },
             ifRight = { validVersion ->
-                // Admin tokens bypass candidate authorization — admin can operate on any candidate
                 if (role == "vendor" && validVersion.candidate !in candidates) {
                     call.respond(
                         HttpStatusCode.Forbidden,
@@ -193,7 +192,6 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
-            // Admin tokens bypass candidate authorization — admin can operate on any candidate
             if (role == "vendor" && validUniqueVersion.candidate !in candidates) {
                 call.respond(
                     HttpStatusCode.Forbidden,

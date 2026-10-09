@@ -28,14 +28,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-/**
- * Guards spec R4: concurrent POST /versions for the same (candidate, version, distribution, platform)
- * must collapse to a single row via the Postgres UPSERT, with every caller seeing 204 No Content
- * (i.e. no unique-constraint exception ever leaks back to the client).
- *
- * Run repeatedly (`./gradlew test --tests '*ConcurrentPostVersion*' --rerun`) to flush out any
- * surviving check-then-act race window.
- */
 @Tags("acceptance")
 class ConcurrentPostVersionAcceptanceSpec :
     ShouldSpec({

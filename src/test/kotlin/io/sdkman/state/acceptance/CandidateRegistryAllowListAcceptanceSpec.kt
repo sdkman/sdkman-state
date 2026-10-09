@@ -19,14 +19,6 @@ import io.sdkman.state.support.toJsonString
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * Proves the registry is the allow-list: registering a candidate grants publishing rights and
- * deleting one revokes them, both on the instance that served the write and without a restart.
- *
- * This is the repair the cutover exists to make — `jpx` fell out of the classpath allow-list and
- * needed a deploy to come back. The delete-versus-publish race of rule 6 is deliberately not
- * covered here; it is accepted rather than closed.
- */
 @Tags("acceptance")
 class CandidateRegistryAllowListAcceptanceSpec :
     ShouldSpec({

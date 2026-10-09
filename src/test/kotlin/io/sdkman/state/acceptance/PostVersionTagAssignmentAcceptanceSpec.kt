@@ -387,7 +387,6 @@ class PostVersionTagAssignmentAcceptanceSpec :
         }
 
         should("return 400 Bad Request when the platform is not a valid enum value") {
-            // a raw body is needed: the typed DTO cannot represent an invalid Platform
             val requestBody =
                 """
                 {
@@ -417,7 +416,6 @@ class PostVersionTagAssignmentAcceptanceSpec :
         }
 
         should("return 400 Bad Request when the distribution is not a valid enum value") {
-            // a raw body is needed: the typed DTO cannot represent an invalid Distribution
             val requestBody =
                 """
                 {

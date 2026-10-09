@@ -97,8 +97,6 @@ class PostgresVersionRepositoryIntegrationSpec :
                 withCleanDatabase {
                     repo.createOrUpdate(version)
 
-                    // selectVersion matches on `distribution IS NULL`, so a hit proves the
-                    // column was stored as SQL NULL rather than an 'NA' sentinel string.
                     val stored =
                         selectVersion(
                             candidate = version.candidate,
@@ -160,7 +158,6 @@ class PostgresVersionRepositoryIntegrationSpec :
                     )
 
                 withCleanDatabase {
-                    // First insert
                     repo.createOrUpdate(version)
                     val firstTimestamp =
                         selectLastUpdatedAt(
@@ -172,10 +169,8 @@ class PostgresVersionRepositoryIntegrationSpec :
 
                     firstTimestamp.shouldBeSome()
 
-                    // Wait to ensure timestamp difference
                     delay(100)
 
-                    // Upsert with different data
                     val updatedVersion = version.copy(url = "https://groovy-4.0.0-updated")
                     repo.createOrUpdate(updatedVersion)
 
@@ -343,8 +338,6 @@ class PostgresVersionRepositoryIntegrationSpec :
                     repo.createOrUpdate(temurin)
                     repo.createOrUpdate(zulu)
 
-                    // NULLS NOT DISTINCT collapses only NULL distributions; distinct literals
-                    // sharing (candidate, version, platform) must remain separate rows.
                     val versions =
                         repo
                             .findByCandidate(

@@ -30,11 +30,6 @@ import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
 
-/**
- * Passthrough used so unit tests can exercise [VersionServiceImpl.createOrUpdate] without a
- * registered Exposed `Database`. Production uses `ExposedTransactional`; verifying the wrapping
- * call count from the service is covered by [transactional] being a mockk spy below.
- */
 private fun passthroughTransactional(): Transactional =
     object : Transactional {
         override suspend fun <E, A> inTransaction(block: suspend () -> Either<E, A>): Either<E, A> = block()
@@ -261,10 +256,6 @@ class VersionServiceUnitSpec :
             }
 
             should("return DatabaseError and skip audit when tag processing fails") {
-                // R5: tag replacement is atomic with the version write — if tags fail, the
-                // version write rolls back and the request must surface the failure (no more
-                // silent swallow). Audit must also be skipped because the version write was
-                // rolled back, so there is no successful operation to record.
                 val version =
                     Version(
                         candidate = "java",
@@ -462,9 +453,6 @@ class VersionServiceUnitSpec :
             }
 
             should("roll back the outer transaction when tag processing fails") {
-                // R5: the version+tag write must run in one transaction. Verify by spying on the
-                // Transactional port — it should be called exactly once, and a Left bubbled out
-                // of its block must reach the caller unchanged.
                 val transactional = mockk<Transactional>()
                 val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
                 val version =

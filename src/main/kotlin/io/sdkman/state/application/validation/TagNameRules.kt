@@ -1,10 +1,5 @@
 package io.sdkman.state.application.validation
 
-// Shared tag-name validation rules. A tag must be 1–50 characters, start and end
-// with an alphanumeric character, and use only alphanumerics, dots, hyphens, and
-// underscores in between. Both `VersionRequestValidator` (tag list on a version)
-// and `TagAssignmentValidator` (single tag assignment) reuse this single rule so
-// the pattern and length bound are defined exactly once.
 object TagNameRules {
     const val MAX_LENGTH = 50
     val PATTERN = Regex("^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$")

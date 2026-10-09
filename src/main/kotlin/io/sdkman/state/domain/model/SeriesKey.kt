@@ -21,10 +21,6 @@ data class SeriesKey(
             .getOrElse { "$FOURTH(?:$BUILD)?" }
 
     companion object {
-        // The eligibility grammar of `specs/semverish-four-component-core.md`, in the syntax Kotlin
-        // and POSIX regular expressions share so `versionPattern` is valid in both. `V18`
-        // mirrors an earlier, three-component form by hand; a later backlog migration must be
-        // written against this, not V18.
         private const val NUMERIC = "0|[1-9][0-9]*"
         private const val CORE = "($NUMERIC)\\.(?:$NUMERIC)\\.(?:$NUMERIC)"
         private const val FOURTH = "(?:\\.(?:$NUMERIC))?"

@@ -12,8 +12,6 @@ import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Version
 
-// The whole validation answer, shared by a write route and its public validation twin so
-// their 500 and 400 responses cannot drift (specs/public-validation.md, Business Rules 2).
 fun versionValidationAnswer(
     validator: VersionRequestValidator,
     body: String,

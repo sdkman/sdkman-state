@@ -27,8 +27,6 @@ import kotlinx.serialization.json.jsonPrimitive
 class DeleteTagAcceptanceSpec :
     ShouldSpec({
 
-        // Happy path tests
-
         should("delete a tag and return 204 No Content") {
             val candidate = "java"
             val version = "27.0.2"
@@ -189,7 +187,6 @@ class DeleteTagAcceptanceSpec :
                 insertTag(candidate, "27", distribution.some(), platform, versionId)
 
                 withTestApplication {
-                    // step 1: delete "latest" tag
                     client
                         .delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
@@ -204,7 +201,6 @@ class DeleteTagAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
-                    // step 2: delete "27" tag
                     client
                         .delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
@@ -219,7 +215,6 @@ class DeleteTagAcceptanceSpec :
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
-                    // step 3: delete the now-untagged version
                     client
                         .delete("/versions") {
                             contentType(ContentType.Application.Json)
@@ -282,8 +277,6 @@ class DeleteTagAcceptanceSpec :
                 selectTagNames(versionId) shouldBe emptyList()
             }
         }
-
-        // Unhappy path tests
 
         should("return 404 Not Found when deleting a non-existent tag") {
             withCleanDatabase {
@@ -443,8 +436,6 @@ class DeleteTagAcceptanceSpec :
                 }
             }
         }
-
-        // Audit test
 
         should("create audit record when tag is deleted") {
             val candidate = "java"

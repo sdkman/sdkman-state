@@ -43,7 +43,6 @@ class AuthServiceImplUnitSpec :
 
         beforeEach { clearAllMocks() }
 
-        // Re-stub appConfig defaults after clearAllMocks
         beforeEach {
             every { appConfig.adminEmail } returns ADMIN_EMAIL
             every { appConfig.adminPassword } returns ADMIN_PASSWORD

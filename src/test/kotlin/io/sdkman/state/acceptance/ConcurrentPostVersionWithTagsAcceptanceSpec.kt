@@ -29,14 +29,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-/**
- * Guards spec R5: the version write and the tag replacement run in a single transaction so a
- * tag-replacement failure rolls back the version write — and, equally, concurrent same-payload
- * writes never leave orphan or duplicate tag rows behind. Fires N coroutines posting the same
- * `(candidate, version, distribution, platform)` payload **with tags**, asserts every response
- * is 204 No Content, then verifies that exactly one version row survives and the surviving tag
- * rows match the posted tag list (no orphan rows from partially-applied attempts).
- */
 @Tags("acceptance")
 class ConcurrentPostVersionWithTagsAcceptanceSpec :
     ShouldSpec({

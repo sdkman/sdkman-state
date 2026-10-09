@@ -17,10 +17,6 @@ import io.sdkman.state.support.allowList
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * Proves the validation routes, which need no login, refuse a body one byte over the limit with
- * `413` before reading it, while the authenticated write routes stay uncapped.
- */
 @Tags("acceptance")
 class PublicValidationBodyLimitAcceptanceSpec :
     ShouldSpec({

@@ -22,7 +22,6 @@ class HikariPoolIntegrationSpec :
     ShouldSpec({
 
         afterSpec {
-            // Re-prime the shared default so subsequent specs use the working shared pool.
             sharedTestDatabase
         }
 

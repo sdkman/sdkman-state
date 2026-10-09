@@ -136,7 +136,6 @@ class PostVersionVisibilityAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("kotlin")
 
-                    // First POST creates with visible=true
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -145,7 +144,6 @@ class PostVersionVisibilityAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST updates with visible=false
                     val updatedVersion = initialVersion.copy(visible = false.some())
                     val requestBody2 = updatedVersion.toJsonString()
                     val response2 =
@@ -180,7 +178,6 @@ class PostVersionVisibilityAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("groovy")
 
-                    // First POST creates with visible=false
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -189,7 +186,6 @@ class PostVersionVisibilityAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST updates with visible omitted (should default to true)
                     val updatedVersion = initialVersion.copy(visible = none())
                     val requestBody2 = updatedVersion.toJsonString()
                     val response2 =
@@ -224,7 +220,6 @@ class PostVersionVisibilityAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("gradle")
 
-                    // First POST creates with visible=false
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -233,7 +228,6 @@ class PostVersionVisibilityAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST explicitly sets visible=true
                     val updatedVersion = initialVersion.copy(visible = true.some())
                     val requestBody2 = updatedVersion.toJsonString()
                     val response2 =

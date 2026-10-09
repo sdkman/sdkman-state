@@ -29,8 +29,6 @@ class VersionRequestValidator(
         private val json = Json { explicitNulls = false }
     }
 
-    // A registry that has never loaded is not a validation failure: reporting it as one would
-    // surface a transient database fault to a publisher as "candidate is not valid".
     fun allowListLoaded(): Boolean = candidateAllowList.registered().isSome()
 
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
@@ -220,8 +218,6 @@ class VersionRequestValidator(
         tag: String,
     ): List<ValidationError> = TagNameRules.validate("tags[$index]", tag)
 
-    // Returns Right(Unit) when upstream validation already failed, to avoid
-    // double-reporting errors that are already in the accumulated error list.
     private fun validateSemverish(
         candidateResult: Either<NonEmptyList<ValidationError>, String>,
         versionResult: Either<NonEmptyList<ValidationError>, String>,

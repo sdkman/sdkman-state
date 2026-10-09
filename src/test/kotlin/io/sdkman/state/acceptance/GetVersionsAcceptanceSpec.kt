@@ -245,9 +245,6 @@ class GetVersionsAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when platform is a retired legacy identifier") {
-            // Rules 2 & 3: the lowercase platform identifier `linuxx64` is no longer accepted —
-            // an unknown value must surface as a descriptive 400, never silently fall through
-            // to UNIVERSAL as the old loose parser did.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java?platform=linuxx64").apply {
@@ -265,9 +262,6 @@ class GetVersionsAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when distribution is a vendor shortcode") {
-            // Rules 9 & 10: vendor shortcodes such as `open` are no longer silently dropped —
-            // that previously discarded the filter and broadened the result. They must now be
-            // rejected with a message naming the offending value and the canonical vocabulary.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java?distribution=open").apply {
@@ -286,8 +280,6 @@ class GetVersionsAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when visible value is outside the vocabulary") {
-            // Rule 14: an unknown `visible` value is no longer coerced to `true`. The accepted
-            // set is fixed (`true`, `false`, `all`) and anything else is a client error.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java?visible=yes").apply {

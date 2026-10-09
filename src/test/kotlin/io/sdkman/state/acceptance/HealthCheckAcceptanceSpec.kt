@@ -131,7 +131,6 @@ class HealthCheckAcceptanceSpec :
             } finally {
                 TransactionManager.closeAndUnregister(badDatabase)
                 badDataSource.close()
-                // Re-prime the shared default so subsequent specs use the working pool.
                 sharedTestDatabase
             }
         }

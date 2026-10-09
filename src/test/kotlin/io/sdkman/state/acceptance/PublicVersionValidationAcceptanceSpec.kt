@@ -24,13 +24,6 @@ import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 
-/**
- * Proves `POST /validate/versions` answers as `POST /versions` would, without a login and without
- * writing, so a contributor can check a version before anyone with publish rights sees it.
- *
- * The registry is an in-memory [allowList] with no `candidates` row behind it: a `204` for a
- * candidate only the allow-list knows shows validation reads no database per request.
- */
 @Tags("acceptance")
 class PublicVersionValidationAcceptanceSpec :
     ShouldSpec({

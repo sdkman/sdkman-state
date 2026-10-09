@@ -29,13 +29,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-/**
- * Guards the dedup of the no-distribution branch of POST /versions: concurrent same-payload writes
- * must collapse into a single row. V16 converged the 'NA' sentinel back to SQL NULL and recreated the
- * unique constraint as UNIQUE NULLS NOT DISTINCT, so Postgres treats the NULL distributions as
- * colliding and INSERT … ON CONFLICT still dedups. Before NULLS NOT DISTINCT, Postgres' default
- * NULLS DISTINCT semantics defeated the UPSERT for null-distribution rows.
- */
 @Tags("acceptance")
 class ConcurrentPostVersionWithoutDistributionAcceptanceSpec :
     ShouldSpec({

@@ -3,14 +3,6 @@ package io.sdkman.state.support
 import arrow.core.Either
 import io.kotest.matchers.shouldBe
 
-/**
- * Arrow Either test matchers for Kotest.
- *
- * These replace verbose patterns like `result.isRight() shouldBe true` and
- * `result.getOrElse { error("expected Right") }` with expressive one-liners
- * that also return the unwrapped value for subsequent assertions.
- */
-
 fun <A, B> Either<A, B>.shouldBeRight(): B =
     fold(
         { throw AssertionError("Expected Either.Right but got Either.Left($it)") },

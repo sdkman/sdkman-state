@@ -26,14 +26,6 @@ import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 
-/**
- * Proves rule 5: a registry that has never loaded is not an empty registry.
- *
- * A cold-load failure must reach the publisher as a `500`, because a `400` enumerating an empty
- * allow-list reads as "this candidate is not valid", which is permanent to a retrying client while
- * the real fault is transient. Reads never consult the registry, so they keep serving throughout —
- * which is why an unready holder degrades publishing alone rather than failing the health check.
- */
 @Tags("acceptance")
 class CandidateRegistryUnreadyAcceptanceSpec :
     ShouldSpec({

@@ -14,13 +14,6 @@ import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * Proves `POST /validate/candidates` refuses every invalid registration with exactly the `400`
- * that `POST /admin/candidates` gives an admin, so a contributor's check can never pass or fail
- * differently from the registration it rehearses (specs/public-validation.md, Business Rules 2).
- *
- * The rows mirror every `400` case of `CandidateRequestValidatorSpec`.
- */
 @Tags("acceptance")
 class CandidateValidationParityAcceptanceSpec :
     ShouldSpec({

@@ -21,11 +21,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/**
- * Proves `POST /validate/candidates` answers as `POST /admin/candidates` would, without a login
- * and without registering anything, so a contributor can check a registration before an admin
- * applies it.
- */
 @Tags("acceptance")
 class PublicCandidateValidationAcceptanceSpec :
     ShouldSpec({

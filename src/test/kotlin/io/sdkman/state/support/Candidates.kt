@@ -10,17 +10,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 
-/**
- * Registers candidates over `POST /admin/candidates` so a spec can publish versions to them.
- *
- * Once the registry is the allow-list, `POST /versions` rejects a candidate that no earlier request
- * registered, so every acceptance spec that writes a version has to seed the registry first. The
- * registration goes over the admin route rather than straight into the table, because that is the
- * path production uses and the only one that refreshes the in-memory copy the publish check reads.
- *
- * The metadata is derived from the identifier: it has to satisfy `CandidateRequestValidator` and
- * nothing more, since no assertion of a version spec reads it.
- */
 suspend fun ApplicationTestBuilder.registerCandidates(vararg candidates: String) {
     candidates.forEach { candidate ->
         val response =

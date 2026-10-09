@@ -56,8 +56,6 @@ class PostgresVersionRepository : VersionRepository {
 
     private fun Version.withTags(tags: List<String>): Version = copy(tags = tags.some())
 
-    // Tags read back in the order they were written; without an ORDER BY Postgres may
-    // return reused heap slots first.
     private fun fetchTagNames(versionId: Int): List<String> =
         VersionTagsTable
             .select(VersionTagsTable.tag)
@@ -143,11 +141,6 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // V16 made versions.distribution nullable (None -> NULL) and recreated the unique
-    // constraint as `UNIQUE NULLS NOT DISTINCT (candidate, version, distribution, platform)`.
-    // Under NULLS NOT DISTINCT two NULL-distribution rows collide on the conflict target, so
-    // `INSERT … ON CONFLICT … DO UPDATE` dedups every row, including the null-distribution
-    // case. One UPSERT path covers both Some(d) and None inputs.
     override suspend fun createOrUpdate(version: Version): Either<DatabaseFailure, Int> =
         Either
             .catch {
@@ -239,9 +232,6 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // R15a: a locking select cannot see a concurrent transaction's uncommitted insert under
-    // read-committed, so two posts into one series would interleave and both stay visible.
-    // The advisory lock, not the `FOR UPDATE` beneath it, is what serializes them.
     override suspend fun retireOtherVersionsInSeries(
         key: SeriesKey,
         postedVersion: String,
@@ -251,8 +241,6 @@ class PostgresVersionRepository : VersionRepository {
                 dbQuery {
                     lockSeries(key)
 
-                    // Major and variant are not columns, so the pattern narrows the rows the
-                    // `FOR UPDATE` holds and `SeriesKey.of` decides membership over them.
                     val retiring =
                         VersionsTable
                             .selectAll()

@@ -15,14 +15,6 @@ import io.sdkman.state.support.allowList
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
-/**
- * Proves `POST /validate/versions` refuses every invalid body with exactly the `400` that
- * `POST /versions` gives an admin, so a contributor's check can never pass or fail differently
- * from the publish it rehearses (specs/public-validation.md, Business Rules 2).
- *
- * The rows mirror every `400` case of `VersionRequestValidatorSpec`. `java` is the opted-in
- * semverish candidate in the test configuration.
- */
 @Tags("acceptance")
 class VersionValidationParityAcceptanceSpec :
     ShouldSpec({

@@ -113,9 +113,6 @@ class GetVersionAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when platform parameter is missing") {
-            // Rule 4: platform is required on single-version resolution — the previous implicit
-            // UNIVERSAL fallback is gone, and absence must surface with a message naming the
-            // missing parameter and the canonical vocabulary.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java/21.0.3").apply {
@@ -133,8 +130,6 @@ class GetVersionAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when platform is a retired legacy identifier") {
-            // Rule 3: unknown platform — including legacy lowercase identifiers like `linuxx64` —
-            // is a client error, never silently coerced to UNIVERSAL.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java/21.0.3?platform=linuxx64").apply {
@@ -152,9 +147,6 @@ class GetVersionAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when distribution is a vendor shortcode") {
-            // Rule 10: vendor shortcodes such as `open` are no longer silently dropped — that
-            // discarded the filter and broadened the match. They must now be rejected with a
-            // descriptive message naming the offending value and the canonical vocabulary.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java/21.0.3?platform=LINUX_X64&distribution=open").apply {

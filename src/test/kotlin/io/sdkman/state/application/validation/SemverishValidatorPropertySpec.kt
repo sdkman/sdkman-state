@@ -16,8 +16,6 @@ import io.sdkman.state.support.shouldBeRight
 class SemverishValidatorPropertySpec :
     ShouldSpec({
 
-        // -- Generators --
-
         val alphanumChars = ('a'..'z') + ('A'..'Z') + ('0'..'9')
         val identChars = alphanumChars + '-'
 
@@ -62,8 +60,6 @@ class SemverishValidatorPropertySpec :
                 arbOptionalVariant,
                 arbOptionalBuildMetadata,
             ) { core, variant, metadata -> "$core$variant$metadata" }
-
-        // -- Properties --
 
         should("accept any version composed from valid semverish parts") {
             checkAll(arbSemverishVersion) { version ->

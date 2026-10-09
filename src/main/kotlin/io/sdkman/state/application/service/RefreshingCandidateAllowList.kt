@@ -9,13 +9,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicReference
 
-/**
- * Holds the candidate registry in memory and reloads it on demand.
- *
- * A failed reload keeps the last good copy, because a briefly stale allow-list beats rejecting
- * valid publishes. A failure before any successful load leaves the holder unready. Refreshes run
- * one at a time, so a slow read can never overwrite the copy a later read stored.
- */
 class RefreshingCandidateAllowList(
     private val candidateRepository: CandidateRepository,
 ) : CandidateAllowList {

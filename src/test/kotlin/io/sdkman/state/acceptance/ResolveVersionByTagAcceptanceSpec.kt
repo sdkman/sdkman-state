@@ -86,9 +86,6 @@ class ResolveVersionByTagAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when platform parameter is missing") {
-            // Rule 5: the previous implicit UNIVERSAL fall-back is gone — platform is required,
-            // and absence is a client error that must name the missing parameter and the
-            // canonical vocabulary in the body, never coerced silently to UNIVERSAL.
             val version =
                 Version(
                     candidate = "gradle",
@@ -119,8 +116,6 @@ class ResolveVersionByTagAcceptanceSpec :
         }
 
         should("return 400 with ErrorResponse body when platform is a retired legacy identifier") {
-            // Rule 3: unknown platform — including legacy lowercase identifiers like `linuxx64` —
-            // is a client error on tag resolution, never silently coerced to UNIVERSAL.
             withCleanDatabase {
                 withTestApplication {
                     client.get("/versions/java/tags/lts?platform=linuxx64").apply {

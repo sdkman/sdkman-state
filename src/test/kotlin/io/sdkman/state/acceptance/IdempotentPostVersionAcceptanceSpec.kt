@@ -42,7 +42,6 @@ class IdempotentPostVersionAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("java")
 
-                    // First POST
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -51,7 +50,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST (idempotent)
                     val response2 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -60,7 +58,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
-                // Verify version exists in database
                 selectVersion(
                     candidate = version.candidate,
                     version = version.version,
@@ -97,7 +94,6 @@ class IdempotentPostVersionAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("java")
 
-                    // First POST
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -106,7 +102,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST with different data (overwrite)
                     val response2 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -115,7 +110,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
-                // Verify the updated version is stored
                 selectVersion(
                     candidate = updatedVersion.candidate,
                     version = updatedVersion.version,
@@ -141,7 +135,6 @@ class IdempotentPostVersionAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("scala")
 
-                    // First POST
                     val response1 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -150,7 +143,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response1.status shouldBe HttpStatusCode.NoContent
 
-                    // Second POST (idempotent)
                     val response2 =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -159,7 +151,6 @@ class IdempotentPostVersionAcceptanceSpec :
                         }
                     response2.status shouldBe HttpStatusCode.NoContent
                 }
-                // Verify version exists in database
                 selectVersion(
                     candidate = version.candidate,
                     version = version.version,
