@@ -17,6 +17,8 @@ interface AppConfig {
     val cacheMaxAge: Int
     val adminEmail: String
     val adminPassword: String
+    val communityEmail: Option<String>
+    val communityPassword: Option<String>
     val jwtSecret: String
     val jwtExpiry: Int
     val semverishCandidates: Set<String>
@@ -43,6 +45,8 @@ class DefaultAppConfig(
     override val cacheMaxAge: Int = config.property("api.cache.control").getString().toInt()
     override val adminEmail: String = config.property("admin.email").getString()
     override val adminPassword: String = config.property("admin.password").getString()
+    override val communityEmail: Option<String> = config.getOptionString("community.email")
+    override val communityPassword: Option<String> = config.getOptionString("community.password")
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.property("jwt.expiry").getString().toInt()
