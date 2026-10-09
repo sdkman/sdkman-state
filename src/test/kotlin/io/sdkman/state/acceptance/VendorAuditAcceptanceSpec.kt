@@ -16,6 +16,7 @@ import io.sdkman.state.support.*
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.extractTags
 import io.sdkman.state.support.registerCandidates
+import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
 
 @Tags("acceptance")
@@ -140,6 +141,72 @@ class VendorAuditAcceptanceSpec :
                 val auditRecords = selectAuditRecordsByEmail("admin@sdkman.io")
                 auditRecords shouldHaveSize 1
                 auditRecords.first().email shouldBe "admin@sdkman.io"
+            }
+        }
+
+        should("attribute a community POST to the community account") {
+            val version =
+                Version(
+                    candidate = "jpx",
+                    version = "1.2.0",
+                    platform = Platform.UNIVERSAL,
+                    url = "https://example.com/jpx-1.2.0.zip",
+                    visible = true.some(),
+                    distribution = none(),
+                )
+
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    client
+                        .post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(version.toJsonString())
+                            bearerAuth(JwtTestSupport.communityToken())
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                val auditRecords = selectAuditRecordsByEmail(JwtTestSupport.COMMUNITY_EMAIL)
+                auditRecords shouldHaveSize 1
+                val auditRecord = auditRecords.first()
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000001")
+                auditRecord.email shouldBe JwtTestSupport.COMMUNITY_EMAIL
+                auditRecord.operation shouldBe AuditOperation.CREATE
+            }
+        }
+
+        should("attribute a community DELETE to the community account") {
+            val version =
+                Version(
+                    candidate = "jpx",
+                    version = "1.2.0",
+                    platform = Platform.UNIVERSAL,
+                    url = "https://example.com/jpx-1.2.0.zip",
+                    visible = true.some(),
+                    distribution = none(),
+                )
+
+            withCleanDatabase {
+                insertVersions(version)
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    client
+                        .delete("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"candidate":"jpx","version":"1.2.0","platform":"UNIVERSAL","distribution":null}""")
+                            bearerAuth(JwtTestSupport.communityToken())
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                val auditRecords = selectAuditRecordsByEmail(JwtTestSupport.COMMUNITY_EMAIL)
+                auditRecords shouldHaveSize 1
+                val auditRecord = auditRecords.first()
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000001")
+                auditRecord.email shouldBe JwtTestSupport.COMMUNITY_EMAIL
+                auditRecord.operation shouldBe AuditOperation.DELETE
             }
         }
 
