@@ -11,6 +11,8 @@ import io.ktor.http.*
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.TagAssignment
+import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.*
 import io.sdkman.state.support.JwtTestSupport
@@ -18,6 +20,16 @@ import io.sdkman.state.support.extractTags
 import io.sdkman.state.support.registerCandidates
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
+
+private val communityTagVersion =
+    Version(
+        candidate = "jpx",
+        version = "1.2.0",
+        platform = Platform.UNIVERSAL,
+        url = "https://example.com/jpx-1.2.0.zip",
+        visible = true.some(),
+        distribution = none(),
+    )
 
 @Tags("acceptance")
 class VendorAuditAcceptanceSpec :
@@ -197,6 +209,55 @@ class VendorAuditAcceptanceSpec :
                         .delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody("""{"candidate":"jpx","version":"1.2.0","platform":"UNIVERSAL","distribution":null}""")
+                            bearerAuth(JwtTestSupport.communityToken())
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                val auditRecords = selectAuditRecordsByEmail(JwtTestSupport.COMMUNITY_EMAIL)
+                auditRecords shouldHaveSize 1
+                val auditRecord = auditRecords.first()
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000001")
+                auditRecord.email shouldBe JwtTestSupport.COMMUNITY_EMAIL
+                auditRecord.operation shouldBe AuditOperation.DELETE
+            }
+        }
+
+        should("attribute a community tag assignment to the community account") {
+            withCleanDatabase {
+                insertVersionWithId(communityTagVersion)
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    client
+                        .post("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(TagAssignment("jpx", "1.2.0", none(), Platform.UNIVERSAL, "latest").toJsonString())
+                            bearerAuth(JwtTestSupport.communityToken())
+                        }.status shouldBe HttpStatusCode.NoContent
+                }
+
+                val auditRecords = selectAuditRecordsByEmail(JwtTestSupport.COMMUNITY_EMAIL)
+                auditRecords shouldHaveSize 1
+                val auditRecord = auditRecords.first()
+                auditRecord.vendorId shouldBe UUID.fromString("00000000-0000-0000-0000-000000000001")
+                auditRecord.email shouldBe JwtTestSupport.COMMUNITY_EMAIL
+                auditRecord.operation shouldBe AuditOperation.TAG
+            }
+        }
+
+        should("attribute a community tag deletion to the community account") {
+            withCleanDatabase {
+                val versionId = insertVersionWithId(communityTagVersion)
+                insertTag("jpx", "latest", none(), Platform.UNIVERSAL, versionId)
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    client
+                        .delete("/versions/tags") {
+                            contentType(ContentType.Application.Json)
+                            setBody(UniqueTag("jpx", "latest", none(), Platform.UNIVERSAL).toJsonString())
                             bearerAuth(JwtTestSupport.communityToken())
                         }.status shouldBe HttpStatusCode.NoContent
                 }
