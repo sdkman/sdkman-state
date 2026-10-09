@@ -7,30 +7,10 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.server.testing.*
-import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
-import io.sdkman.state.adapter.primary.rest.configureHTTP
-import io.sdkman.state.adapter.primary.rest.configureRouting
-import io.sdkman.state.adapter.primary.rest.configureSerialization
-import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
-import io.sdkman.state.adapter.secondary.persistence.PostgresAuditRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
-import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
-import io.sdkman.state.application.service.AuthServiceImpl
-import io.sdkman.state.application.service.CandidateServiceImpl
-import io.sdkman.state.application.service.RateLimiter
-import io.sdkman.state.application.service.TagServiceImpl
-import io.sdkman.state.application.service.VersionServiceImpl
-import io.sdkman.state.application.validation.VersionRequestValidator
-import io.sdkman.state.config.DefaultAppConfig
-import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.support.JwtTestSupport
-import io.sdkman.state.support.allowList
 import io.sdkman.state.support.testApplicationConfig
 import io.sdkman.state.support.withCleanDatabase
+import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -46,39 +26,7 @@ class CommunityLoginAcceptanceSpec :
                         put("community.email", JwtTestSupport.COMMUNITY_EMAIL)
                         put("community.password", JwtTestSupport.COMMUNITY_PASSWORD)
                     }
-                val appConfig = DefaultAppConfig(config)
-                testApplication {
-                    environment {
-                        this.config = config
-                    }
-                    application {
-                        configureHTTP()
-                        configureSerialization()
-                        configureJwtAuthentication(appConfig)
-
-                        val versionsRepo = PostgresVersionRepository()
-                        val tagsRepo = PostgresTagRepository()
-                        val auditRepo = PostgresAuditRepository()
-                        val vendorRepo = PostgresVendorRepository()
-                        val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
-                        val transactional = ExposedTransactional()
-                        val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
-                        val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
-
-                        val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
-
-                        configureRouting(
-                            versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
-                            tagService = tagService,
-                            healthRepo = PostgresHealthRepository(),
-                            authService = authService,
-                            vendorRepository = vendorRepo,
-                            appConfig = appConfig,
-                            versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates, allowList()),
-                        )
-                        configureCandidateRouting(candidateService, allowList())
-                    }
-
+                withTestApplication(config) {
                     // when
                     val response =
                         client.post("/login") {
