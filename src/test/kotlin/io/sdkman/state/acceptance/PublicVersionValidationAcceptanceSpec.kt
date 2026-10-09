@@ -6,6 +6,7 @@ import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import io.ktor.client.request.post
@@ -15,8 +16,11 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.OutgoingContent
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
+import io.ktor.utils.io.ByteWriteChannel
+import io.ktor.utils.io.writeStringUtf8
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
@@ -92,6 +96,41 @@ class PublicVersionValidationAcceptanceSpec :
             withCleanDatabase {
                 withTestApplication {
                     val response = validate("x".repeat(16_385))
+
+                    response.status shouldBe HttpStatusCode.PayloadTooLarge
+                    response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
+                }
+            }
+        }
+
+        should("not answer 413 to a body of exactly 16384 bytes") {
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("jpx")
+                    val json = jpx.toJsonString()
+
+                    val response = validate(json + " ".repeat(16_384 - json.length))
+
+                    response.status shouldNotBe HttpStatusCode.PayloadTooLarge
+                }
+            }
+        }
+
+        should("answer 413 with no-store to a streamed body over 16384 bytes without a Content-Length") {
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/validate/versions") {
+                            setBody(
+                                object : OutgoingContent.WriteChannelContent() {
+                                    override val contentType: ContentType = ContentType.Application.Json
+
+                                    override suspend fun writeTo(channel: ByteWriteChannel) {
+                                        channel.writeStringUtf8("x".repeat(16_385))
+                                    }
+                                },
+                            )
+                        }
 
                     response.status shouldBe HttpStatusCode.PayloadTooLarge
                     response.headers.getAll(HttpHeaders.CacheControl) shouldBe listOf("no-store")
