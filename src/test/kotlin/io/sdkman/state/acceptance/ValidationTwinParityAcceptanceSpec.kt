@@ -4,13 +4,17 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.ByteArrayContent
 import io.ktor.http.contentType
+import io.ktor.http.withCharset
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.registerCandidates
@@ -117,4 +121,58 @@ class ValidationTwinParityAcceptanceSpec :
 
         shouldAnswerAsWriteRoute("/versions", "/validate/versions", rejectedVersionBodies)
         shouldAnswerAsWriteRoute("/admin/candidates", "/validate/candidates", rejectedRegistrationBodies)
+
+        should("accept a UTF_16 registration body on /validate/candidates as /admin/candidates does") {
+            withCleanDatabase {
+                withTestApplication {
+                    // given: a valid registration body encoded in the charset its content type declares
+                    val utf16Json = ContentType.Application.Json.withCharset(Charsets.UTF_16)
+                    val encodedBody = registrationBody().toByteArray(Charsets.UTF_16)
+
+                    // when: anyone validates the body, and an admin writes it
+                    val validated =
+                        client.post("/validate/candidates") {
+                            contentType(utf16Json)
+                            setBody(encodedBody)
+                        }
+                    val written =
+                        client.post("/admin/candidates") {
+                            contentType(utf16Json)
+                            setBody(encodedBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: the twin predicts the write, and the write succeeds
+                    validated.status shouldBe HttpStatusCode.NoContent
+                    written.status shouldBe HttpStatusCode.Created
+                }
+            }
+        }
+
+        should("answer an unknown content charset on /validate/versions as /versions does") {
+            withCleanDatabase {
+                withTestApplication {
+                    // given: java is registered and the content type names a charset that does not exist
+                    registerCandidates("java")
+                    val unknownCharsetContentType = "application/json; charset=no-such-charset"
+
+                    // when: an admin writes the body, and anyone validates it
+                    val written =
+                        client.post("/versions") {
+                            header(HttpHeaders.ContentType, unknownCharsetContentType)
+                            setBody(ByteArrayContent(versionBody().toByteArray()))
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+                    val validated =
+                        client.post("/validate/versions") {
+                            header(HttpHeaders.ContentType, unknownCharsetContentType)
+                            setBody(ByteArrayContent(versionBody().toByteArray()))
+                        }
+
+                    // then: the write falls back to UTF-8 and succeeds, and the twin predicts it
+                    written.status shouldBe HttpStatusCode.NoContent
+                    validated.status shouldBe HttpStatusCode.NoContent
+                }
+            }
+        }
     })
