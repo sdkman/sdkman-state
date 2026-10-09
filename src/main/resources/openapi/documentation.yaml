@@ -25,7 +25,7 @@ paths:
                 $ref: "#/components/schemas/HealthCheckResponse"
   /versions:
     delete:
-      description: ""
+      description: "Delete a version. Admin and community tokens may delete a version of any candidate; a vendor token only one of its own candidates."
       security:
         - bearerAuth: []
       requestBody:
@@ -56,7 +56,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor token for a candidate outside its scope, or a token with an unknown role"
           content:
             'application/json':
               schema:
@@ -84,7 +84,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P.Q[-variant][+build-metadata]; a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
+      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P.Q[-variant][+build-metadata]; a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out. Admin and community tokens may write any candidate; a vendor token only its own candidates."
       security:
         - bearerAuth: []
       requestBody:
@@ -124,7 +124,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor token for a candidate outside its scope, or a token with an unknown role"
           content:
             'application/json':
               schema:
@@ -148,7 +148,7 @@ paths:
                     message: "Candidate registry unavailable"
   /versions/tags:
     delete:
-      description: "Remove a tag by its unique scope (candidate, tag, distribution, platform)"
+      description: "Remove a tag by its unique scope (candidate, tag, distribution, platform). Admin and community tokens may write any candidate; a vendor token only its own candidates."
       security:
         - bearerAuth: []
       requestBody:
@@ -193,7 +193,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor token for a candidate outside its scope, or a token with an unknown role"
           content:
             'application/json':
               schema:
@@ -211,7 +211,7 @@ paths:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
     post:
-      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field."
+      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. Admin and community tokens may write any candidate; a vendor token only its own candidates."
       security:
         - bearerAuth: []
       requestBody:
@@ -260,7 +260,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor token for a candidate outside its scope, or a token with an unknown role"
           content:
             'application/json':
               schema:
@@ -281,7 +281,7 @@ paths:
                     message: "null"
   /login:
     post:
-      description: "Authenticate and obtain a JWT token"
+      description: "Authenticate and obtain a JWT token. The token's role is admin for the configured admin account, community for the configured community account, or vendor for a row in the vendors table, checked in that order. Admin may do anything. Community may write candidates, versions and tags of every candidate, but not manage vendors. A vendor may write versions and tags of the candidates in its scope only. The community account is optional: unless both community.email and community.password are configured, a community login fails with 401."
       requestBody:
         content:
           'application/json':
@@ -475,7 +475,7 @@ paths:
                       - field: "request"
                         message: "Invalid JSON: Unexpected JSON token at offset 0"
         "401":
-          description: "Unauthorized - Missing, invalid, or non-admin token"
+          description: "Unauthorized - Missing, invalid, or non-admin, non-community token"
           content:
             'application/json':
               schema:
@@ -506,7 +506,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CandidateAdminDto"
         "401":
-          description: "Unauthorized - Missing, invalid, or non-admin token"
+          description: "Unauthorized - Missing, invalid, or non-admin, non-community token"
           content:
             'application/json':
               schema:
