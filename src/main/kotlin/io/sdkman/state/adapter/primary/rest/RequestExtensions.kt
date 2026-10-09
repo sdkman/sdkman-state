@@ -68,8 +68,10 @@ suspend fun ApplicationCall.receiveTextWithin(limitBytes: Long): Option<String> 
             .readByteArray()
             .toOption()
             .filter { it.size <= limitBytes }
-            .map { it.decodeToString() }
+            .map { String(it, bodyCharset()) }
     }
+
+private fun ApplicationCall.bodyCharset(): java.nio.charset.Charset = request.contentCharset().toOption().getOrElse { Charsets.UTF_8 }
 
 fun Parameters.requiredPathParam(name: String): Either<ErrorResponse, String> =
     this[name].toOption().filter { it.isNotBlank() }.toEither {
