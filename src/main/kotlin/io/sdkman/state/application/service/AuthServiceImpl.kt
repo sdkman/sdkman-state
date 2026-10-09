@@ -14,6 +14,7 @@ import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
 import io.sdkman.state.security.BCRYPT_COST
 import io.sdkman.state.security.COMMUNITY_VENDOR_ID
+import io.sdkman.state.security.ROLE_ADMIN
 import io.sdkman.state.security.ROLE_COMMUNITY
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -79,7 +80,7 @@ class AuthServiceImpl(
     ): Either<AuthError, String> {
         val result = BCrypt.verifyer().verify(password.toByteArray(), adminHashedPassword.toByteArray())
         return if (result.verified) {
-            createToken(email, "admin", UUID(0L, 0L), emptyList())
+            createToken(email, ROLE_ADMIN, UUID(0L, 0L), emptyList())
         } else {
             AuthError.InvalidCredentials.left()
         }

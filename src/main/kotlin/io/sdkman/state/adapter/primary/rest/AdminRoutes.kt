@@ -14,6 +14,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.security.BCRYPT_COST
+import io.sdkman.state.security.ROLE_ADMIN
 import java.security.SecureRandom
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -29,7 +30,7 @@ fun Route.adminListVendorsRoute(vendorRepository: VendorRepository) {
     get("/admin/vendors") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
-        if (role != "admin") {
+        if (role != ROLE_ADMIN) {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
             return@get
         }
@@ -55,7 +56,7 @@ fun Route.adminCreateVendorRoute(
     post("/admin/vendors") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
-        if (role != "admin") {
+        if (role != ROLE_ADMIN) {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
             return@post
         }
@@ -96,7 +97,7 @@ fun Route.adminDeleteVendorRoute(vendorRepository: VendorRepository) {
     delete("/admin/vendors/{id}") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val role = call.authenticatedRole()
-        if (role != "admin") {
+        if (role != ROLE_ADMIN) {
             call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
             return@delete
         }
