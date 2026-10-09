@@ -536,6 +536,79 @@ paths:
             'application/json':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /validate/versions:
+    post:
+      description: "Validate a POST /versions body without writing it and without a login. Takes exactly the POST /versions body and runs the same validation, so a 400 is identical to the one POST /versions gives for the same body. A token, if sent, changes nothing. A 204 is a prediction, not a promise: the write can still fail on authorization, a database error, or a registry change in between. Answers may lag a registry change by up to the registry refresh interval. Validation reads nothing from the database per request and is not throttled."
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: "#/components/schemas/Version"
+        required: true
+      responses:
+        "204":
+          description: "No Content - POST /versions would accept this body"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: "Bad Request - Validation failed; identical to the POST /versions answer for the same body"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "413":
+          description: "Content Too Large - The body exceeds 16384 bytes and is refused unread"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "500":
+          description: "Internal Server Error - The candidate registry has never loaded successfully, as for POST /versions"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                registry_unavailable:
+                  description: "The candidate registry has never loaded successfully"
+                  value:
+                    error: "Internal Server Error"
+                    message: "Candidate registry unavailable"
+  /validate/candidates:
+    post:
+      description: "Validate a POST /admin/candidates body without writing it and without a login. Takes exactly the POST /admin/candidates body and runs the same validation, so a 400 is identical to the one POST /admin/candidates gives for the same body. A token, if sent, changes nothing. A 204 is a prediction, not a promise: the write can still fail on authorization or a database error."
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              $ref: "#/components/schemas/CreateCandidateRequest"
+        required: true
+      responses:
+        "204":
+          description: "No Content - POST /admin/candidates would accept this body"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+        "400":
+          description: "Bad Request - Validation failure or malformed JSON; identical to the POST /admin/candidates answer for the same body"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
+          content:
+            'application/json':
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+        "413":
+          description: "Content Too Large - The body exceeds 16384 bytes and is refused unread"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStore"
   /versions/{candidate}:
     get:
       description: "List versions for a candidate, optionally filtered by platform, distribution, and visibility."
@@ -765,6 +838,13 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  headers:
+    NoStore:
+      description: "The answer depends on the candidate registry at that moment and must not be cached"
+      schema:
+        type: "string"
+        enum:
+          - "no-store"
   schemas:
     HealthCheckResponse:
       type: "object"
