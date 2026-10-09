@@ -35,8 +35,6 @@ class UnknownRoleAuthorizationAcceptanceSpec :
         val jpxUniqueVersion = UniqueVersion("jpx", "1.2.0", none(), Platform.LINUX_X64)
         val jpxLatestTag = UniqueTag("jpx", "latest", none(), Platform.LINUX_X64)
 
-        fun observerToken(): String = JwtTestSupport.tokenWithClaims(sub = "observer@example.com", role = "observer")
-
         should("return 403 when an unknown role POSTs a version") {
             withCleanDatabase {
                 withTestApplication {
@@ -46,7 +44,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(jpxVersion.toJsonString())
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Forbidden
@@ -64,7 +62,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(jpxUniqueVersion.toJsonString())
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Forbidden
@@ -82,7 +80,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         client.post("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(TagAssignment("jpx", "1.2.0", none(), Platform.LINUX_X64, "latest").toJsonString())
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Forbidden
@@ -101,7 +99,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(jpxLatestTag.toJsonString())
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Forbidden

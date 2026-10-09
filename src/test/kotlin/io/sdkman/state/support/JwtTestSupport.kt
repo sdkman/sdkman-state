@@ -41,6 +41,8 @@ object JwtTestSupport {
             .withExpiresAt(Instant.now().plusSeconds(600))
             .sign(algorithm)
 
+    fun observerToken(): String = tokenWithClaims(sub = "observer@example.com", role = "observer")
+
     fun vendorToken(
         vendorId: UUID = UUID.randomUUID(),
         email: String = "vendor@example.com",

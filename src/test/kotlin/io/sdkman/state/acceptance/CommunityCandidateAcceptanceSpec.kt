@@ -46,8 +46,6 @@ class CommunityCandidateAcceptanceSpec :
                     .jsonPrimitive.content
             }
 
-        fun observerToken(): String = JwtTestSupport.tokenWithClaims(sub = "observer@example.com", role = "observer")
-
         should("answer 201 when the community registers a new candidate") {
             withCleanDatabase {
                 withTestApplication {
@@ -174,7 +172,7 @@ class CommunityCandidateAcceptanceSpec :
                         client.post("/admin/candidates") {
                             contentType(ContentType.Application.Json)
                             setBody(jpxRegistrationBody)
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Unauthorized
@@ -189,7 +187,7 @@ class CommunityCandidateAcceptanceSpec :
                 withTestApplication {
                     val response =
                         client.delete("/admin/candidates/jpx") {
-                            bearerAuth(observerToken())
+                            bearerAuth(JwtTestSupport.observerToken())
                         }
 
                     response.status shouldBe HttpStatusCode.Unauthorized
