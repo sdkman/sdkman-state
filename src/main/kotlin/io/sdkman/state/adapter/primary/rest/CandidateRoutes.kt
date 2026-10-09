@@ -14,8 +14,8 @@ import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
 import io.sdkman.state.domain.service.CandidateAllowList
 import io.sdkman.state.domain.service.CandidateService
-
-private const val ADMIN_ROLE = "admin"
+import io.sdkman.state.security.ROLE_ADMIN
+import io.sdkman.state.security.ROLE_COMMUNITY
 
 fun Route.candidateReadRoute(candidateService: CandidateService) {
     get("/candidates") {
@@ -32,7 +32,7 @@ fun Route.adminCreateCandidateRoute(
 ) {
     post("/admin/candidates") {
         call.declineCaching()
-        if (!call.isAuthenticatedAdmin()) {
+        if (!call.isCandidateManager()) {
             call.respondUnauthorized()
             return@post
         }
@@ -49,7 +49,7 @@ fun Route.adminDeleteCandidateRoute(
 ) {
     delete("/admin/candidates/{candidate}") {
         call.declineCaching()
-        if (!call.isAuthenticatedAdmin()) {
+        if (!call.isCandidateManager()) {
             call.respondUnauthorized()
             return@delete
         }
@@ -85,7 +85,7 @@ private suspend fun ApplicationCall.respondRegistration(
 private suspend fun ApplicationCall.respondUnauthorized() =
     respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
 
-private fun ApplicationCall.isAuthenticatedAdmin(): Boolean = authenticatedRole() == ADMIN_ROLE
+private fun ApplicationCall.isCandidateManager(): Boolean = authenticatedRole() in setOf(ROLE_ADMIN, ROLE_COMMUNITY)
 
 private fun ApplicationCall.declineCaching() = response.header(HttpHeaders.CacheControl, "no-store")
 

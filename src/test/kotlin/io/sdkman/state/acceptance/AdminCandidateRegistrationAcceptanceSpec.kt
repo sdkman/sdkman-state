@@ -270,7 +270,7 @@ class AdminCandidateRegistrationAcceptanceSpec :
                             setBody(registrationBody())
                         }
 
-                    // then: the route is admin-only
+                    // then: the route needs an admin or community token
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }

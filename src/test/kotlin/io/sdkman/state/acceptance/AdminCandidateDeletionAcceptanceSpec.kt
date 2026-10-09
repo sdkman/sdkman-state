@@ -182,7 +182,7 @@ class AdminCandidateDeletionAcceptanceSpec :
                     // when: a client with no token deletes a candidate
                     val response = client.delete("/admin/candidates/jbang")
 
-                    // then: the route is admin-only
+                    // then: the route needs an admin or community token
                     response.status shouldBe HttpStatusCode.Unauthorized
                 }
             }
