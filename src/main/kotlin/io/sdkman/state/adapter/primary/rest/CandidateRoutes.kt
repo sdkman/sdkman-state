@@ -7,11 +7,8 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
-import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
-import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.adapter.primary.rest.dto.toAdminDto
 import io.sdkman.state.adapter.primary.rest.dto.toDto
-import io.sdkman.state.application.validation.CandidateRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
@@ -39,8 +36,8 @@ fun Route.adminCreateCandidateRoute(
             call.respondUnauthorized()
             return@post
         }
-        CandidateRequestValidator.validateRequest(call.receiveText()).fold(
-            ifLeft = { errors -> call.respondValidationFailure(errors.map { ValidationFailure(it.field, it.message) }) },
+        checkCandidateBody(call.receiveText()).fold(
+            ifLeft = { rejection -> call.respondRejectedBody(rejection) },
             ifRight = { registration -> call.respondRegistration(candidateService, candidateAllowList, registration) },
         )
     }
@@ -84,9 +81,6 @@ private suspend fun ApplicationCall.respondRegistration(
         respond(result.status(), result.candidate.toAdminDto())
     },
 )
-
-private suspend fun ApplicationCall.respondValidationFailure(failures: List<ValidationFailure>) =
-    respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", failures))
 
 private suspend fun ApplicationCall.respondUnauthorized() =
     respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
