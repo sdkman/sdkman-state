@@ -15,6 +15,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
+import io.ktor.utils.io.readRemaining
 import io.sdkman.state.adapter.primary.rest.dto.CandidateConflictResponse
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
@@ -23,6 +24,9 @@ import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import kotlinx.io.readByteArray
+
+const val VALIDATION_BODY_LIMIT_BYTES = 16_384L
 
 fun ApplicationCall.authenticatedVendorId(): java.util.UUID =
     principal<JWTPrincipal>()
@@ -54,6 +58,18 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
                 .asList(String::class.java)
                 .toOption()
         }.getOrElse { emptyList() }
+
+suspend fun ApplicationCall.receiveTextWithin(limitBytes: Long): Option<String> =
+    if (request.contentLength().toOption().isSome { it > limitBytes }) {
+        none()
+    } else {
+        receiveChannel()
+            .readRemaining(limitBytes + 1)
+            .readByteArray()
+            .toOption()
+            .filter { it.size <= limitBytes }
+            .map { it.decodeToString() }
+    }
 
 fun Parameters.requiredPathParam(name: String): Either<ErrorResponse, String> =
     this[name].toOption().filter { it.isNotBlank() }.toEither {
