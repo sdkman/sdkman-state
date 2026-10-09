@@ -1,6 +1,8 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.left
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
@@ -11,6 +13,8 @@ import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
 import io.sdkman.state.security.BCRYPT_COST
+import io.sdkman.state.security.COMMUNITY_VENDOR_ID
+import io.sdkman.state.security.ROLE_COMMUNITY
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -18,6 +22,11 @@ import java.util.UUID
 private const val ISSUER = "sdkman-state"
 private const val AUDIENCE = "sdkman-state"
 private const val SECONDS_PER_MINUTE = 60L
+
+private data class CommunityAccount(
+    val email: String,
+    val hashedPassword: String,
+)
 
 class AuthServiceImpl(
     private val vendorRepository: VendorRepository,
@@ -28,6 +37,13 @@ class AuthServiceImpl(
 
     private val adminHashedPassword: String =
         String(BCrypt.withDefaults().hash(BCRYPT_COST, appConfig.adminPassword.toByteArray()))
+
+    private val communityAccount: Option<CommunityAccount> =
+        appConfig.communityEmail.flatMap { email ->
+            appConfig.communityPassword.map { password ->
+                CommunityAccount(email, String(BCrypt.withDefaults().hash(BCRYPT_COST, password.toByteArray())))
+            }
+        }
 
     private val dummyHash: String =
         String(BCrypt.withDefaults().hash(BCRYPT_COST, "dummy-password-for-timing".toByteArray()))
@@ -44,9 +60,18 @@ class AuthServiceImpl(
         return if (email == appConfig.adminEmail) {
             verifyAdminLogin(email, password)
         } else {
-            verifyVendorLogin(email, password)
+            verifyCommunityOrVendorLogin(email, password)
         }
     }
+
+    private suspend fun verifyCommunityOrVendorLogin(
+        email: String,
+        password: String,
+    ): Either<AuthError, String> =
+        communityAccount
+            .filter { it.email == email }
+            .map { verifyCommunityLogin(it, password) }
+            .getOrElse { verifyVendorLogin(email, password) }
 
     private fun verifyAdminLogin(
         email: String,
@@ -55,6 +80,18 @@ class AuthServiceImpl(
         val result = BCrypt.verifyer().verify(password.toByteArray(), adminHashedPassword.toByteArray())
         return if (result.verified) {
             createToken(email, "admin", UUID(0L, 0L), emptyList())
+        } else {
+            AuthError.InvalidCredentials.left()
+        }
+    }
+
+    private fun verifyCommunityLogin(
+        account: CommunityAccount,
+        password: String,
+    ): Either<AuthError, String> {
+        val result = BCrypt.verifyer().verify(password.toByteArray(), account.hashedPassword.toByteArray())
+        return if (result.verified) {
+            createToken(account.email, ROLE_COMMUNITY, COMMUNITY_VENDOR_ID, emptyList())
         } else {
             AuthError.InvalidCredentials.left()
         }
