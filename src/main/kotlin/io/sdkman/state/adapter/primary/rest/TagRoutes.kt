@@ -28,8 +28,6 @@ private fun Route.assignTagRoute(tagService: TagService) {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
-        val role = call.authenticatedRole()
-        val candidates = call.authenticatedCandidates()
         either<DomainError, Unit> {
             val assignment =
                 Either
@@ -45,8 +43,7 @@ private fun Route.assignTagRoute(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            // Admin tokens bypass candidate authorization — admin can operate on any candidate
-            if (role == "vendor" && assignment.candidate !in candidates) {
+            if (!call.isAuthorizedForCandidate(assignment.candidate)) {
                 call.respond(
                     HttpStatusCode.Forbidden,
                     ErrorResponse("Forbidden", "Not authorized for candidate: ${assignment.candidate}"),
@@ -66,8 +63,6 @@ private fun Route.deleteTagRoute(tagService: TagService) {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
-        val role = call.authenticatedRole()
-        val candidates = call.authenticatedCandidates()
         either<DomainError, Unit> {
             val uniqueTag =
                 Either
@@ -83,8 +78,7 @@ private fun Route.deleteTagRoute(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            // Admin tokens bypass candidate authorization — admin can operate on any candidate
-            if (role == "vendor" && uniqueTag.candidate !in candidates) {
+            if (!call.isAuthorizedForCandidate(uniqueTag.candidate)) {
                 call.respond(
                     HttpStatusCode.Forbidden,
                     ErrorResponse("Forbidden", "Not authorized for candidate: ${uniqueTag.candidate}"),

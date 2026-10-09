@@ -23,6 +23,8 @@ import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.security.ROLE_ADMIN
+import io.sdkman.state.security.ROLE_VENDOR
 
 fun ApplicationCall.authenticatedVendorId(): java.util.UUID =
     principal<JWTPrincipal>()
@@ -54,6 +56,13 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
                 .asList(String::class.java)
                 .toOption()
         }.getOrElse { emptyList() }
+
+fun ApplicationCall.isAuthorizedForCandidate(candidate: String): Boolean =
+    when (authenticatedRole()) {
+        ROLE_ADMIN -> true
+        ROLE_VENDOR -> candidate in authenticatedCandidates()
+        else -> false
+    }
 
 fun Parameters.requiredPathParam(name: String): Either<ErrorResponse, String> =
     this[name].toOption().filter { it.isNotBlank() }.toEither {
