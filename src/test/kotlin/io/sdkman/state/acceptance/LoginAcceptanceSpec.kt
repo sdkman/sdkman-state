@@ -97,6 +97,22 @@ class LoginAcceptanceSpec :
             }
         }
 
+        should("return 401 for community credentials when no community account is configured") {
+            withCleanDatabase {
+                withTestApplication {
+                    val response =
+                        client.post("/login") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                """{"email":"${JwtTestSupport.COMMUNITY_EMAIL}","password":"${JwtTestSupport.COMMUNITY_PASSWORD}"}""",
+                            )
+                        }
+
+                    response.status shouldBe HttpStatusCode.Unauthorized
+                }
+            }
+        }
+
         should("return 401 for soft-deleted vendor") {
             withCleanDatabase {
                 withTestApplication {

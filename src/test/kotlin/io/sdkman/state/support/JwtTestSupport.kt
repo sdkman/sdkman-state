@@ -8,6 +8,8 @@ import java.util.UUID
 object JwtTestSupport {
     const val TEST_SECRET = "test-jwt-secret-that-is-long-enough"
     const val ADMIN_EMAIL = "admin@sdkman.io"
+    const val COMMUNITY_EMAIL = "community@sdkman.io"
+    const val COMMUNITY_PASSWORD = "testcommunitypassword"
     val NIL_UUID: UUID = UUID(0L, 0L)
 
     private val algorithm = Algorithm.HMAC256(TEST_SECRET)
