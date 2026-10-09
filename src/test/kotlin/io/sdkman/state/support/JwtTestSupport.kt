@@ -2,6 +2,7 @@ package io.sdkman.state.support
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import io.sdkman.state.security.COMMUNITY_VENDOR_ID
 import java.time.Instant
 import java.util.UUID
 
@@ -22,6 +23,19 @@ object JwtTestSupport {
             .withSubject(ADMIN_EMAIL)
             .withClaim("role", "admin")
             .withClaim("vendor_id", NIL_UUID.toString())
+            .withClaim("candidates", emptyList<String>())
+            .withIssuedAt(Instant.now())
+            .withExpiresAt(Instant.now().plusSeconds(600))
+            .sign(algorithm)
+
+    fun communityToken(): String =
+        JWT
+            .create()
+            .withIssuer("sdkman-state")
+            .withAudience("sdkman-state")
+            .withSubject(COMMUNITY_EMAIL)
+            .withClaim("role", "community")
+            .withClaim("vendor_id", COMMUNITY_VENDOR_ID.toString())
             .withClaim("candidates", emptyList<String>())
             .withIssuedAt(Instant.now())
             .withExpiresAt(Instant.now().plusSeconds(600))

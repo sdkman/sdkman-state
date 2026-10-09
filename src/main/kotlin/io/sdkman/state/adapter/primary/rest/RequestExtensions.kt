@@ -24,6 +24,7 @@ import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.security.ROLE_ADMIN
+import io.sdkman.state.security.ROLE_COMMUNITY
 import io.sdkman.state.security.ROLE_VENDOR
 
 fun ApplicationCall.authenticatedVendorId(): java.util.UUID =
@@ -59,7 +60,7 @@ fun ApplicationCall.authenticatedCandidates(): List<String> =
 
 fun ApplicationCall.isAuthorizedForCandidate(candidate: String): Boolean =
     when (authenticatedRole()) {
-        ROLE_ADMIN -> true
+        ROLE_ADMIN, ROLE_COMMUNITY -> true
         ROLE_VENDOR -> candidate in authenticatedCandidates()
         else -> false
     }
