@@ -413,7 +413,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /candidates:
     get:
-      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived from the `lts` tag on every request and is never stored."
+      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived on every request from the `stable` tag, falling back to the `lts` tag, and is never stored."
       responses:
         "200":
           description: "OK"
@@ -1161,7 +1161,7 @@ components:
           type: "string"
         default:
           type: "string"
-          description: "The version carrying the `lts` tag, resolved on UNIVERSAL first and then LINUX_X64, considering only rows with no distribution. Derived from version_tags on every request and never stored. The field is absent - not null - when no tag resolves, and always absent for java, which is the one candidate with per-distribution tags."
+          description: "The version carrying the `stable` tag, falling back to the `lts` tag. The tag decides first, then the platform: `stable` on UNIVERSAL, then `stable` on LINUX_X64, then `lts` on UNIVERSAL, then `lts` on LINUX_X64. Only those four combinations count; any other tag or platform never produces a default. Only rows with no distribution are considered. Derived from version_tags on every request and never stored. The field is absent - not null - when no tag resolves, and always absent for java, which is the one candidate with per-distribution tags."
       required:
         - "candidate"
         - "name"
