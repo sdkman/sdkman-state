@@ -8,6 +8,7 @@ enum class Role(
 ) {
     ADMIN("admin"),
     VENDOR("vendor"),
+    COMMUNITY("community"),
     ;
 
     companion object {
