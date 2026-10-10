@@ -39,8 +39,9 @@ Login checks the admin first, then the community account, then the `vendors` tab
 no community account configured starts and behaves exactly as today: a community login simply
 fails with `401`, like any wrong credential. The account counts as configured only when both
 `community.email` and `community.password` are set; with either one missing it is treated as
-absent. *(Assumption, planning pass 2026-10-08: half a credential is a misconfiguration, and
-refusing it is the safer reading.)* So the release needs no deploy ordering, and the
+absent. A value that is empty or blank counts as unset. *(Assumption, planning pass 2026-10-08:
+half a credential is a misconfiguration, and refusing it is the safer reading. Planning pass
+2026-10-10: a blank `COMMUNITY_PASSWORD` must never admit an empty password.)* So the release needs no deploy ordering, and the
 local stack and the tests keep working without it.
 
 **It may change every candidate.** On any candidate, registered or not, the role can do
