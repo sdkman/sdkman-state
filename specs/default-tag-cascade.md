@@ -1,68 +1,69 @@
 # Default Tag Cascade
 
-The derived `default` on `GET /candidates` is the version carrying the `lts` tag. For java that is
-right: `lts` is a JEP 322 concept. For every other candidate it is a borrowed word. Most tools have
-no long-term-support line, and the tag their maintainers would naturally reach for is `stable`.
+`GET /candidates` gives each non-java candidate a derived `default`, today the version carrying the
+`lts` tag. For java, `lts` is the right word, since JEP 322 defines it. Most other tools have no
+long-term-support line, and the tag their maintainers would naturally use is `stable`.
 
-This feature lets a non-java candidate's default come from a `stable` tag, falling back to `lts`
+This feature lets a non-java candidate's `default` come from a `stable` tag, falling back to `lts`
 when there is none. Nothing else about the derived default changes.
 
-*Amends rules 4, 5 and 7 of [`candidate-registry.md`](candidate-registry.md) and its default
-scenarios. Java's default is untouched.*
+*Amends [`candidate-registry.md`](candidate-registry.md): rules 4, 5 and 7, the `default` row of its
+API contract, the `lts` sentences of its §Behaviour, its out-of-scope entry on per-candidate defaults,
+its `default` acceptance criteria, and four of its default scenarios. Rules 6 and 8 stand: only rows
+with no distribution count, and java never carries a `default`.*
 
 ## Behaviour
 
-A non-java candidate's `default` is resolved by trying, in order, until one matches:
+A non-java candidate's `default` is the first of these that exists:
 
 1. the version tagged `stable` at `UNIVERSAL`
 2. the version tagged `stable` at `LINUX_X64`
 3. the version tagged `lts` at `UNIVERSAL`
 4. the version tagged `lts` at `LINUX_X64`
 
-The **tag decides first, then the platform**. A `stable` tag on either platform beats `lts` on any
+The **tag decides first, then the platform**. `stable` on either platform beats `lts` on any
 platform. A candidate matching none of the four has no `default`, and the field is absent, as today.
 
-Adopting `stable` is the candidate owner's opt-in. Whoever publishes a candidate's versions, its
-vendor through `POST /versions` or the community through `sdkman-contrib`, chooses which tag they
-send. Once a candidate carries `stable`, its `lts` tag no longer affects its default. Nothing
-enforces that a candidate uses only one of the two.
+A candidate's `lts` tag stops producing its `default` only once a `stable` tag exists at
+`UNIVERSAL` or `LINUX_X64` on a row with no distribution. A `stable` anywhere else is inert and
+`lts` still resolves.
 
 ## Business Rules
 
-These replace the corresponding rules in [`candidate-registry.md`](candidate-registry.md); rules 6
-and 8 there stand unchanged.
+These replace rules 4, 5 and 7 of [`candidate-registry.md`](candidate-registry.md).
 
 4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing
    writes a default onto a candidate row and there is no endpoint to set one. Moving a default means
-   moving the `stable` tag, or the `lts` tag for a candidate that has no `stable`.
+   moving the `stable` tag, or the `lts` tag for a candidate with no `stable`.
 5. **`default` cascades by tag, then by platform:** `stable` before `lts`, and within each tag
-   `UNIVERSAL` before `LINUX_X64`. No other tag and no other platform is consulted. The resolution
-   is restricted to those four combinations, not merely ordered by them. `latest`, a major-version
-   tag such as `9`, or a `stable` sitting only on `MAC_ARM64` never produces a default.
-7. **`default` does not filter on `visible`.** Unchanged in substance. The `sdk list` header and
-   `sdk default` both read this one derived value, so they agree. The derived value equals what
-   `GET /versions/{c}/tags/{tag}` returns for whichever tag and platform won the cascade.
+   `UNIVERSAL` before `LINUX_X64`. The four combinations are the only ones that count; nothing
+   outside them can produce a default, however it would sort. `latest`, a major-version tag such as
+   `9`, or a `stable` or `lts` tag that exists only on `MAC_ARM64` never produces one. Tag names
+   match exactly; `Stable` is a different tag and never produces a default.
+7. **`default` does not filter on `visible`, and agrees with the tag route.** The derived value
+   equals what `GET /versions/{candidate}/tags/{tag}?platform={platform}` returns for the tag and
+   platform that won the cascade, including when that version is no longer visible. Tag and
+   platform are read from `version_tags`, the same columns the tag route reads; distribution is
+   read from `versions`, per rule 6.
 
 ## Findings
 
-- **No live candidate carries `stable` today.** A survey of `state.sdkman.io` on 2026-10-10 found
-  all 77 non-java candidates tagged `lts`, five also tagged `latest`, and none tagged `stable`.
-  Shipping this changes no live default.
-- **`latest` is deliberately excluded.** It means newest, not chosen, and it already disagrees with
-  the default on live: `kotlintoolchain` carries `latest` on 0.12.1 and `lts` on 0.13.0, whose
-  default is 0.13.0.
-- **`lts` is written by existing publishers.** Vendors send it on `POST /versions`, and
-  `vendor-release` (winding down) writes it on default publishes. Neither needs to change. They
-  keep moving the default for every candidate that has not opted into `stable`.
-- **The traps recorded in [`candidate-registry.md`](candidate-registry.md) §Findings still apply,
-  now per tag.** Resolution stays one query for the whole registry, the cut is per candidate, and
-  the platform and tag predicates must exclude, not only order. A preference ordering without the
-  exclusion would admit `latest` or a `MAC_ARM64`-only `stable`.
+- **Shipping this changes no live default.** A survey of `state.sdkman.io` on 2026-10-10 found every
+  non-java candidate tagged `lts`, five also tagged `latest`, and none tagged `stable`.
+- **`latest` is deliberately excluded.** It means newest, not chosen, and on live it already
+  disagrees with the default: `kotlintoolchain` carries `latest` on 0.12.1 and `lts` on 0.13.0.
+- **The resolution traps in [`candidate-registry.md`](candidate-registry.md) §Findings still apply,
+  now across two tags.** Resolution stays one query for the whole registry. The choice of tag is made
+  per candidate, never once for the whole registry. The tag and platform predicates must exclude
+  everything outside the four combinations, not merely sort them: sorting alone would let `latest`
+  or a `MAC_ARM64`-only tag through.
+- **`stable` needs no write-side change.** `TagNameRules` already accepts it as a tag name.
 
 ## Examples
 
-These replace the four `lts` default scenarios in
-[`candidate-registry.md`](candidate-registry.md) §Examples. The java scenario stays as it is.
+These replace the `gradle`, `kuml`, `scala` and `jpx` default scenarios in
+[`candidate-registry.md`](candidate-registry.md) §Examples. The java scenario stays. The `connor`
+scenario stays too, with `And no "connor" version is tagged "stable"` added.
 
 ```gherkin
 Feature: Derived candidate default
@@ -108,10 +109,25 @@ Feature: Derived candidate default
     When a client sends GET /candidates
     Then "kuml" has a default of "0.20.5"
 
+  Scenario: UNIVERSAL wins when lts exists at both platforms
+    Given the candidate "scala" is registered
+      And no "scala" version is tagged "stable"
+      And version "3.4.3" of "scala" on "UNIVERSAL" is tagged "lts"
+      And version "3.3.1" of "scala" on "LINUX_X64" is tagged "lts"
+    When a client sends GET /candidates
+    Then "scala" has a default of "3.4.3"
+
   Scenario: stable on another platform is ignored
     Given the candidate "kuml" is registered
       And version "0.21.0" of "kuml" on "MAC_ARM64" is tagged "stable"
       And version "0.20.5" of "kuml" on "LINUX_X64" is tagged "lts"
+    When a client sends GET /candidates
+    Then "kuml" has a default of "0.20.5"
+
+  Scenario: Tag names match exactly
+    Given the candidate "kuml" is registered
+      And version "0.21.0" of "kuml" on "UNIVERSAL" is tagged "Stable"
+      And version "0.20.5" of "kuml" on "UNIVERSAL" is tagged "lts"
     When a client sends GET /candidates
     Then "kuml" has a default of "0.20.5"
 
@@ -130,50 +146,40 @@ Feature: Derived candidate default
     When a client sends GET /candidates
     Then "gradle" has a default of "8.14"
       And "scala" has a default of "3.4.3"
+
+  Scenario: A stable default agrees with the tag route, even when retired
+    Given the candidate "gradle" is registered
+      And version "8.14" of "gradle" on "UNIVERSAL" is not visible and is tagged "stable"
+    When a client sends GET /candidates
+      And a client sends GET /versions/gradle/tags/stable?platform=UNIVERSAL
+    Then "gradle" has a default of "8.14"
+      And the tag route resolves "8.14"
 ```
 
-The last scenario guards the per-candidate cut: a registry-wide choice of tag would resolve `scala`
-against `stable` and leave it without a default.
-
-## Rollout
-
-Ships with no visible change: every live candidate keeps its current default until someone tags
-`stable`. `sdkman-state` deploys on push. The Candidates Service needs no deploy; it reads the
-derived value and picks up a moved default within its usual refresh window (State `max-age` plus the
-in-process refresh, up to fifteen minutes).
-
-## Workspace follow-ups
-
-Outside `sdkman-state`, tracked here so they land with it:
-
-- **`sdkman-candidates`, wording only.** Comments in `CandidateRegistry.scala`,
-  `DefaultController.scala` and `CandidatesListController.scala`, and
-  `specs/candidate-registry-read-flip.md`, describe the non-java default as "the `lts`-tagged
-  version". Reword to "the default State derives". No code change, no deploy.
-- **`docs/glossary.md` §default / lts tag.** "Default" stops meaning "the version carrying `lts`".
-  Non-java: first of `stable`, then `lts`. Java: Temurin `lts` at `LINUX_X64`.
-- **Local seed.** `seed/seed.sh` tags one non-java fixture `stable` on a version other than its
-  `lts`. `gradle` fits: no Insomnia folder pins its default. Tag `8.5` `stable` and leave `8.14` on
-  `lts`.
-- **Insomnia folder `12 candidate registry (Local only)`.** Assert that `GET /default/gradle` and
-  gradle's `sdk list` header both return `8.5`.
+The "each candidate" scenario guards the per-candidate choice of tag. If the tag were chosen once
+for the whole registry, `scala` would be resolved against `stable` and end up with no default.
 
 ## Out of Scope
 
-- **java.** Its default remains the Temurin `lts` at `LINUX_X64`, resolved by the Candidates
-  Service. Rule 8 of [`candidate-registry.md`](candidate-registry.md) is unchanged.
-- **Moving existing `lts` tags to `stable`.** No data migration. Owners opt in by publishing.
-- **Validation against mixing.** A candidate may carry both tags; `stable` simply wins.
-- **`vendor-release`.** It keeps writing `lts`.
-- **`latest`, or any third tier.**
+- **java.** Rule 8 of [`candidate-registry.md`](candidate-registry.md) is unchanged.
+- **Moving existing `lts` tags to `stable`.** No data migration. Candidates opt in by tagging.
+- **Validation against carrying both tags.** `stable` simply wins.
+- **`latest`, or any further tier.**
+- **Configuring the cascade per candidate.** The order is fixed for every non-java candidate.
+- **Any change to `POST /versions`, the tag routes, or the version read routes.**
 
 ## Acceptance Criteria
 
-- Every scenario in §Examples passes, alongside the unchanged java scenario of
-  [`candidate-registry.md`](candidate-registry.md).
-- `GET /candidates` still resolves every default in a single query, whatever the registry size.
-- For a candidate with no `stable` tag, `GET /candidates` returns exactly the `default` it returns
-  before this change.
-- `GET /candidates` against production returns the same `default` for all 77 non-java candidates
-  before and after deploy.
-- The project's quality gates pass.
+- [ ] Every scenario in §Examples passes, alongside the java and `connor` scenarios of
+      [`candidate-registry.md`](candidate-registry.md)
+- [ ] `GET /candidates` still resolves every default without a query per candidate
+- [ ] The existing `lts` default tests in `GetCandidatesAcceptanceSpec` and
+      `CandidateDefaultAgreementAcceptanceSpec` still pass, changed at most by an added "no `stable`
+      tag" given
+- [ ] `src/main/resources/openapi/documentation.yaml` describes `default` as the cascade: `stable`
+      before `lts`, `UNIVERSAL` before `LINUX_X64`, limited to those four combinations, rows with no
+      distribution only, always absent for java. Both the `GET /candidates` route description and
+      the `default` property say so.
+- [ ] [`candidate-registry.md`](candidate-registry.md) points to this spec from each passage it
+      amends
+- [ ] The project's quality gates pass
