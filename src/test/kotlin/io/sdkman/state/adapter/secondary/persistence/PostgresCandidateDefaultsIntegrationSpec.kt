@@ -164,4 +164,66 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 defaults shouldBe mapOf("gradle" to "8.14", "scala" to "3.4.3")
             }
         }
+
+        should("ignore stable on MAC_ARM64 and resolve lts on LINUX_X64") {
+            withCleanDatabase {
+                // given: stable only on a platform outside the resolution order, lts on LINUX_X64
+                seedTaggedVersion("kuml", "0.21.0", Platform.MAC_ARM64, tag = "stable")
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64, tag = "lts")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: a stable tag outside the four combinations is inert
+                defaults shouldContain ("kuml" to "0.20.5")
+            }
+        }
+
+        should("match tag names exactly so Stable never beats lts") {
+            withCleanDatabase {
+                // given: a capitalised Stable tag and an lts tag, both on UNIVERSAL
+                seedTaggedVersion("kuml", "0.21.0", Platform.UNIVERSAL, tag = "Stable")
+                seedTaggedVersion("kuml", "0.20.5", Platform.UNIVERSAL, tag = "lts")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: Stable is a different tag, so lts resolves
+                defaults shouldContain ("kuml" to "0.20.5")
+            }
+        }
+
+        should("omit a candidate tagged only latest") {
+            withCleanDatabase {
+                // given: the candidate carries latest on UNIVERSAL and no stable or lts
+                seedTaggedVersion("jpx", "0.15.5", Platform.UNIVERSAL, tag = "latest")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: latest never produces a default
+                defaults.shouldNotContainKey("jpx")
+            }
+        }
+
+        should("ignore stable on a version row with a distribution and resolve lts") {
+            withCleanDatabase {
+                // given: stable points at a TEMURIN version row through a tag row with no distribution
+                seedTaggedVersion(
+                    "kuml",
+                    "0.21.0",
+                    Platform.UNIVERSAL,
+                    Distribution.TEMURIN.some(),
+                    tagDistribution = none(),
+                    tag = "stable",
+                )
+                seedTaggedVersion("kuml", "0.20.5", Platform.UNIVERSAL, tag = "lts")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: the distribution filter drops stable before the cascade ranks it
+                defaults shouldContain ("kuml" to "0.20.5")
+            }
+        }
     })
