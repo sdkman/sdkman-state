@@ -6,6 +6,8 @@ import io.ktor.server.config.*
 
 fun ApplicationConfig.getOptionString(path: String): Option<String> = propertyOrNull(path).toOption().map { it.getString() }
 
+fun ApplicationConfig.getOptionNonBlankString(path: String): Option<String> = getOptionString(path).filter { it.isNotBlank() }
+
 fun ApplicationConfig.getCommaSeparatedSet(path: String): Set<String> =
     property(path)
         .getString()
