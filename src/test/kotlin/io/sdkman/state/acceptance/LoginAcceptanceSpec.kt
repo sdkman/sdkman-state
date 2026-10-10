@@ -1,5 +1,6 @@
 package io.sdkman.state.acceptance
 
+import com.auth0.jwt.JWT
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
@@ -65,6 +66,31 @@ class LoginAcceptanceSpec :
                         .getValue("token")
                         .jsonPrimitive.content
                         .shouldNotBeBlank()
+                }
+            }
+        }
+
+        should("return 200 with a community-role JWT for valid community credentials") {
+            withCleanDatabase {
+                withTestApplication {
+                    // when
+                    val response =
+                        client.post("/login") {
+                            contentType(ContentType.Application.Json)
+                            setBody(
+                                """{"email":"${JwtTestSupport.COMMUNITY_EMAIL}","password":"${JwtTestSupport.COMMUNITY_PASSWORD}"}""",
+                            )
+                        }
+
+                    // then
+                    response.status shouldBe HttpStatusCode.OK
+                    val token =
+                        Json
+                            .parseToJsonElement(response.bodyAsText())
+                            .jsonObject
+                            .getValue("token")
+                            .jsonPrimitive.content
+                    JWT.decode(token).getClaim("role").asString() shouldBe "community"
                 }
             }
         }
