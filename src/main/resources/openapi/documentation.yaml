@@ -56,7 +56,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -124,7 +124,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -193,7 +193,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -260,7 +260,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate"
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -281,7 +281,7 @@ paths:
                     message: "null"
   /login:
     post:
-      description: "Authenticate and obtain a JWT token"
+      description: "Authenticate and obtain a JWT token. The token role is \"admin\", \"vendor\" or \"community\". Login checks the admin account first, then the optional community account, then the vendors table. A community token carries the fixed vendor_id \"00000000-0000-0000-0000-000000000001\", the community account email and an empty candidates list; with no community account configured, a community login fails with 401."
       requestBody:
         content:
           'application/json':
@@ -431,7 +431,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /admin/candidates:
     post:
-      description: "Register a candidate. The write is an upsert keyed on the identifier: an existing candidate has its name, description and website_url updated and its timestamp refreshed, and the identifier itself is never mutated - renaming a candidate is a delete plus a create. 201 and 200 are told apart by what the upsert reports rather than by a preceding read, so a concurrent double post cannot answer 201 twice. Registration grants publishing rights: POST /versions validates its candidate against this registry, so a newly registered candidate becomes publishable within the refresh interval, with no deploy and no restart."
+      description: "Register a candidate. The write is an upsert keyed on the identifier: an existing candidate has its name, description and website_url updated and its timestamp refreshed, and the identifier itself is never mutated - renaming a candidate is a delete plus a create. 201 and 200 are told apart by what the upsert reports rather than by a preceding read, so a concurrent double post cannot answer 201 twice. Registration grants publishing rights: POST /versions validates its candidate against this registry, so a newly registered candidate becomes publishable within the refresh interval, with no deploy and no restart. Admin and community tokens are admitted."
       security:
         - bearerAuth: []
       requestBody:
@@ -475,7 +475,7 @@ paths:
                       - field: "request"
                         message: "Invalid JSON: Unexpected JSON token at offset 0"
         "401":
-          description: "Unauthorized - Missing, invalid, or non-admin token"
+          description: "Unauthorized - Missing, invalid, or non-admin, non-community token"
           content:
             'application/json':
               schema:
@@ -488,7 +488,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /admin/candidates/{candidate}:
     delete:
-      description: "Remove a candidate from the registry. Deletion is hard, not soft: a candidate carries no history worth preserving once its versions are gone, so the body is the removed record. A candidate that still has versions is refused with 409 and the count of those versions; the count is the whole guard, and no database constraint stands behind it. Deletion revokes publishing rights: POST /versions validates its candidate against this registry, so a deleted candidate stops being publishable within the refresh interval."
+      description: "Remove a candidate from the registry. Deletion is hard, not soft: a candidate carries no history worth preserving once its versions are gone, so the body is the removed record. A candidate that still has versions is refused with 409 and the count of those versions; the count is the whole guard, and no database constraint stands behind it. Deletion revokes publishing rights: POST /versions validates its candidate against this registry, so a deleted candidate stops being publishable within the refresh interval. Admin and community tokens are admitted."
       security:
         - bearerAuth: []
       parameters:
@@ -506,7 +506,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CandidateAdminDto"
         "401":
-          description: "Unauthorized - Missing, invalid, or non-admin token"
+          description: "Unauthorized - Missing, invalid, or non-admin, non-community token"
           content:
             'application/json':
               schema:
