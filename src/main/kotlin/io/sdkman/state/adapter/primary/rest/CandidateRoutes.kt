@@ -1,6 +1,5 @@
 package io.sdkman.state.adapter.primary.rest
 
-import arrow.core.getOrElse
 import arrow.core.raise.either
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -13,7 +12,6 @@ import io.sdkman.state.adapter.primary.rest.dto.toDto
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
-import io.sdkman.state.domain.model.Role
 import io.sdkman.state.domain.service.CandidateAllowList
 import io.sdkman.state.domain.service.CandidateService
 
@@ -84,12 +82,6 @@ private suspend fun ApplicationCall.respondRegistration(
 
 private suspend fun ApplicationCall.respondUnauthorized() =
     respond(HttpStatusCode.Unauthorized, ErrorResponse("Unauthorized", "Invalid or expired token"))
-
-private fun ApplicationCall.mayManageCandidates(): Boolean =
-    Role
-        .fromClaim(authenticatedRole())
-        .map { role -> role == Role.ADMIN || role == Role.COMMUNITY }
-        .getOrElse { false }
 
 private fun ApplicationCall.declineCaching() = response.header(HttpHeaders.CacheControl, "no-store")
 

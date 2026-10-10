@@ -12,3 +12,15 @@ fun ApplicationCall.mayWriteCandidate(candidate: String): Boolean =
                 role == Role.COMMUNITY ||
                 (role == Role.VENDOR && candidate in authenticatedCandidates())
         }.getOrElse { false }
+
+fun ApplicationCall.mayManageCandidates(): Boolean =
+    Role
+        .fromClaim(authenticatedRole())
+        .map { role -> role == Role.ADMIN || role == Role.COMMUNITY }
+        .getOrElse { false }
+
+fun ApplicationCall.mayManageVendors(): Boolean =
+    Role
+        .fromClaim(authenticatedRole())
+        .map { role -> role == Role.ADMIN }
+        .getOrElse { false }
