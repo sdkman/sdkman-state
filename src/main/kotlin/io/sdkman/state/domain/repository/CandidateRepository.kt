@@ -18,5 +18,5 @@ interface CandidateRepository {
 
     suspend fun countVersions(candidate: String): Either<DatabaseFailure, Long>
 
-    suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>>
+    suspend fun findDefaults(): Either<DatabaseFailure, Map<String, String>>
 }

@@ -50,7 +50,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("gradle", "8.0.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: UNIVERSAL wins — the platforms are a resolution order, not a filter
                 defaults shouldContain ("gradle" to "9.0.0")
@@ -72,7 +72,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("gradle", "8.0.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: an untagged UNIVERSAL row does not block the fallback
                 defaults shouldContain ("gradle" to "8.0.0")
@@ -85,7 +85,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("scala", "3.5.0", Platform.MAC_ARM64)
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: no default at all — MAC_ARM64 is never consulted
                 defaults.shouldNotContainKey("scala")
@@ -98,7 +98,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("groovy", "4.0.0", Platform.UNIVERSAL, visible = false)
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: visibility goes unfiltered, so this agrees with GET /versions/{c}/tags/lts
                 defaults shouldContain ("groovy" to "4.0.0")
@@ -112,7 +112,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("java", "25.0.2", Platform.UNIVERSAL, Distribution.TEMURIN.some(), tagDistribution = none())
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: the filter reads versions.distribution, so the row is omitted
                 defaults.shouldNotContainKey("java")
@@ -128,7 +128,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                 seedLtsVersion("kotlin", "2.2.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
-                val defaults = repo.findLtsDefaults().shouldBeRight()
+                val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: the map is keyed by candidate, so the two gradle rows collapse into one entry
                 defaults shouldHaveSize 3

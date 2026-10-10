@@ -47,7 +47,7 @@ class CandidateServiceUnitSpec :
             should("keep java in the listing without a default") {
                 // given: java carries an lts tag the derivation would otherwise answer with
                 coEvery { candidatesRepo.findAll() } returns Either.Right(listOf(candidate("java")))
-                coEvery { candidatesRepo.findLtsDefaults() } returns Either.Right(mapOf("java" to "21.0.8-tem"))
+                coEvery { candidatesRepo.findDefaults() } returns Either.Right(mapOf("java" to "21.0.8-tem"))
 
                 // when: listing the registry
                 val result = service.list()
@@ -56,11 +56,11 @@ class CandidateServiceUnitSpec :
                 result.shouldBeRight() shouldBe listOf(ListedCandidate(candidate("java"), none()))
             }
 
-            should("pair every other candidate with its findLtsDefaults entry") {
+            should("pair every other candidate with its findDefaults entry") {
                 // given: two non-java candidates, only one of which resolves a default
                 coEvery { candidatesRepo.findAll() } returns
                     Either.Right(listOf(candidate("groovy"), candidate("scala")))
-                coEvery { candidatesRepo.findLtsDefaults() } returns Either.Right(mapOf("groovy" to "4.0.28"))
+                coEvery { candidatesRepo.findDefaults() } returns Either.Right(mapOf("groovy" to "4.0.28"))
 
                 // when: listing the registry
                 val result = service.list()
@@ -77,20 +77,20 @@ class CandidateServiceUnitSpec :
                 // given: a registry of three candidates
                 coEvery { candidatesRepo.findAll() } returns
                     Either.Right(listOf(candidate("groovy"), candidate("java"), candidate("scala")))
-                coEvery { candidatesRepo.findLtsDefaults() } returns Either.Right(emptyMap())
+                coEvery { candidatesRepo.findDefaults() } returns Either.Right(emptyMap())
 
                 // when: listing the registry
                 service.list()
 
                 // then: the default derivation runs once, not once per candidate
-                coVerify(exactly = 1) { candidatesRepo.findLtsDefaults() }
+                coVerify(exactly = 1) { candidatesRepo.findDefaults() }
             }
 
             should("return DatabaseError when the registry read fails") {
                 // given: findAll fails
                 val dbFailure = queryFailure("connection lost")
                 coEvery { candidatesRepo.findAll() } returns Either.Left(dbFailure)
-                coEvery { candidatesRepo.findLtsDefaults() } returns Either.Right(emptyMap())
+                coEvery { candidatesRepo.findDefaults() } returns Either.Right(emptyMap())
 
                 // when: listing the registry
                 val result = service.list()
@@ -103,7 +103,7 @@ class CandidateServiceUnitSpec :
                 // given: the registry reads but the lts derivation fails
                 val dbFailure = queryFailure("connection reset")
                 coEvery { candidatesRepo.findAll() } returns Either.Right(listOf(candidate("groovy")))
-                coEvery { candidatesRepo.findLtsDefaults() } returns Either.Left(dbFailure)
+                coEvery { candidatesRepo.findDefaults() } returns Either.Left(dbFailure)
 
                 // when: listing the registry
                 val result = service.list()

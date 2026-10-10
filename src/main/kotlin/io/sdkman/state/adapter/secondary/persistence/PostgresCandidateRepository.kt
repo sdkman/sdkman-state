@@ -173,7 +173,7 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    override suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>> =
+    override suspend fun findDefaults(): Either<DatabaseFailure, Map<String, String>> =
         Either
             .catch {
                 dbQuery {
@@ -196,7 +196,7 @@ class PostgresCandidateRepository : CandidateRepository {
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to find lts defaults: ${error.message}",
+                    message = "Failed to find candidate defaults: ${error.message}",
                     cause = error,
                 )
             }
