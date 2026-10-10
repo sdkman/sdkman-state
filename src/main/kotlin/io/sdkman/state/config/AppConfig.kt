@@ -1,7 +1,9 @@
 package io.sdkman.state.config
 
 import arrow.core.Option
+import arrow.core.raise.option
 import io.ktor.server.config.*
+import io.sdkman.state.domain.model.CommunityAccount
 
 interface AppConfig {
     val databaseHost: String
@@ -17,6 +19,7 @@ interface AppConfig {
     val cacheMaxAge: Int
     val adminEmail: String
     val adminPassword: String
+    val communityAccount: Option<CommunityAccount>
     val jwtSecret: String
     val jwtExpiry: Int
     val semverishCandidates: Set<String>
@@ -43,6 +46,13 @@ class DefaultAppConfig(
     override val cacheMaxAge: Int = config.property("api.cache.control").getString().toInt()
     override val adminEmail: String = config.property("admin.email").getString()
     override val adminPassword: String = config.property("admin.password").getString()
+    override val communityAccount: Option<CommunityAccount> =
+        option {
+            CommunityAccount(
+                email = config.getOptionNonBlankString("community.email").bind(),
+                password = config.getOptionNonBlankString("community.password").bind(),
+            )
+        }
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.property("jwt.expiry").getString().toInt()
