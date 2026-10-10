@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.server.testing.ApplicationTestBuilder
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
@@ -44,20 +45,7 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 insertTag("gradle", "lts", none(), Platform.UNIVERSAL, versionId)
 
                 withTestApplication {
-                    // given: gradle registered over the admin route, so the comparison runs
-                    // against a row the service itself wrote
-                    client
-                        .post("/admin/candidates") {
-                            contentType(ContentType.Application.Json)
-                            setBody(
-                                """
-                                {"candidate":"gradle","name":"Gradle",
-                                 "description":"Gradle build tool.",
-                                 "website_url":"https://gradle.org/"}
-                                """.trimIndent(),
-                            )
-                            bearerAuth(JwtTestSupport.adminToken())
-                        }.status shouldBe HttpStatusCode.Created
+                    registerGradle().status shouldBe HttpStatusCode.Created
 
                     // when: the tag route resolves lts at the platform the default prefers
                     val tagResponse = client.get("/versions/gradle/tags/lts?platform=UNIVERSAL")
@@ -77,3 +65,17 @@ class CandidateDefaultAgreementAcceptanceSpec :
             }
         }
     })
+
+// gradle is registered over the admin route, so the comparison runs against a row the service itself wrote
+private suspend fun ApplicationTestBuilder.registerGradle(): HttpResponse =
+    client.post("/admin/candidates") {
+        contentType(ContentType.Application.Json)
+        setBody(
+            """
+            {"candidate":"gradle","name":"Gradle",
+             "description":"Gradle build tool.",
+             "website_url":"https://gradle.org/"}
+            """.trimIndent(),
+        )
+        bearerAuth(JwtTestSupport.adminToken())
+    }
