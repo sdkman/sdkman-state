@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.AuthError
+import io.sdkman.state.domain.model.CommunityAccount
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.security.BCRYPT_COST
@@ -27,6 +28,9 @@ import java.util.UUID
 private const val JWT_SECRET = "test-secret-for-unit-tests"
 private const val ADMIN_EMAIL = "admin@test.com"
 private const val ADMIN_PASSWORD = "admin-password"
+private const val COMMUNITY_EMAIL = "community@test.com"
+private const val COMMUNITY_PASSWORD = "community-password"
+private val COMMUNITY_ACCOUNT = CommunityAccount(COMMUNITY_EMAIL, COMMUNITY_PASSWORD)
 
 class AuthServiceImplUnitSpec :
     ShouldSpec({
@@ -36,6 +40,7 @@ class AuthServiceImplUnitSpec :
             mockk<AppConfig> {
                 every { adminEmail } returns ADMIN_EMAIL
                 every { adminPassword } returns ADMIN_PASSWORD
+                every { communityAccount } returns COMMUNITY_ACCOUNT.some()
                 every { jwtSecret } returns JWT_SECRET
                 every { jwtExpiry } returns 10
             }
@@ -47,6 +52,7 @@ class AuthServiceImplUnitSpec :
         beforeEach {
             every { appConfig.adminEmail } returns ADMIN_EMAIL
             every { appConfig.adminPassword } returns ADMIN_PASSWORD
+            every { appConfig.communityAccount } returns COMMUNITY_ACCOUNT.some()
             every { appConfig.jwtSecret } returns JWT_SECRET
             every { appConfig.jwtExpiry } returns 10
             every { rateLimiter.checkAndRecord(any()) } returns false
@@ -151,6 +157,40 @@ class AuthServiceImplUnitSpec :
 
             // when
             val result = service.login("deleted@test.com", "vendor-pw", "127.0.0.1")
+
+            // then
+            result.shouldBeLeft().shouldBeInstanceOf<AuthError.InvalidCredentials>()
+        }
+
+        should("return JWT with community role, sentinel vendor id and no candidates for valid community login") {
+            // when
+            val result = service.login(COMMUNITY_EMAIL, COMMUNITY_PASSWORD, "127.0.0.1")
+
+            // then
+            val token = result.shouldBeRight()
+            val decoded = JWT.require(Algorithm.HMAC256(JWT_SECRET)).build().verify(token)
+            decoded.subject shouldBe COMMUNITY_EMAIL
+            decoded.getClaim("role").asString() shouldBe "community"
+            decoded.getClaim("vendor_id").asString() shouldBe "00000000-0000-0000-0000-000000000001"
+            decoded.getClaim("candidates").asList(String::class.java) shouldBe emptyList()
+        }
+
+        should("return InvalidCredentials for wrong community password") {
+            // when
+            val result = service.login(COMMUNITY_EMAIL, "wrong-password", "127.0.0.1")
+
+            // then
+            result.shouldBeLeft().shouldBeInstanceOf<AuthError.InvalidCredentials>()
+        }
+
+        should("return InvalidCredentials for community credentials when no community account is configured") {
+            // given
+            every { appConfig.communityAccount } returns none()
+            coEvery { vendorRepo.findByEmail(COMMUNITY_EMAIL) } returns Either.Right(none())
+            val serviceWithoutCommunity = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
+
+            // when
+            val result = serviceWithoutCommunity.login(COMMUNITY_EMAIL, COMMUNITY_PASSWORD, "127.0.0.1")
 
             // then
             result.shouldBeLeft().shouldBeInstanceOf<AuthError.InvalidCredentials>()

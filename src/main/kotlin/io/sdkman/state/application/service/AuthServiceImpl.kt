@@ -1,12 +1,15 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.Option
+import arrow.core.Some
 import arrow.core.left
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.error.AuthError
+import io.sdkman.state.domain.model.Role
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
@@ -18,6 +21,13 @@ import java.util.UUID
 private const val ISSUER = "sdkman-state"
 private const val AUDIENCE = "sdkman-state"
 private const val SECONDS_PER_MINUTE = 60L
+private val ADMIN_VENDOR_ID = UUID(0L, 0L)
+private val COMMUNITY_VENDOR_ID = UUID(0L, 1L)
+
+private class CommunityCredentials(
+    val email: String,
+    val hashedPassword: String,
+)
 
 class AuthServiceImpl(
     private val vendorRepository: VendorRepository,
@@ -26,11 +36,12 @@ class AuthServiceImpl(
 ) : AuthService {
     private val logger = LoggerFactory.getLogger(AuthServiceImpl::class.java)
 
-    private val adminHashedPassword: String =
-        String(BCrypt.withDefaults().hash(BCRYPT_COST, appConfig.adminPassword.toByteArray()))
+    private val adminHashedPassword: String = hash(appConfig.adminPassword)
 
-    private val dummyHash: String =
-        String(BCrypt.withDefaults().hash(BCRYPT_COST, "dummy-password-for-timing".toByteArray()))
+    private val communityCredentials: Option<CommunityCredentials> =
+        appConfig.communityAccount.map { CommunityCredentials(it.email, hash(it.password)) }
+
+    private val dummyHash: String = hash("dummy-password-for-timing")
 
     override suspend fun login(
         email: String,
@@ -41,10 +52,11 @@ class AuthServiceImpl(
             return AuthError.RateLimitExceeded.left()
         }
 
-        return if (email == appConfig.adminEmail) {
-            verifyAdminLogin(email, password)
-        } else {
-            verifyVendorLogin(email, password)
+        val community = communityCredentials.filter { it.email == email }
+        return when {
+            email == appConfig.adminEmail -> verifyAdminLogin(email, password)
+            community is Some -> verifyCommunityLogin(community.value, password)
+            else -> verifyVendorLogin(email, password)
         }
     }
 
@@ -54,7 +66,19 @@ class AuthServiceImpl(
     ): Either<AuthError, String> {
         val result = BCrypt.verifyer().verify(password.toByteArray(), adminHashedPassword.toByteArray())
         return if (result.verified) {
-            createToken(email, "admin", UUID(0L, 0L), emptyList())
+            createToken(email, Role.ADMIN, ADMIN_VENDOR_ID, emptyList())
+        } else {
+            AuthError.InvalidCredentials.left()
+        }
+    }
+
+    private fun verifyCommunityLogin(
+        credentials: CommunityCredentials,
+        password: String,
+    ): Either<AuthError, String> {
+        val result = BCrypt.verifyer().verify(password.toByteArray(), credentials.hashedPassword.toByteArray())
+        return if (result.verified) {
+            createToken(credentials.email, Role.COMMUNITY, COMMUNITY_VENDOR_ID, emptyList())
         } else {
             AuthError.InvalidCredentials.left()
         }
@@ -91,7 +115,7 @@ class AuthServiceImpl(
         val hashToVerify = if (isDeleted) dummyHash else vendor.hashedPassword
         val result = BCrypt.verifyer().verify(password.toByteArray(), hashToVerify.toByteArray())
         return if (result.verified && !isDeleted) {
-            createToken(vendor.email, "vendor", vendor.id, vendor.candidates)
+            createToken(vendor.email, Role.VENDOR, vendor.id, vendor.candidates)
         } else {
             AuthError.InvalidCredentials.left()
         }
@@ -101,9 +125,11 @@ class AuthServiceImpl(
         BCrypt.verifyer().verify(password.toByteArray(), dummyHash.toByteArray())
     }
 
+    private fun hash(password: String): String = String(BCrypt.withDefaults().hash(BCRYPT_COST, password.toByteArray()))
+
     private fun createToken(
         email: String,
-        role: String,
+        role: Role,
         vendorId: UUID,
         candidates: List<String>,
     ): Either<AuthError, String> =
@@ -116,7 +142,7 @@ class AuthServiceImpl(
                     .withIssuer(ISSUER)
                     .withAudience(AUDIENCE)
                     .withSubject(email)
-                    .withClaim("role", role)
+                    .withClaim("role", role.claim)
                     .withClaim("vendor_id", vendorId.toString())
                     .withClaim("candidates", candidates)
                     .withIssuedAt(now)
