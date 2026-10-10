@@ -58,6 +58,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
 
         should("refuse an unknown role posting a version with 403 Forbidden") {
             withTaggedVersion {
+                // when: an unknown role posts a version
                 val response =
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
@@ -65,12 +66,14 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         bearerAuth(observerToken)
                     }
 
+                // then: the write is forbidden
                 response.status shouldBe HttpStatusCode.Forbidden
             }
         }
 
         should("refuse an unknown role deleting a version with 403 Forbidden") {
             withTaggedVersion {
+                // when: an unknown role deletes a version
                 val response =
                     client.delete("/versions") {
                         contentType(ContentType.Application.Json)
@@ -78,12 +81,14 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         bearerAuth(observerToken)
                     }
 
+                // then: the write is forbidden
                 response.status shouldBe HttpStatusCode.Forbidden
             }
         }
 
         should("refuse an unknown role assigning a tag with 403 Forbidden") {
             withTaggedVersion {
+                // when: an unknown role assigns a tag
                 val response =
                     client.post("/versions/tags") {
                         contentType(ContentType.Application.Json)
@@ -91,12 +96,14 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         bearerAuth(observerToken)
                     }
 
+                // then: the write is forbidden
                 response.status shouldBe HttpStatusCode.Forbidden
             }
         }
 
         should("refuse an unknown role deleting a tag with 403 Forbidden") {
             withTaggedVersion {
+                // when: an unknown role deletes a tag
                 val response =
                     client.delete("/versions/tags") {
                         contentType(ContentType.Application.Json)
@@ -104,6 +111,7 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                         bearerAuth(observerToken)
                     }
 
+                // then: the write is forbidden
                 response.status shouldBe HttpStatusCode.Forbidden
             }
         }
