@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.sdkman.state.domain.model.CommunityAccount
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
-import io.sdkman.state.support.testApplicationConfig
+import io.sdkman.state.support.testApplicationConfigWithoutCommunityAccount
 
 class DefaultAppConfigUnitSpec :
     ShouldSpec({
@@ -14,7 +14,7 @@ class DefaultAppConfigUnitSpec :
 
         fun communityAccountOf(vararg community: Pair<String, String>) =
             DefaultAppConfig(
-                testApplicationConfig().apply {
+                testApplicationConfigWithoutCommunityAccount().apply {
                     community.forEach { (path, value) -> put(path, value) }
                 },
             ).communityAccount

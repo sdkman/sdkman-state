@@ -31,6 +31,12 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import java.sql.Connection
 
 fun testApplicationConfig(): MapApplicationConfig =
+    testApplicationConfigWithoutCommunityAccount().apply {
+        put("community.email", JwtTestSupport.COMMUNITY_EMAIL)
+        put("community.password", JwtTestSupport.COMMUNITY_PASSWORD)
+    }
+
+fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig =
     MapApplicationConfig(
         "database.host" to PostgresTestContainer.host,
         "database.port" to PostgresTestContainer.port.toString(),
