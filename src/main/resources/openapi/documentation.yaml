@@ -413,7 +413,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /candidates:
     get:
-      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived on every request from the `stable` tag, falling back to the `lts` tag, and is never stored."
+      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived on every request from the `stable` tag, falling back to the `lts` tag, and is never stored. The tag decides first, then the platform: `stable` on UNIVERSAL, then `stable` on LINUX_X64, then `lts` on UNIVERSAL, then `lts` on LINUX_X64. Only those four combinations produce a default, and only rows with no distribution count. An entry for java never carries a `default`."
       responses:
         "200":
           description: "OK"
