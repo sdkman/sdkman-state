@@ -64,6 +64,44 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 }
             }
         }
+
+        should("derive the same default as the stable tag route resolves") {
+            val version =
+                Version(
+                    candidate = "gradle",
+                    version = "8.14",
+                    platform = Platform.UNIVERSAL,
+                    url = "https://gradle-8.14.zip",
+                    visible = false.some(),
+                    distribution = none(),
+                    tags = listOf("stable").some(),
+                )
+
+            withCleanDatabase {
+                // given: a retired gradle row the stable tag still points at
+                val versionId = insertVersionWithId(version)
+                insertTag("gradle", "stable", none(), Platform.UNIVERSAL, versionId)
+
+                withTestApplication {
+                    registerGradle().status shouldBe HttpStatusCode.Created
+
+                    // when: the tag route resolves stable at the platform the default prefers
+                    val tagResponse = client.get("/versions/gradle/tags/stable?platform=UNIVERSAL")
+                    tagResponse.status shouldBe HttpStatusCode.OK
+                    val resolved =
+                        Json
+                            .decodeFromString<JsonObject>(tagResponse.bodyAsText())
+                            .getValue("version")
+                            .jsonPrimitive.content
+
+                    // then: the listing derives the very same version, the retired 8.14, as its default
+                    val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
+                    val gradleEntry = listing.map { it.jsonObject }.single()
+                    val derived = gradleEntry["default"].toOption().map { it.jsonPrimitive.content }
+                    (derived to resolved) shouldBe ("8.14".some() to "8.14")
+                }
+            }
+        }
     })
 
 // gradle is registered over the admin route, so the comparison runs against a row the service itself wrote
