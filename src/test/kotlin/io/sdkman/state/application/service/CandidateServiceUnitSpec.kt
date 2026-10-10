@@ -100,7 +100,7 @@ class CandidateServiceUnitSpec :
             }
 
             should("return DatabaseError when the default derivation fails") {
-                // given: the registry reads but the lts derivation fails
+                // given: the registry reads but the default derivation fails
                 val dbFailure = queryFailure("connection reset")
                 coEvery { candidatesRepo.findAll() } returns Either.Right(listOf(candidate("groovy")))
                 coEvery { candidatesRepo.findDefaults() } returns Either.Left(dbFailure)
