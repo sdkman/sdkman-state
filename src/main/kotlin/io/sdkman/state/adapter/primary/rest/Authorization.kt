@@ -7,5 +7,8 @@ import io.sdkman.state.domain.model.Role
 fun ApplicationCall.mayWriteCandidate(candidate: String): Boolean =
     Role
         .fromClaim(authenticatedRole())
-        .map { role -> role == Role.ADMIN || (role == Role.VENDOR && candidate in authenticatedCandidates()) }
-        .getOrElse { false }
+        .map { role ->
+            role == Role.ADMIN ||
+                role == Role.COMMUNITY ||
+                (role == Role.VENDOR && candidate in authenticatedCandidates())
+        }.getOrElse { false }
