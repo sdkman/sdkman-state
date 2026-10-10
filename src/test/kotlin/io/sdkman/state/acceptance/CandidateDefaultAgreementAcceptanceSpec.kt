@@ -1,5 +1,6 @@
 package io.sdkman.state.acceptance
 
+import arrow.core.Option
 import arrow.core.none
 import arrow.core.some
 import arrow.core.toOption
@@ -48,19 +49,10 @@ class CandidateDefaultAgreementAcceptanceSpec :
                     registerGradle().status shouldBe HttpStatusCode.Created
 
                     // when: the tag route resolves lts at the platform the default prefers
-                    val tagResponse = client.get("/versions/gradle/tags/lts?platform=UNIVERSAL")
-                    tagResponse.status shouldBe HttpStatusCode.OK
-                    val resolved =
-                        Json
-                            .decodeFromString<JsonObject>(tagResponse.bodyAsText())
-                            .getValue("version")
-                            .jsonPrimitive.content
+                    val resolved = resolveTagVersion("lts")
 
                     // then: the listing derives the very same version as its default
-                    val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
-                    val gradleEntry = listing.map { it.jsonObject }.single()
-                    val derived = gradleEntry["default"].toOption().map { it.jsonPrimitive.content }
-                    derived shouldBe resolved.some()
+                    derivedGradleDefault() shouldBe resolved.some()
                 }
             }
         }
@@ -86,19 +78,10 @@ class CandidateDefaultAgreementAcceptanceSpec :
                     registerGradle().status shouldBe HttpStatusCode.Created
 
                     // when: the tag route resolves stable at the platform the default prefers
-                    val tagResponse = client.get("/versions/gradle/tags/stable?platform=UNIVERSAL")
-                    tagResponse.status shouldBe HttpStatusCode.OK
-                    val resolved =
-                        Json
-                            .decodeFromString<JsonObject>(tagResponse.bodyAsText())
-                            .getValue("version")
-                            .jsonPrimitive.content
+                    val resolved = resolveTagVersion("stable")
 
                     // then: the listing derives the very same version, the retired 8.14, as its default
-                    val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
-                    val gradleEntry = listing.map { it.jsonObject }.single()
-                    val derived = gradleEntry["default"].toOption().map { it.jsonPrimitive.content }
-                    (derived to resolved) shouldBe ("8.14".some() to "8.14")
+                    (derivedGradleDefault() to resolved) shouldBe ("8.14".some() to "8.14")
                 }
             }
         }
@@ -117,3 +100,18 @@ private suspend fun ApplicationTestBuilder.registerGradle(): HttpResponse =
         )
         bearerAuth(JwtTestSupport.adminToken())
     }
+
+private suspend fun ApplicationTestBuilder.resolveTagVersion(tag: String): String {
+    val tagResponse = client.get("/versions/gradle/tags/$tag?platform=UNIVERSAL")
+    tagResponse.status shouldBe HttpStatusCode.OK
+    return Json
+        .decodeFromString<JsonObject>(tagResponse.bodyAsText())
+        .getValue("version")
+        .jsonPrimitive.content
+}
+
+private suspend fun ApplicationTestBuilder.derivedGradleDefault(): Option<String> {
+    val listing = Json.decodeFromString<JsonArray>(client.get("/candidates").bodyAsText())
+    val gradleEntry = listing.map { it.jsonObject }.single()
+    return gradleEntry["default"].toOption().map { it.jsonPrimitive.content }
+}
