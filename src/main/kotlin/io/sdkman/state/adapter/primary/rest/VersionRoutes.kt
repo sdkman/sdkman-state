@@ -149,13 +149,10 @@ private fun Route.versionCreateRoute(
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
-        val role = call.authenticatedRole()
-        val candidates = call.authenticatedCandidates()
         versionRequestValidator.checkVersionBody(call.receiveText()).fold(
             ifLeft = { rejection -> call.respondRejectedBody(rejection) },
             ifRight = { validVersion ->
-                // Admin tokens bypass candidate authorization — admin can operate on any candidate
-                if (role == "vendor" && validVersion.candidate !in candidates) {
+                if (!call.mayWriteCandidate(validVersion.candidate)) {
                     call.respond(
                         HttpStatusCode.Forbidden,
                         ErrorResponse("Forbidden", "Not authorized for candidate: ${validVersion.candidate}"),
@@ -176,8 +173,6 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
         call.response.header(HttpHeaders.CacheControl, "no-store")
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
-        val role = call.authenticatedRole()
-        val candidates = call.authenticatedCandidates()
         either<DomainError, Unit> {
             val uniqueVersion =
                 Either
@@ -193,8 +188,7 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
                     .validate(uniqueVersion)
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
-            // Admin tokens bypass candidate authorization — admin can operate on any candidate
-            if (role == "vendor" && validUniqueVersion.candidate !in candidates) {
+            if (!call.mayWriteCandidate(validUniqueVersion.candidate)) {
                 call.respond(
                     HttpStatusCode.Forbidden,
                     ErrorResponse("Forbidden", "Not authorized for candidate: ${validUniqueVersion.candidate}"),
