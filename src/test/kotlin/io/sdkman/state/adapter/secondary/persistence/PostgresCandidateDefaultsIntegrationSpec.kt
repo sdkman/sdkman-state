@@ -8,6 +8,7 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.maps.shouldContain
 import io.kotest.matchers.maps.shouldHaveSize
 import io.kotest.matchers.maps.shouldNotContainKey
+import io.kotest.matchers.shouldBe
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
@@ -21,13 +22,14 @@ class PostgresCandidateDefaultsIntegrationSpec :
     ShouldSpec({
         val repo = PostgresCandidateRepository()
 
-        fun seedLtsVersion(
+        fun seedTaggedVersion(
             candidate: String,
             version: String,
             platform: Platform,
             distribution: Option<Distribution> = none(),
             tagDistribution: Option<Distribution> = distribution,
             visible: Boolean = true,
+            tag: String = "lts",
         ) {
             val versionId =
                 insertVersionWithId(
@@ -40,14 +42,14 @@ class PostgresCandidateDefaultsIntegrationSpec :
                         distribution = distribution,
                     ),
                 )
-            insertTag(candidate, "lts", tagDistribution, platform, versionId)
+            insertTag(candidate, tag, tagDistribution, platform, versionId)
         }
 
         should("prefer the UNIVERSAL row over the LINUX_X64 row") {
             withCleanDatabase {
                 // given: one candidate tagged lts on both resolvable platforms
-                seedLtsVersion("gradle", "9.0.0", Platform.UNIVERSAL)
-                seedLtsVersion("gradle", "8.0.0", Platform.LINUX_X64)
+                seedTaggedVersion("gradle", "9.0.0", Platform.UNIVERSAL)
+                seedTaggedVersion("gradle", "8.0.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -69,7 +71,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
                         visible = true.some(),
                     ),
                 )
-                seedLtsVersion("gradle", "8.0.0", Platform.LINUX_X64)
+                seedTaggedVersion("gradle", "8.0.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -82,7 +84,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
         should("omit a candidate whose only lts tag sits on MAC_ARM64") {
             withCleanDatabase {
                 // given: the candidate is tagged lts on a platform outside the resolution order
-                seedLtsVersion("scala", "3.5.0", Platform.MAC_ARM64)
+                seedTaggedVersion("scala", "3.5.0", Platform.MAC_ARM64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -95,7 +97,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
         should("include a candidate whose lts row is not visible") {
             withCleanDatabase {
                 // given: the lts tag points at a retired row, as between supersession and the next DISCO pass
-                seedLtsVersion("groovy", "4.0.0", Platform.UNIVERSAL, visible = false)
+                seedTaggedVersion("groovy", "4.0.0", Platform.UNIVERSAL, visible = false)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -109,7 +111,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
             withCleanDatabase {
                 // given: a distribution on the *version* row while the tag row carries none —
                 // reading version_tags.distribution instead would wrongly include it
-                seedLtsVersion("java", "25.0.2", Platform.UNIVERSAL, Distribution.TEMURIN.some(), tagDistribution = none())
+                seedTaggedVersion("java", "25.0.2", Platform.UNIVERSAL, Distribution.TEMURIN.some(), tagDistribution = none())
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -122,16 +124,44 @@ class PostgresCandidateDefaultsIntegrationSpec :
         should("return one entry per candidate") {
             withCleanDatabase {
                 // given: three candidates, one of them tagged lts on both resolvable platforms
-                seedLtsVersion("gradle", "9.0.0", Platform.UNIVERSAL)
-                seedLtsVersion("gradle", "8.0.0", Platform.LINUX_X64)
-                seedLtsVersion("groovy", "4.0.0", Platform.UNIVERSAL)
-                seedLtsVersion("kotlin", "2.2.0", Platform.LINUX_X64)
+                seedTaggedVersion("gradle", "9.0.0", Platform.UNIVERSAL)
+                seedTaggedVersion("gradle", "8.0.0", Platform.LINUX_X64)
+                seedTaggedVersion("groovy", "4.0.0", Platform.UNIVERSAL)
+                seedTaggedVersion("kotlin", "2.2.0", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
 
                 // then: the map is keyed by candidate, so the two gradle rows collapse into one entry
                 defaults shouldHaveSize 3
+            }
+        }
+
+        should("prefer stable on LINUX_X64 over lts on UNIVERSAL") {
+            withCleanDatabase {
+                // given: stable only on LINUX_X64 and lts on UNIVERSAL
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64, tag = "stable")
+                seedTaggedVersion("kuml", "0.21.0", Platform.UNIVERSAL, tag = "lts")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: the tag decides before the platform
+                defaults shouldContain ("kuml" to "0.20.5")
+            }
+        }
+
+        should("resolve the tag per candidate") {
+            withCleanDatabase {
+                // given: gradle carries only stable and scala carries only lts
+                seedTaggedVersion("gradle", "8.14", Platform.UNIVERSAL, tag = "stable")
+                seedTaggedVersion("scala", "3.4.3", Platform.UNIVERSAL, tag = "lts")
+
+                // when: the defaults are derived
+                val defaults = repo.findDefaults().shouldBeRight()
+
+                // then: each candidate resolves its own tag
+                defaults shouldBe mapOf("gradle" to "8.14", "scala" to "3.4.3")
             }
         }
     })
