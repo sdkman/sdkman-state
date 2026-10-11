@@ -4,10 +4,12 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
+import io.kotest.matchers.string.shouldStartWith
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.selectVendorPasswordHash
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
@@ -51,6 +53,22 @@ class AdminVendorManagementAcceptanceSpec :
                         .jsonPrimitive.content
                         .shouldNotBeBlank()
                     body.getValue("candidates").jsonArray.map { it.jsonPrimitive.content } shouldBe listOf("java", "kotlin")
+                }
+            }
+        }
+
+        should("store the created vendor password hashed at the configured cost of 4") {
+            withCleanDatabase {
+                withTestApplication {
+                    // when
+                    client.post("/admin/vendors") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"email":"cost@test.com","candidates":["java"]}""")
+                        bearerAuth(JwtTestSupport.adminToken())
+                    }
+
+                    // then
+                    selectVendorPasswordHash("cost@test.com") shouldStartWith "\$2a\$04\$"
                 }
             }
         }
