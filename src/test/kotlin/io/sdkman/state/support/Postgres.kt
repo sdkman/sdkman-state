@@ -232,6 +232,14 @@ fun selectAuditRecordsByEmail(email: String): List<VendorAuditRecord> =
         }
     }
 
+fun selectVendorPasswordHash(email: String): String =
+    dbQuery {
+        VendorsTable
+            .selectAll()
+            .where { VendorsTable.email eq email }
+            .single()[VendorsTable.password]
+    }
+
 fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRecord> =
     dbQuery {
         AuditTable.selectAll().where { AuditTable.operation eq operation.name }.map { row ->
