@@ -19,12 +19,12 @@ import io.sdkman.state.domain.error.AuthError
 import io.sdkman.state.domain.model.CommunityAccount
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
-import io.sdkman.state.security.BCRYPT_COST
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.time.Instant
 import java.util.UUID
 
+private const val TEST_BCRYPT_COST = 4
 private const val JWT_SECRET = "test-secret-for-unit-tests"
 private const val ADMIN_EMAIL = "admin@test.com"
 private const val ADMIN_PASSWORD = "admin-password"
@@ -43,6 +43,7 @@ class AuthServiceImplUnitSpec :
                 every { communityAccount } returns COMMUNITY_ACCOUNT.some()
                 every { jwtSecret } returns JWT_SECRET
                 every { jwtExpiry } returns 10
+                every { bcryptCost } returns TEST_BCRYPT_COST
             }
         val service = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
@@ -55,6 +56,7 @@ class AuthServiceImplUnitSpec :
             every { appConfig.communityAccount } returns COMMUNITY_ACCOUNT.some()
             every { appConfig.jwtSecret } returns JWT_SECRET
             every { appConfig.jwtExpiry } returns 10
+            every { appConfig.bcryptCost } returns TEST_BCRYPT_COST
             every { rateLimiter.checkAndRecord(any()) } returns false
         }
 
@@ -74,7 +76,7 @@ class AuthServiceImplUnitSpec :
         should("return JWT with vendor role for valid vendor login") {
             // given
             val vendorId = UUID.randomUUID()
-            val hashedPassword = String(BCrypt.withDefaults().hash(BCRYPT_COST, "vendor-pw".toByteArray()))
+            val hashedPassword = String(BCrypt.withDefaults().hash(TEST_BCRYPT_COST, "vendor-pw".toByteArray()))
             val vendor =
                 Vendor(
                     id = vendorId,
@@ -109,7 +111,7 @@ class AuthServiceImplUnitSpec :
 
         should("return InvalidCredentials for wrong vendor password") {
             // given
-            val hashedPassword = String(BCrypt.withDefaults().hash(BCRYPT_COST, "correct-pw".toByteArray()))
+            val hashedPassword = String(BCrypt.withDefaults().hash(TEST_BCRYPT_COST, "correct-pw".toByteArray()))
             val vendor =
                 Vendor(
                     id = UUID.randomUUID(),
@@ -142,7 +144,7 @@ class AuthServiceImplUnitSpec :
 
         should("return InvalidCredentials for soft-deleted vendor") {
             // given
-            val hashedPassword = String(BCrypt.withDefaults().hash(BCRYPT_COST, "vendor-pw".toByteArray()))
+            val hashedPassword = String(BCrypt.withDefaults().hash(TEST_BCRYPT_COST, "vendor-pw".toByteArray()))
             val vendor =
                 Vendor(
                     id = UUID.randomUUID(),
