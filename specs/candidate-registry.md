@@ -14,7 +14,7 @@ A candidate is a registered installable, identified by a short lowercase name (`
 
 **Reading.** `GET /candidates` returns every registered candidate, ascending by identifier, with its presentation metadata. Each candidate also carries a **derived** `default`: the version currently holding the `lts` tag for that candidate. The value is derived per request from `version_tags` and is never stored, so it cannot go stale.
 
-Resolving `default` needs a platform, because tags are scoped to one. The candidate record does not say which platform a candidate lives on — that classification existed in Mongo, was unreliable, and is deliberately not carried across ([`0007`](../../../docs/decisions/0007-platform-classification-deleted.md)). Instead a fixed order applies: **prefer the `UNIVERSAL` row, fall back to `LINUX_X64`**. A candidate with no `lts` tag at either platform has no `default`, and the field is absent.
+Resolving `default` needs a platform, because tags are scoped to one. The candidate record does not say which platform a candidate lives on — that classification existed in Mongo, was unreliable, and is deliberately not carried across ([`0007`](../../../docs/decisions/0007-platform-classification-deleted.md)). Instead a fixed order applies: **prefer the `UNIVERSAL` row, fall back to `LINUX_X64`**. A candidate with no `lts` tag at either platform has no `default`, and the field is absent. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md): `default` now comes from a `stable` tag, falling back to `lts`.*
 
 `java` is **excluded** from `default`. Its `lts` tag exists once per distribution, so a single value would be arbitrary, and its public identifier is distribution-qualified (`25.0.4-tem`) in a way no other candidate's is. Callers needing java's default resolve it themselves through the existing `GET /versions/java/tags/lts?platform=LINUX_X64&distribution=TEMURIN`. `java` still appears in the listing like any other candidate; only its `default` is absent.
 
@@ -47,7 +47,7 @@ Response body (`CandidateDto`):
 | `name` | string | display name, e.g. `Gradle` |
 | `description` | string | free text, up to 2000 characters, a single paragraph of printable ASCII |
 | `website_url` | string | always `https` |
-| `default` | string, optional | the `lts`-tagged version; absent when unresolved, and always absent for `java` |
+| `default` | string, optional | the `lts`-tagged version; absent when unresolved, and always absent for `java`. Amended by [`default-tag-cascade.md`](default-tag-cascade.md) |
 
 ```json
 [
@@ -126,10 +126,10 @@ Deletion is hard, not soft — unlike vendors, a candidate carries no history wo
 1. **The registry is not yet the allow-list.** `POST /versions` accepts a candidate if and only if it appears in `candidates.txt`. The registry and the file coexist for the length of this part and are allowed to disagree; reconciling them is part 2. Nothing here reads the table to authorise a write.
 2. **Registration is an upsert.** `POST /admin/candidates` for an existing candidate updates `name`, `description` and `website_url` and refreshes `last_updated_at`. The identifier itself is never mutated; renaming a candidate is a delete plus a create.
 3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop. It is a check and not a lock: a `POST /versions` arriving after the count is not stopped by it. In this part that is inconsequential, because publishing does not consult the registry at all; part 2's rule 6 records why the window stays accepted once it does.
-4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag.
-5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`.
+4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
+5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
 6. **`default` only considers rows with no distribution.** Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`distribution-na-to-null.md`](distribution-na-to-null.md)). There is a trap here: `versions` and `version_tags` both carry a `distribution` column, the existing tag lookup behind `GET /versions/{c}/tags/lts` reads the one on `versions`, and reading the other one instead makes the two endpoints disagree about the same candidate. They must agree.
-7. **`default` does not filter on `visible`.** The existing tag lookup does not either, and the java supersession pass knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag, announcing them as it goes. Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale.
+7. **`default` does not filter on `visible`.** The existing tag lookup does not either, and the java supersession pass knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag, announcing them as it goes. Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
 8. **`java` never carries a `default`.** It is excluded by name. This is the one candidate-specific rule in the service and it exists because java is the one candidate with per-distribution tags.
 9. **`website_url` must be `https`.** Rejected on write otherwise. It is the same rule the service already applies to version download URLs, and the same pattern, though that one is private to the version validator today and so is not reachable as it stands.
 10. **Candidate identifiers are lowercase and case-sensitive.** `Java` is not `java`; it is rejected by the pattern.
@@ -276,6 +276,9 @@ Feature: Candidate registry
     Then the response status is 200
       And the body is an empty array
 
+  # The gradle, kuml, scala and jpx default scenarios are amended by
+  # default-tag-cascade.md, which replaces them with the stable-then-lts cascade.
+
   Scenario: A candidate's default comes from its lts tag at UNIVERSAL
     Given the candidate "gradle" is registered
       And version "8.14" of "gradle" on "UNIVERSAL" is tagged "lts"
@@ -319,6 +322,7 @@ Feature: Candidate registry
     Given the candidate "connor" is registered
       And version "1.0.0" of "connor" on "MAC_ARM64" is tagged "lts"
       And no "connor" version on "UNIVERSAL" or "LINUX_X64" is tagged "lts"
+      And no "connor" version is tagged "stable"
     When a client sends GET /candidates
     Then "connor" has no default
 
@@ -421,7 +425,7 @@ Feature: Candidate registry
 - Foreign-keying the vendor authorisation scope (`vendors.candidates`) to this table.
 - Any change to `POST /versions`, `DELETE /versions`, the tag routes, or the version read routes. This part adds routes and a table; it modifies no existing request path.
 - Auditing of candidate writes.
-- A per-candidate default that is anything other than the `lts` tag; per-candidate tag configuration remains out of scope, as in [`resolve-version-by-tag.md`](resolve-version-by-tag.md).
+- A per-candidate default that is anything other than the `lts` tag; per-candidate tag configuration remains out of scope, as in [`resolve-version-by-tag.md`](resolve-version-by-tag.md). *Amended by [`default-tag-cascade.md`](default-tag-cascade.md), which adds the `stable` tag ahead of `lts`.*
 - Storing or reviving any platform classification for a candidate.
 
 ## Acceptance Criteria
@@ -429,8 +433,8 @@ Feature: Candidate registry
 - [ ] `GET /candidates` returns every registered candidate, ascending by `candidate`, with `candidate`, `name`, `description` and `website_url`
 - [ ] `GET /candidates` is reachable unauthenticated and carries the same cache headers as the version read routes
 - [ ] An empty registry returns `200` with `[]`
-- [ ] Each candidate carries a derived `default` resolved from the `lts` tag, preferring `UNIVERSAL` over `LINUX_X64`, matching only rows with no distribution
-- [ ] `default` is absent when no `lts` tag resolves, and is always absent for `java`
+- [ ] Each candidate carries a derived `default` resolved from the `lts` tag, preferring `UNIVERSAL` over `LINUX_X64`, matching only rows with no distribution (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
+- [ ] `default` is absent when no `lts` tag resolves, and is always absent for `java` (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
 - [ ] Resolving the derived defaults does not issue a query per candidate
 - [ ] `POST /admin/candidates` registers a candidate and returns `201`; re-posting an existing candidate updates it and returns `200`
 - [ ] `POST /admin/candidates` returns `400` with accumulated failures for a blank field, a non-`https` `website_url`, or an identifier failing `^[a-z][a-z0-9]*$`
@@ -451,8 +455,8 @@ Feature: Candidate registry
 - [ ] No existing acceptance spec needs a candidate registered before it can post a version
 - [ ] No registry cache, TTL configuration, refresh mechanism or readiness state is introduced
 - [ ] No candidate write produces a `vendor_audit` row
-- [ ] The derived `default` is restricted to `UNIVERSAL` and `LINUX_X64`; a candidate whose only `lts` tag is on another platform has no `default`
-- [ ] The derived `default` does not filter on `visible`, and agrees with `GET /versions/{candidate}/tags/lts` for the same candidate
+- [ ] The derived `default` is restricted to `UNIVERSAL` and `LINUX_X64`; a candidate whose only `lts` tag is on another platform has no `default` (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
+- [ ] The derived `default` does not filter on `visible`, and agrees with `GET /versions/{candidate}/tags/lts` for the same candidate (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
 - [ ] The `409` on delete is covered by a test of its own, since no database constraint would produce it
 - [ ] `POST /admin/candidates` rejects a description carrying a non-ASCII character, a control character, a line break, or a run of consecutive spaces
 - [ ] `POST /admin/candidates` supports a re-runnable backfill: registering the same candidate twice is an upsert, not a conflict, and the full set is readable back through `GET /candidates`

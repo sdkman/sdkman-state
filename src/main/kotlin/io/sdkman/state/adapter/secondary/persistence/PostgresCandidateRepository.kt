@@ -37,7 +37,7 @@ internal object CandidatesTable : Table(name = "candidates") {
 
 class PostgresCandidateRepository : CandidateRepository {
     private companion object {
-        const val LTS_TAG = "lts"
+        val TAG_RESOLUTION_ORDER = listOf("stable", "lts")
 
         val UPSERT_SQL =
             """
@@ -173,7 +173,7 @@ class PostgresCandidateRepository : CandidateRepository {
                 )
             }
 
-    override suspend fun findLtsDefaults(): Either<DatabaseFailure, Map<String, String>> =
+    override suspend fun findDefaults(): Either<DatabaseFailure, Map<String, String>> =
         Either
             .catch {
                 dbQuery {
@@ -182,21 +182,25 @@ class PostgresCandidateRepository : CandidateRepository {
                             VersionsTable,
                             JoinType.INNER,
                             additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
-                        ).select(VersionTagsTable.candidate, VersionTagsTable.platform, VersionsTable.version)
+                        ).select(VersionTagsTable.candidate, VersionTagsTable.tag, VersionTagsTable.platform, VersionsTable.version)
                         .where {
-                            (VersionTagsTable.tag eq LTS_TAG) and
+                            (VersionTagsTable.tag inList TAG_RESOLUTION_ORDER) and
                                 VersionsTable.distribution.isNull() and
                                 (VersionTagsTable.platform inList PLATFORM_RESOLUTION_ORDER)
                         }.groupBy { it[VersionTagsTable.candidate] }
                         .mapValues { (_, tagged) ->
                             tagged
-                                .sortedBy { PLATFORM_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.platform]) }
-                                .first()[VersionsTable.version]
+                                .sortedWith(
+                                    compareBy(
+                                        { TAG_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.tag]) },
+                                        { PLATFORM_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.platform]) },
+                                    ),
+                                ).first()[VersionsTable.version]
                         }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to find lts defaults: ${error.message}",
+                    message = "Failed to find candidate defaults: ${error.message}",
                     cause = error,
                 )
             }

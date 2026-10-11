@@ -27,7 +27,7 @@ class CandidateServiceImpl(
                     .bind()
             val defaults =
                 candidateRepository
-                    .findLtsDefaults()
+                    .findDefaults()
                     .mapLeft { DomainError.DatabaseError(it) }
                     .bind()
             candidates.map { candidate ->

@@ -15,7 +15,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.readBuffer
 import io.sdkman.state.adapter.primary.rest.dto.CandidateConflictResponse
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
@@ -64,7 +64,7 @@ suspend fun ApplicationCall.receiveTextWithin(limitBytes: Long): Option<String> 
         none()
     } else {
         receiveChannel()
-            .readRemaining(limitBytes + 1)
+            .readBuffer(limitBytes + 1)
             .readByteArray()
             .toOption()
             .filter { it.size <= limitBytes }
