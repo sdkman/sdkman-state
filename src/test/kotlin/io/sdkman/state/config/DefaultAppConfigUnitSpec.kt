@@ -1,6 +1,10 @@
 package io.sdkman.state.config
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.string.shouldContain
+import io.ktor.server.config.ApplicationConfigurationException
+import io.ktor.server.config.MapApplicationConfig
 import io.sdkman.state.domain.model.CommunityAccount
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
@@ -57,5 +61,21 @@ class DefaultAppConfigUnitSpec :
 
             // then: no account is configured
             account.shouldBeNone()
+        }
+
+        should("fail construction when the bcrypt cost is missing") {
+            // given: a config that lacks the bcrypt cost
+            val testConfig = testApplicationConfigWithoutCommunityAccount()
+            val configWithoutCost =
+                MapApplicationConfig(
+                    testConfig
+                        .keys()
+                        .filterNot { it == "auth.bcrypt.cost" }
+                        .map { key -> key to testConfig.property(key).getString() },
+                )
+
+            // when/then: building the app config throws
+            shouldThrow<ApplicationConfigurationException> { DefaultAppConfig(configWithoutCost) }
+                .message shouldContain "auth.bcrypt.cost"
         }
     })
