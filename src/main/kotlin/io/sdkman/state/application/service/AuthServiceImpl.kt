@@ -13,7 +13,6 @@ import io.sdkman.state.domain.model.Role
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
 import io.sdkman.state.domain.service.AuthService
-import io.sdkman.state.security.BCRYPT_COST
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.UUID
@@ -125,7 +124,7 @@ class AuthServiceImpl(
         BCrypt.verifyer().verify(password.toByteArray(), dummyHash.toByteArray())
     }
 
-    private fun hash(password: String): String = String(BCrypt.withDefaults().hash(BCRYPT_COST, password.toByteArray()))
+    private fun hash(password: String): String = String(BCrypt.withDefaults().hash(appConfig.bcryptCost, password.toByteArray()))
 
     private fun createToken(
         email: String,

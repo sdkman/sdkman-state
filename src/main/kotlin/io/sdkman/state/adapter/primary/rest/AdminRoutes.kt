@@ -13,7 +13,6 @@ import io.sdkman.state.adapter.primary.rest.dto.VendorWithPasswordResponse
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.domain.model.Vendor
 import io.sdkman.state.domain.repository.VendorRepository
-import io.sdkman.state.security.BCRYPT_COST
 import java.security.SecureRandom
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -73,7 +72,7 @@ fun Route.adminCreateVendorRoute(
         }
 
         val plaintextPassword = generatePassword()
-        val hashedPassword = String(BCrypt.withDefaults().hash(BCRYPT_COST, plaintextPassword.toByteArray()))
+        val hashedPassword = String(BCrypt.withDefaults().hash(appConfig.bcryptCost, plaintextPassword.toByteArray()))
 
         vendorRepository.upsert(request.email, hashedPassword, request.candidates).fold(
             ifLeft = {
