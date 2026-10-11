@@ -55,6 +55,7 @@ fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig =
         "jwt.expiry" to "10",
         "validation.semverish.candidates" to "java",
         "auth.rateLimit.enabled" to "true",
+        "auth.bcrypt.cost" to "4",
         "candidates.refresh.intervalMs" to "300000",
     )
 
