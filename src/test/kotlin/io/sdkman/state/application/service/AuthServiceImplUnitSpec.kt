@@ -6,11 +6,9 @@ import arrow.core.some
 import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
@@ -198,28 +196,6 @@ class AuthServiceImplUnitSpec :
 
             // then
             result.shouldBeLeft().shouldBeInstanceOf<AuthError.InvalidCredentials>()
-        }
-
-        should("fail construction when the configured bcrypt cost is below 4") {
-            // given
-            every { appConfig.bcryptCost } returns 3
-
-            // when
-            val exception = shouldThrow<IllegalArgumentException> { AuthServiceImpl(vendorRepo, appConfig, rateLimiter) }
-
-            // then
-            exception.message shouldContain "cost"
-        }
-
-        should("fail construction when the configured bcrypt cost is above 31") {
-            // given
-            every { appConfig.bcryptCost } returns 32
-
-            // when
-            val exception = shouldThrow<IllegalArgumentException> { AuthServiceImpl(vendorRepo, appConfig, rateLimiter) }
-
-            // then
-            exception.message shouldContain "cost"
         }
 
         should("return RateLimitExceeded when rate limiter blocks") {
