@@ -240,6 +240,20 @@ fun selectVendorPasswordHash(email: String): String =
             .single()[VendorsTable.password]
     }
 
+fun insertVendor(
+    email: String,
+    hashedPassword: String,
+    candidates: List<String>,
+) = transaction {
+    VendorsTable.insert {
+        it[this.email] = email
+        it[password] = hashedPassword
+        it[this.candidates] = candidates
+        it[createdAt] = Instant.now()
+        it[updatedAt] = Instant.now()
+    }
+}
+
 fun selectAuditRecordsByOperation(operation: AuditOperation): List<VendorAuditRecord> =
     dbQuery {
         AuditTable.selectAll().where { AuditTable.operation eq operation.name }.map { row ->

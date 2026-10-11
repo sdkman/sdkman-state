@@ -1,5 +1,6 @@
 package io.sdkman.state.acceptance
 
+import at.favre.lib.crypto.bcrypt.BCrypt
 import com.auth0.jwt.JWT
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
@@ -9,6 +10,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.insertVendor
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
@@ -66,6 +68,27 @@ class LoginAcceptanceSpec :
                         .getValue("token")
                         .jsonPrimitive.content
                         .shouldNotBeBlank()
+                }
+            }
+        }
+
+        should("return 200 for a vendor whose password was hashed at cost 12") {
+            withCleanDatabase {
+                // given: a vendor stored with a cost-12 hash while the service runs at cost 4
+                val password = "cost12-password"
+                val hashedPassword = String(BCrypt.withDefaults().hash(12, password.toByteArray()))
+                insertVendor("cost12@test.com", hashedPassword, listOf("java"))
+
+                withTestApplication {
+                    // when
+                    val response =
+                        client.post("/login") {
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"email":"cost12@test.com","password":"$password"}""")
+                        }
+
+                    // then
+                    response.status shouldBe HttpStatusCode.OK
                 }
             }
         }
