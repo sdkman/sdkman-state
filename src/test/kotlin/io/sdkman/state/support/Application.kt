@@ -21,6 +21,7 @@ import io.sdkman.state.application.service.RefreshingCandidateAllowList
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
 import io.sdkman.state.application.validation.VersionRequestValidator
+import io.sdkman.state.config.AppConfig
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.createHikariDataSource
@@ -95,9 +96,16 @@ fun withTestApplication(
 }
 
 fun Application.configureTestApplication(candidateAllowList: CandidateAllowList) {
+    configureTestApplication(sharedTestAppConfig, candidateAllowList)
+}
+
+fun Application.configureTestApplication(
+    appConfig: AppConfig,
+    candidateAllowList: CandidateAllowList,
+) {
     configureHTTP()
     configureSerialization()
-    configureJwtAuthentication(sharedTestAppConfig)
+    configureJwtAuthentication(appConfig)
 
     val versionsRepo = PostgresVersionRepository()
     val tagsRepo = PostgresTagRepository()
@@ -105,13 +113,13 @@ fun Application.configureTestApplication(candidateAllowList: CandidateAllowList)
     val vendorRepo = PostgresVendorRepository()
     val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
     val transactional = ExposedTransactional()
-    val rateLimiter = RateLimiter(sharedTestAppConfig.rateLimitEnabled)
-    val authService = AuthServiceImpl(vendorRepo, sharedTestAppConfig, rateLimiter)
+    val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
+    val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 
     val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
 
     val versionRequestValidator =
-        VersionRequestValidator(sharedTestAppConfig.semverishEnabled, candidateAllowList)
+        VersionRequestValidator(appConfig.semverishEnabled, candidateAllowList)
 
     configureRouting(
         versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
@@ -119,7 +127,7 @@ fun Application.configureTestApplication(candidateAllowList: CandidateAllowList)
         healthRepo = PostgresHealthRepository(),
         authService = authService,
         vendorRepository = vendorRepo,
-        appConfig = sharedTestAppConfig,
+        appConfig = appConfig,
         versionRequestValidator = versionRequestValidator,
     )
     configureCandidateRouting(candidateService, candidateAllowList)
