@@ -17,8 +17,8 @@ import kotlinx.serialization.json.Json
 class SemverishVersionValidationAcceptanceSpec :
     ShouldSpec({
 
-        should("accept conforming semverish version for opted-in candidate java") {
-            // given: a valid semverish version for java (opted-in candidate)
+        should("accept conforming semverish version for java") {
+            // given: a valid semverish version for java
             val requestBody =
                 """
                 {
@@ -47,8 +47,8 @@ class SemverishVersionValidationAcceptanceSpec :
             }
         }
 
-        should("reject non-conforming version for opted-in candidate java") {
-            // given: a non-conforming version for java (opted-in candidate)
+        should("reject non-conforming version for java") {
+            // given: a non-conforming version for java
             val requestBody =
                 """
                 {
@@ -80,7 +80,7 @@ class SemverishVersionValidationAcceptanceSpec :
             }
         }
 
-        should("reject three-component version for opted-in candidate java") {
+        should("reject three-component version for java") {
             // given: a three-component core, valid before java required a fourth component
             val requestBody =
                 """
@@ -113,7 +113,7 @@ class SemverishVersionValidationAcceptanceSpec :
             }
         }
 
-        should("reject variant outside the fx or crac vocabulary for opted-in candidate java") {
+        should("reject variant outside the fx or crac vocabulary for java") {
             // given: a four-component core carrying a variant other than fx or crac
             val requestBody =
                 """
@@ -146,8 +146,8 @@ class SemverishVersionValidationAcceptanceSpec :
             }
         }
 
-        should("accept non-conforming version for non-opted-in candidate scala") {
-            // given: a non-conforming version for scala (not opted-in)
+        should("accept non-conforming version for candidate scala other than java") {
+            // given: a non-conforming version for scala, which is not java
             val requestBody =
                 """
                 {
@@ -172,6 +172,69 @@ class SemverishVersionValidationAcceptanceSpec :
 
                     // then: the version is accepted (no semverish validation)
                     response.status shouldBe HttpStatusCode.NoContent
+                }
+            }
+        }
+
+        should("accept trailing elements for java") {
+            // given: a java version 25.0.0.1.1.2
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "25.0.0.1.1.2",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java-25.0.0.1.1.2.tar.gz"
+                }
+                """.trimIndent()
+
+            // when: posting the version
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: the expected status is returned
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+            }
+        }
+
+        should("reject ea-suffixed fourth component for java") {
+            // given: a java version 25.0.2.0-ea.25
+            val requestBody =
+                """
+                {
+                    "candidate": "java",
+                    "version": "25.0.2.0-ea.25",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java-25.0.2.0-ea.25.tar.gz"
+                }
+                """.trimIndent()
+
+            // when: posting the version
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+
+                    val response =
+                        client.post("/versions") {
+                            contentType(ContentType.Application.Json)
+                            setBody(requestBody)
+                            bearerAuth(JwtTestSupport.adminToken())
+                        }
+
+                    // then: the expected status is returned
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    val errorResponse =
+                        Json.decodeFromString<ValidationErrorResponse>(response.bodyAsText())
+                    errorResponse.failures.any { it.field == "version" } shouldBe true
                 }
             }
         }
