@@ -119,12 +119,78 @@ class SemverishValidatorSpec :
                 // then: validation succeeds
                 result shouldBeRight version
             }
+
+            should("accept version with one trailing element") {
+                // given: a core with one trailing element
+                val version = "21.0.5.11.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept version with two trailing elements") {
+                // given: a core with two trailing elements
+                val version = "25.0.0.1.1.2"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept trailing zero before the final trailing element") {
+                // given: a zero trailing element followed by a positive one
+                val version = "25.0.2.0.0.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept trailing core with crac variant") {
+                // given: a four-part version with the crac variant
+                val version = "21.0.10.0-crac"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept trailing core with numeric build metadata") {
+                // given: a four-part version with numeric build metadata
+                val version = "21.0.9.0+116386"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
+
+            should("accept trailing elements with variant and build metadata") {
+                // given: trailing elements with variant and build metadata
+                val version = "25.0.0.1.1.2-crac+ea.3"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
         }
 
         context("invalid semverish versions") {
             should("reject three-component core") {
                 // given: a version with only three core components
-                val version = "25.0.2"
+                val version = "25.0.1"
 
                 // when: validating the version
                 val result = SemverishValidator.validate(version)
@@ -173,17 +239,6 @@ class SemverishValidatorSpec :
             should("reject version with only major and minor") {
                 // given: a version with two core components
                 val version = "25.0"
-
-                // when: validating the version
-                val result = SemverishValidator.validate(version)
-
-                // then: validation fails
-                result.shouldBeLeft()
-            }
-
-            should("reject version with five numeric core components") {
-                // given: a version whose fifth numeric element belongs in build metadata
-                val version = "25.0.2.1.1"
 
                 // when: validating the version
                 val result = SemverishValidator.validate(version)
@@ -338,6 +393,83 @@ class SemverishValidatorSpec :
             should("reject version with trailing hyphen in build metadata identifier") {
                 // given: a version with a trailing hyphen in build metadata
                 val version = "25.0.2.0+ea-"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject leading zero in trailing element") {
+                // given: an invalid version
+                val version = "25.0.2.0.01"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject zero as final trailing element") {
+                // given: an invalid version
+                val version = "25.0.2.0.0"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject empty trailing element") {
+                // given: an invalid version
+                val version = "25.0.2.0."
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject empty core component") {
+                // given: an invalid version
+                val version = "25.0.2..0"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject early access in the variant section") {
+                // given: an invalid version
+                val version = "25.0.2.0-ea.25"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject non-ASCII digits") {
+                // given: an invalid version
+                val version = "٢٥.0.2.0"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject build metadata identifier starting with a hyphen") {
+                // given: an invalid version
+                val version = "25.0.2.0+-1"
 
                 // when: validating the version
                 val result = SemverishValidator.validate(version)
