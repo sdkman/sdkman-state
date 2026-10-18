@@ -109,7 +109,7 @@ class HealthCheckAcceptanceSpec :
                             authService = authService,
                             vendorRepository = vendorRepo,
                             appConfig = appConfig,
-                            versionRequestValidator = VersionRequestValidator(appConfig.semverishCandidates, allowList()),
+                            versionRequestValidator = VersionRequestValidator(appConfig.semverishEnabled, allowList()),
                         )
                         configureCandidateRouting(candidateService, allowList())
                     }

@@ -17,7 +17,7 @@ class VersionRequestValidatorSpec :
 
         val validator =
             VersionRequestValidator(
-                semverishCandidates = emptySet(),
+                semverishEnabled = false,
                 candidateAllowList = allowList("java", "gradle", "kotlin", "maven", "scala"),
             )
 
@@ -418,7 +418,7 @@ class VersionRequestValidatorSpec :
                 // given: a validator whose registry is held in a deliberately unsorted order
                 val unsortedValidator =
                     VersionRequestValidator(
-                        semverishCandidates = emptySet(),
+                        semverishEnabled = false,
                         candidateAllowList = allowList("scala", "ant", "gradle"),
                     )
                 val json =

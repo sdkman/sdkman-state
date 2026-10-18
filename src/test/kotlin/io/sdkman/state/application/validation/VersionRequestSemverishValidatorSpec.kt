@@ -13,7 +13,7 @@ class VersionRequestSemverishValidatorSpec :
 
         val validator =
             VersionRequestValidator(
-                semverishCandidates = setOf("java"),
+                semverishEnabled = true,
                 candidateAllowList = allowList("java", "gradle", "kotlin", "maven", "scala"),
             )
 

@@ -33,9 +33,9 @@ class WriteValidationUnitSpec :
             }
             """.trimIndent()
 
-        val validator = VersionRequestValidator(semverishCandidates = emptySet(), candidateAllowList = allowList("jpx"))
+        val validator = VersionRequestValidator(semverishEnabled = false, candidateAllowList = allowList("jpx"))
         val unreadyValidator =
-            VersionRequestValidator(semverishCandidates = emptySet(), candidateAllowList = unreadyAllowList())
+            VersionRequestValidator(semverishEnabled = false, candidateAllowList = unreadyAllowList())
 
         context("checkVersionBody") {
             should("return the parsed version for a valid body of a registered candidate") {
