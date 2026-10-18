@@ -22,7 +22,6 @@ interface AppConfig {
     val communityAccount: Option<CommunityAccount>
     val jwtSecret: String
     val jwtExpiry: Int
-    val semverishCandidates: Set<String>
     val semverishEnabled: Boolean
     val rateLimitEnabled: Boolean
     val bcryptCost: Int
@@ -58,8 +57,6 @@ class DefaultAppConfig(
     override val jwtSecret: String
         get() = config.property("jwt.secret").getString()
     override val jwtExpiry: Int = config.property("jwt.expiry").getString().toInt()
-    override val semverishCandidates: Set<String> =
-        config.getCommaSeparatedSet("validation.semverish.candidates")
     override val semverishEnabled: Boolean =
         config.property("validation.semverish.enabled").getString().toBooleanStrict()
     override val rateLimitEnabled: Boolean =

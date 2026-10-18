@@ -8,13 +8,5 @@ fun ApplicationConfig.getOptionString(path: String): Option<String> = propertyOr
 
 fun ApplicationConfig.getOptionNonBlankString(path: String): Option<String> = getOptionString(path).filter { it.isNotBlank() }
 
-fun ApplicationConfig.getCommaSeparatedSet(path: String): Set<String> =
-    property(path)
-        .getString()
-        .split(",")
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .toSet()
-
 val AppConfig.jdbcUrl: String
     get() = "jdbc:postgresql://$databaseHost:$databasePort/$databaseName?sslmode=prefer"
