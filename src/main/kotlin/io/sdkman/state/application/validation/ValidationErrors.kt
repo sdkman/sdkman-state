@@ -72,7 +72,7 @@ data class InvalidVersionFormatError(
     val version: String,
 ) : ValidationError() {
     override val message: String =
-        "Version '$version' does not conform to the semverish format: M.N.P.Q[-variant][+build-metadata]"
+        "Version '$version' does not conform to the semverish format: FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]"
 }
 
 data class InvalidRequestError(

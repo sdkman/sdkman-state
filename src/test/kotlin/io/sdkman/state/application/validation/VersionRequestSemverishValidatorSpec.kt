@@ -39,7 +39,7 @@ class VersionRequestSemverishValidatorSpec :
             errors.head.field shouldBe "version"
         }
 
-        should("describe the four-component format in the version failure message") {
+        should("describe the open-ended format in the version failure message") {
             // given: a three-component version for java
             val json =
                 """
@@ -54,9 +54,9 @@ class VersionRequestSemverishValidatorSpec :
             // when: validating the request
             val result = validator.validateRequest(json)
 
-            // then: the version failure names the four-component format
+            // then: the version failure names the open-ended format
             val errors = result.shouldBeLeft()
-            errors.head.message shouldContain "M.N.P.Q[-variant][+build-metadata]"
+            errors.head.message shouldContain "FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]"
         }
 
         should("not produce semverish error when candidate validation already failed") {
