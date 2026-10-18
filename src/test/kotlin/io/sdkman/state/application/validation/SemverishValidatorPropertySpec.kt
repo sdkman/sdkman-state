@@ -29,7 +29,7 @@ class SemverishValidatorPropertySpec :
             Arb.choice(
                 Arb.constant(""),
                 Arb.bind(
-                    Arb.list(arbNumericComponent, 0..2),
+                    Arb.list(arbNumericComponent, 0..8),
                     Arb.int(1..9999),
                 ) { leading, last -> (leading + last.toString()).joinToString("") { ".$it" } },
             )

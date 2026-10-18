@@ -185,6 +185,17 @@ class SemverishValidatorSpec :
                 // then: validation succeeds
                 result shouldBeRight version
             }
+
+            should("accept version with many trailing elements") {
+                // given: a core with six trailing elements
+                val version = "25.0.0.1.1.2.3.4.5.6"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation succeeds
+                result shouldBeRight version
+            }
         }
 
         context("invalid semverish versions") {
@@ -470,6 +481,39 @@ class SemverishValidatorSpec :
             should("reject build metadata identifier starting with a hyphen") {
                 // given: an invalid version
                 val version = "25.0.2.0+-1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject leading zero in a non-final trailing element") {
+                // given: an invalid version
+                val version = "25.0.2.0.01.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject double zero in a non-final trailing element") {
+                // given: an invalid version
+                val version = "25.0.2.0.00.1"
+
+                // when: validating the version
+                val result = SemverishValidator.validate(version)
+
+                // then: validation fails
+                result.shouldBeLeft()
+            }
+
+            should("reject non-ASCII digit mixed into a component") {
+                // given: an invalid version
+                val version = "2٥.0.2.0"
 
                 // when: validating the version
                 val result = SemverishValidator.validate(version)
