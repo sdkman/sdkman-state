@@ -11,6 +11,7 @@ import io.kotest.property.arbitrary.list
 import io.kotest.property.arbitrary.map
 import io.kotest.property.arbitrary.of
 import io.kotest.property.checkAll
+import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 
 class SemverishValidatorPropertySpec :
@@ -24,13 +25,23 @@ class SemverishValidatorPropertySpec :
         val arbNumericComponent: Arb<String> =
             Arb.int(0..9999).map { it.toString() }
 
+        val arbTrailingElements: Arb<String> =
+            Arb.choice(
+                Arb.constant(""),
+                Arb.bind(
+                    Arb.list(arbNumericComponent, 0..2),
+                    Arb.int(1..9999),
+                ) { leading, last -> (leading + last.toString()).joinToString("") { ".$it" } },
+            )
+
         val arbCoreVersion: Arb<String> =
             Arb.bind(
                 arbNumericComponent,
                 arbNumericComponent,
                 arbNumericComponent,
                 arbNumericComponent,
-            ) { major, minor, patch, q -> "$major.$minor.$patch.$q" }
+                arbTrailingElements,
+            ) { major, minor, patch, q, trailing -> "$major.$minor.$patch.$q$trailing" }
 
         val arbIdentifier: Arb<String> =
             Arb.bind(
@@ -74,6 +85,12 @@ class SemverishValidatorPropertySpec :
         should("produce versions that round-trip through validation unchanged") {
             checkAll(arbSemverishVersion) { version ->
                 SemverishValidator.validate(version).shouldBeRight() shouldBe version
+            }
+        }
+
+        should("reject any core version whose last trailing element is zero") {
+            checkAll(arbCoreVersion) { core ->
+                SemverishValidator.validate("$core.0").shouldBeLeft()
             }
         }
     })
