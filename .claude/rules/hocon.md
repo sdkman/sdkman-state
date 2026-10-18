@@ -27,7 +27,7 @@ Rules governing where configuration defaults live and how `DefaultAppConfig` rea
 ### Should Have (Important)
 
 - *RULE-101:* Read genuinely optional values as `Option<A>` via `getOptionString` (using `propertyOrNull(...).toOption()`), never as a defaulted read or a nullable.
-- *RULE-102:* Keep non-defaulting helpers that do real work (e.g. `getOptionString`, `getCommaSeparatedSet`); name them for the work they do, not for a default they no longer hold.
+- *RULE-102:* Keep non-defaulting helpers that do real work (e.g. `getOptionString`, `getOptionNonBlankString`); name them for the work they do, not for a default they no longer hold.
 - *RULE-103:* Do not write unit tests whose only assertion re-states `application.conf` constants. Once defaults live solely in HOCON such a test is circular; rely on integration/acceptance specs that boot from real config.
 
 ### Could Have (Preferred)
