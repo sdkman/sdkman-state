@@ -19,10 +19,11 @@ import io.sdkman.state.domain.service.CandidateAllowList
 import kotlinx.serialization.json.Json
 
 class VersionRequestValidator(
-    private val semverishCandidates: Set<String>,
+    private val semverishEnabled: Boolean,
     private val candidateAllowList: CandidateAllowList,
 ) {
     companion object {
+        private const val SEMVERISH_CANDIDATE = "java"
         private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
         private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
         private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
@@ -230,7 +231,7 @@ class VersionRequestValidator(
             { Unit.right() },
             { candidate ->
                 when {
-                    candidate !in semverishCandidates -> Unit.right()
+                    !semverishEnabled || candidate != SEMVERISH_CANDIDATE -> Unit.right()
                     else ->
                         versionResult.fold(
                             { Unit.right() },
