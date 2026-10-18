@@ -19,6 +19,8 @@ This project uses the Gradle MCP server for enhanced Gradle operations. Always u
 
 Run after every implementation to get immediate feedback:
 
+- **JDK 21 required:** `.sdkmanrc` pins `java=21.0.8-tem`; detekt rejects newer JDKs. Prefix every Gradle command with `JAVA_HOME=$HOME/.sdkman/candidates/java/21.0.8-tem`. Never run `sdk env install` or `sdk default`: they prompt and can change the machine's default java.
+
 - **Full chain:** `./gradlew check` (compile → detekt → ktlintCheck → test)
 - **Tests only:** `./gradlew test`
 - **Lint only:** `./gradlew ktlintCheck`
