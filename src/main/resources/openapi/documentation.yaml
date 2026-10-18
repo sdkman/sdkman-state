@@ -84,7 +84,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version. For candidates opted in to semverish validation (currently: java), the version string must conform to the format M.N.P.Q[-variant][+build-metadata]; a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
+      description: "Create or update a version. For java, while semverish validation is enabled, the version string must conform to the format FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]: four or more numeric components, and a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
       security:
         - bearerAuth: []
       requestBody:
@@ -95,7 +95,7 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request - Validation failed. The candidate must be registered in the candidate registry; an unregistered candidate is rejected here, and the message enumerates the registered candidates sorted ascending. For opted-in candidates, this includes semverish format violations on the version field."
+          description: "Bad Request - Validation failed. The candidate must be registered in the candidate registry; an unregistered candidate is rejected here, and the message enumerates the registered candidates sorted ascending. For java, this includes semverish format violations on the version field."
           content:
             'application/json':
               schema:
@@ -109,12 +109,12 @@ paths:
                       - field: "url"
                         message: "URL 'http://example.com' must be a valid HTTPS URL"
                 semverish_error:
-                  summary: "Semverish format violation for opted-in candidate"
+                  summary: "Semverish format violation for java"
                   value:
                     error: "Validation failed"
                     failures:
                       - field: "version"
-                        message: "Version '29.0.0+ea.10' does not conform to the semverish format: M.N.P.Q[-variant][+build-metadata]"
+                        message: "Version '29.0.0+ea.10' does not conform to the semverish format: FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]"
         "204":
           description: "No Content"
           content:
@@ -1214,7 +1214,7 @@ components:
           type: "string"
         version:
           type: "string"
-          description: "Version identifier. For candidates opted in to semverish validation, must conform to M.N.P.Q[-variant][+build-metadata] where M, N, P, Q are four mandatory non-negative integers without leading zeros, variant is exactly one of 'fx' or 'crac' (case-sensitive), and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
+          description: "Version identifier. For java, must conform to FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata] where FEATURE, INTERIM, UPDATE and PATCH are four mandatory non-negative integers without leading zeros, trailing elements are further dot-separated non-negative integers without leading zeros, the last trailing element is not 0, variant is exactly one of 'fx' or 'crac' (case-sensitive), and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
         platform:
           type: "string"
           enum:
