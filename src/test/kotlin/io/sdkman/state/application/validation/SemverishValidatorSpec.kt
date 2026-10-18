@@ -153,7 +153,7 @@ class SemverishValidatorSpec :
                 result shouldBeRight version
             }
 
-            should("accept trailing core with crac variant") {
+            should("accept four-component core with crac variant") {
                 // given: a four-part version with the crac variant
                 val version = "21.0.10.0-crac"
 
@@ -164,7 +164,7 @@ class SemverishValidatorSpec :
                 result shouldBeRight version
             }
 
-            should("accept trailing core with numeric build metadata") {
+            should("accept four-component core with numeric build metadata") {
                 // given: a four-part version with numeric build metadata
                 val version = "21.0.9.0+116386"
 
