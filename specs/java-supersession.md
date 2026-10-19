@@ -34,6 +34,9 @@ the only one that deletes one. On the post, the caller decides what it does:
 `POST /versions/tags` and `DELETE /versions/tags` refuse java to everyone but the admin. The read
 routes are unchanged. No rule in this spec applies to a candidate other than java.
 
+`POST /versions/java` requires `java` in the registry, as `POST /versions` requires its
+candidate. If `java` is unregistered it answers `400` with a `request` error naming it.
+
 ### Grammar
 
 A vendor's version must match the grammar of [`semverish-open-ended-core.md`](semverish-open-ended-core.md), unchanged:
@@ -49,6 +52,9 @@ generic route applies it to nothing.
 The admin may also post a version that fails the grammar, a **legacy** version. It is stored as
 given and takes part in no series when posted. This is the API route for editing or unhiding the
 legacy rows the migration carried over.
+Once stored, a spelling that reads into a series (`17.0.20`, `26.0.2.fx`) is hidden by the next
+vendor post that becomes that series' head; an unreadable one (`25.0.4.r25`) stays as the admin
+left it.
 
 ### Reading stored rows
 
@@ -64,10 +70,11 @@ by a post and never blocks one.
 
 ### Series
 
-A **series** is the set of readable java rows sharing distribution, platform, FEATURE, INTERIM and
-variant. FEATURE and INTERIM are the first two core components. The variant is `fx`, `crac` or none.
-INTERIM is `0` for OpenJDK-style builds. GraalVM uses it to split its LTS and Innovation lines, so
-LTS `21.0.0.0.1` and Innovation `21.5.0.0.1` are separate series, each with its own visible head. An absent distribution
+A **series** is the set of readable java rows sharing distribution, platform, feature, release
+line and variant. The feature is FEATURE, the first core component. The release line follows
+JEP 322's INTERIM, the second: the **feature line** when INTERIM is `0`, the **interim line**
+otherwise. Each new interim release replaces the previous one, so `25.0.4.0` and `25.3.4.0` are
+two series, while `25.3.4.0` and `25.4.1.0` are one. The variant is `fx`, `crac` or none. An absent distribution
 counts as a value of its own.
 
 The **plain series** (no variant) carries tags. `fx` and `crac` series supersede for visibility
@@ -112,12 +119,15 @@ A vendor post is compared with the head of its series.
 - **It beats the head, it is the head, or the series has no visible member.** The post is stored
   visible and is the head. Every other visible member of the series is hidden, so exactly one
   stays visible. Leftovers collapse here: Corretto major 8 on `LINUX_X64` shows `8.0.504`,
-  `8.0.472` and `8.0.232`, and its next post leaves one.
+  `8.0.472` and `8.0.232`, and its next post that becomes the head leaves one.
 - **It ranks below the head.** The post is stored hidden and gains no tag. Nothing else changes.
-- **It cannot be ordered against the head.** `409 Conflict`, naming the head. Nothing is written.
+- **It cannot be ordered against the head.** `409 Conflict`, naming the head. No row or tag is
+  written. State writes a `REFUSE` audit entry, attributed to the poster and naming the posted
+  version and the head, outside the transaction like every audit entry.
 
 When the series has more than one head, the post must beat every one to become the head. It is
-refused if it cannot be ordered against any one of them.
+refused if it cannot be ordered against any one of them, unless it is itself one of the heads:
+then it is the head, and every other visible member is hidden.
 
 A post of a row that already exists hidden, one the admin hid for instance, is treated like any
 other post: if it beats the head, it is visible again. Every stored post updates the row's URL and
@@ -130,12 +140,12 @@ distribution and platform. Moving a tag takes it off whichever row held it.
 
 - **`<FEATURE>`** (for example `25`) moves to the head if the head beats the current holder, or
   there is no holder, or the holder is unreadable. So it sits on the highest head among the series
-  sharing that FEATURE: GraalVM's `21` goes to Innovation `21.5.0.0.1`, not LTS `21.0.0.0.1`.
+  sharing that feature: `21` goes to the interim head `21.5.0.0.1`, not the feature head `21.0.0.0.1`.
 - **`lts`** moves to the head only if a row of the same series holds it, visible or hidden. So a
   vendor post never takes `lts` out of its series, and an `lts` left on a hidden row heals on the
   series' next post. LTS lives on one series per distribution and platform (25 today, 29
-  later); moving it to another series is an admin action. For GraalVM, an Innovation post never
-  hides the LTS head, so `lts` stays on `21.0.x.x`.
+  later); moving it to another series is an admin action. An interim post never hides the feature
+  line's head, so `lts` stays on `21.0.x.x`.
 - **`latest`** moves to the head if the head beats the current holder, or there is no holder, or
   the holder is unreadable. If the head cannot be ordered against the holder, `latest` stays. So
   `latest` tracks the highest plain head, early access included: OpenJDK's `28.0.0.0+ea.20` holds
@@ -160,9 +170,11 @@ stored, it is read like any other stored row.
 
 ### Writes
 
-A post's upsert, hides and tag moves commit together or not at all. Posts for the same
-distribution and platform take effect one at a time, whoever sends them, so two concurrent posts
-never leave two visible members in a series and never lose a tag move. The scope is distribution
+A post's upsert, hides and tag moves commit together or not at all. Java writes for the same
+distribution and platform take effect one at a time, whoever sends them: `POST /versions/java`,
+`DELETE /versions/java`, and the admin's `POST /versions/tags` and `DELETE /versions/tags` for
+java. So two concurrent writes never leave two visible members in a series and never lose a tag
+move. The scope is distribution
 and platform, not series, because `latest` spans series.
 
 Each row a post hides gets its own `RETIRE` audit entry, attributed to the caller that posted. The
@@ -201,7 +213,7 @@ Authenticated. The candidate is fixed by the route, so the body has no `candidat
 | `401 Unauthorized` | empty | Missing or invalid token |
 | `403 Forbidden` | `ErrorResponse` | The community role, a vendor without `java` in scope, or an unknown role, whatever the body |
 | `409 Conflict` | `ErrorResponse` | A vendor post cannot be ordered against the series head; the message names the head's version |
-| `500 Internal Server Error` | `ErrorResponse` | Database failure |
+| `500 Internal Server Error` | `ErrorResponse` | Database failure, or the candidate registry has never loaded, as on `POST /versions` |
 
 A grammar failure identifies the `version` field and describes the format as
 `FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]`, as today.
@@ -222,7 +234,8 @@ delete promotes nothing.
 |---|---|
 | `POST /versions` | `candidate` `java` is rejected with `400` for every caller. The error identifies `candidate` and names `POST /versions/java`. Other candidates are unchanged |
 | `POST /versions/tags`, `DELETE /versions/tags` | `candidate` `java` is refused with `403` for every role but the admin. The admin and other candidates are unchanged |
-| `DELETE /versions` | `candidate` `java` is rejected with `400` for every caller. The error identifies `candidate` and names `DELETE /versions/java`. Other candidates are unchanged |
+| `DELETE /versions` | `candidate` `java` is rejected with `400` for every caller. The body is the route's existing `ErrorResponse`; its message names `candidate` `java` and `DELETE /versions/java`. Other candidates are unchanged |
+| `POST /validate/versions` | Twin of `POST /versions`: a `java` body gets the identical `400`, identifying `candidate` and naming `POST /versions/java`. `POST /versions/java` has no twin |
 | Read routes | Unchanged |
 
 ### Access, for java
@@ -255,7 +268,8 @@ to the community role.
 
 ### Series and order
 
-6. **A series is (distribution, platform, FEATURE, INTERIM, variant)**, over readable rows only.
+6. **A series is (distribution, platform, feature, release line, variant)**, over readable rows
+   only. The release line is the feature line when INTERIM is `0`, the interim line otherwise.
 7. **Stored rows are read, never rewritten.** A three-component core reads as four; a legacy
    `.fx` or `.crac` reads as `-fx` or `-crac`. A row still outside the grammar is unreadable: never
    hidden by a post, never blocking one.
@@ -270,9 +284,10 @@ to the community role.
 12. **A post that beats the head, is the head, or fills an empty series is the only visible member.**
     Every other visible member of the series is hidden.
 13. **A post below the head is stored hidden.** `204`. It gains no tag and nothing else changes.
-14. **A post that cannot be ordered against the head is refused.** `409`, naming the head. Nothing
-    is written.
-15. **Idempotent.** Re-posting the head keeps it the head. Posting it again changes nothing.
+14. **A post that cannot be ordered against the head is refused.** `409`, naming the head. No row
+    or tag is written; a `REFUSE` audit entry records the refusal.
+15. **Idempotent.** Re-posting the head keeps it the head. Posting it again hides nothing; its
+    URL, checksums and `CREATE` audit entry are written as for any stored post.
 16. **A hidden row can come back.** Re-posting it is like any other post.
 
 ### Tags
@@ -297,7 +312,8 @@ to the community role.
 ### Writes
 
 25. **Atomic.** A post's upsert, hides and tag moves commit together or not at all.
-26. **One at a time per distribution and platform.** Concurrent posts never leave two visible
+26. **One at a time per distribution and platform.** Every java write, posts, deletes and the
+    admin's tag calls alike, takes its turn. Concurrent writes never leave two visible
     members in a series and never lose a tag move.
 27. **Audited, best-effort.** One `RETIRE` entry per hidden row, attributed to the poster, written
     outside the transaction.
@@ -331,14 +347,16 @@ to the community role.
   to `POST /versions/java`, delete through `DELETE /versions/java`, and stop sending `visible` and
   tags. There is no transition window: the
   State merge and DISCO's switch are timed together, and any publication DISCO misses in between is
-  re-posted on its next sweep.
+  re-posted on its next sweep. DISCO treats `409` as final for that build: it skips the build and
+  continues the sweep.
 - **The control plane's local stack.** `seed/seed.sh` posts java through `POST /versions`, with
   three-component versions the grammar rejects. On the java route, as the admin, they are legacy
   posts. The `SEMVERISH_VALIDATION_ENABLED` line of `compose/compose.yaml` and
   `migration/tests/e2e/semverish-toggle.sh` exercise the removed flag. One control-plane change,
   landed with the submodule bump that ships this spec, deletes the toggle script and its step in the
-  verification gate, drops the compose line, and moves the seed's java posts to
-  `POST /versions/java` as the admin.
+  verification gate, drops the compose line, moves the seed's java posts to `POST /versions/java`
+  as the admin, adds a decision superseding 0003 that records that State orders DISCO's java posts
+  and places `lts`, `latest` and `<FEATURE>`, and amends `docs/contracts.md` §4.3 to match.
 
 ## Examples
 
@@ -347,7 +365,7 @@ Feature: Java supersession on POST /versions/java
 
   Background:
     Given DISCO is a vendor with "java" in scope
-      And every row below is java on LINUX_X64
+      And every java row below is on LINUX_X64
 
   # --- ordering ---
 
@@ -476,11 +494,17 @@ Feature: Java supersession on POST /versions/java
     Then TEMURIN 21.0.13.0+1 is tagged "21"
       And TEMURIN 21.0.13.0+1 is not tagged "lts"
 
-  Scenario: A GraalVM Innovation build leaves the LTS line visible
+  Scenario: An interim release leaves the feature line visible
     Given GRAALVM 21.0.0.0.1 is visible and tagged "lts" and "21"
     When DISCO posts GRAALVM 21.5.0.0.1
     Then GRAALVM 21.5.0.0.1 is visible and tagged "21"
       And GRAALVM 21.0.0.0.1 is still visible and tagged "lts"
+
+  Scenario: A newer interim release hides the previous one
+    Given GRAALCE 25.3.4+1.r25 is visible
+    When DISCO posts GRAALCE 25.4.1.0
+    Then GRAALCE 25.4.1.0 is visible
+      And GRAALCE 25.3.4+1.r25 is hidden
 
   # --- revival and idempotence ---
 
@@ -619,19 +643,18 @@ Feature: Java supersession on POST /versions/java
 - [ ] The normalisations read every example in §Reading stored rows as stated, and `25.0.4.r25`,
       `25.r25` and `16.ea.36` are unreadable
 - [ ] `POST /versions/java` accepts the request body of §API Contract and answers each status in its table
-- [ ] After any vendor post, and any admin post with `visible` true or absent, the posted row's series has exactly one visible member
+- [ ] After a vendor post stored as the head, and after an admin post of a grammar-valid version with `visible` true or absent, the posted row's series has exactly one visible member
 - [ ] A vendor post moves `<FEATURE>`, `lts` and `latest` exactly as §Tags states, and moves no tag from an `fx` or `crac` post
 - [ ] An admin post leaves the posted row with exactly the listed tags and moves no other tag
 - [ ] `POST /versions` rejects `java` with `400` for every caller, identifying `candidate` and naming `POST /versions/java`; other candidates see no change and get no version-shape validation
 - [ ] `DELETE /versions/java` deletes as `DELETE /versions` does today, for the admin and a vendor with `java` in scope, and answers `403` to everyone else
-- [ ] `DELETE /versions` rejects `java` with `400` for every caller, identifying `candidate` and naming `DELETE /versions/java`; other candidates see no change
+- [ ] `DELETE /versions` rejects `java` with `400` for every caller, as the route's existing `ErrorResponse` whose message names `candidate` `java` and `DELETE /versions/java`; other candidates see no change
 - [ ] `POST /versions/tags` and `DELETE /versions/tags` refuse `java` with `403` to every role but the admin; the admin and other candidates see no change
 - [ ] The community role, a vendor without `java` in scope and an unknown role get `403` from `POST /versions/java`
 - [ ] Concurrent posts for one distribution and platform leave one visible member per series, lose no tag move, and leave `latest` on the highest plain head
-- [ ] A failure anywhere in a post leaves nothing of it written
+- [ ] A failure in a post's upsert, hides or tag moves leaves nothing of it written
 - [ ] Each hidden row produces a `RETIRE` audit entry attributed to the poster; an audit failure does not roll back the post
 - [ ] The positional rule is gone: no route hides a java row except as this spec states
 - [ ] `validation.semverish.enabled` is gone from `application.conf` and `SEMVERISH_VALIDATION_ENABLED` is no longer read
-- [ ] [`semverish-open-ended-core.md`](semverish-open-ended-core.md) and [`community-role.md`](community-role.md) point to this spec from each passage it amends
 - [ ] `src/main/resources/openapi/documentation.yaml` documents `POST /versions/java` (request schema, who may call it, the comparator's effect on visibility and tags, every status including `409`), `DELETE /versions/java`, the `400` for `java` on `POST /versions` and `DELETE /versions`, the `403` for `java` on the tag routes, and drops the feature-flag wording
 - [ ] All quality gates pass (`./gradlew check`: build, detekt, ktlint, tests)
