@@ -9,13 +9,22 @@ import arrow.core.nel
 import arrow.core.right
 import arrow.core.some
 import arrow.core.toNonEmptyListOrNone
+import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import kotlinx.serialization.json.Json
 
 internal object VersionFieldRules {
     val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
     val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
     val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
+
+    private val json = Json { explicitNulls = false }
+
+    fun decodeRequest(jsonString: String): Either<NonEmptyList<ValidationError>, VersionRequest> =
+        Either
+            .catch { json.decodeFromString<VersionRequest>(jsonString) }
+            .mapLeft { DeserializationError("request", "Invalid JSON: ${it.message}").nel() }
 
     fun validateVersion(version: Option<String>): Either<NonEmptyList<ValidationError>, String> =
         version.fold(
