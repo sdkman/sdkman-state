@@ -11,4 +11,10 @@ interface JavaVersionService {
         vendorId: UUID,
         email: String,
     ): Either<DomainError, Unit>
+
+    suspend fun overrideAsAdmin(
+        version: Version,
+        vendorId: UUID,
+        email: String,
+    ): Either<DomainError, Unit>
 }

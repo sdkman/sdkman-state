@@ -1,8 +1,11 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.Some
 import arrow.core.flatMap
+import arrow.core.getOrElse
 import arrow.core.raise.either
+import arrow.core.right
 import arrow.core.some
 import io.sdkman.state.application.validation.InvalidVersionFormatError
 import io.sdkman.state.domain.error.DomainError
@@ -37,6 +40,16 @@ class JavaVersionServiceImpl(
                     auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.REFUSE, JavaRefusal(version, error.head))
                 }
             }.onRight { publication -> recordPublication(publication, vendorId, email) }
+            .map { }
+
+    override suspend fun overrideAsAdmin(
+        version: Version,
+        vendorId: UUID,
+        email: String,
+    ): Either<DomainError, Unit> =
+        transactional
+            .inTransaction { storeAdminPost(version.copy(visible = version.visible.getOrElse { true }.some())) }
+            .onRight { publication -> recordPublication(publication, vendorId, email) }
             .map { }
 
     private fun parsePost(version: Version): Either<DomainError, JavaVersion> =
@@ -83,6 +96,30 @@ class JavaVersionServiceImpl(
                 .mapLeft { refusal -> DomainError.JavaPostRefused(version.version, refusal.head) }
                 .bind()
         }
+
+    private suspend fun storeAdminPost(stored: Version): Either<DomainError, Publication> =
+        either {
+            lockScope(stored).bind()
+            val versionId = upsert(stored).bind()
+            tagService
+                .replaceTags(versionId, stored.candidate, stored.distribution, stored.platform, stored.tags.getOrElse { emptyList() })
+                .bind()
+            val hidden = hideRestOfSeries(stored).bind()
+            val storedTags = tagService.findTagNamesByVersionId(versionId).bind()
+            Publication(stored = stored.copy(tags = storedTags.some()), hidden = hidden)
+        }
+
+    private suspend fun hideRestOfSeries(stored: Version): Either<DomainError, List<Version>> =
+        JavaVersion
+            .parse(stored.version)
+            .filter { stored.visible == Some(true) }
+            .map { post ->
+                either {
+                    val hidden = JavaSupersession.overrideHides(post, findScopeRows(stored).bind())
+                    hideInScope(stored, hidden).bind()
+                    hidden.map { row -> row.copy(visible = false.some()) }
+                }
+            }.getOrElse { emptyList<Version>().right() }
 
     private suspend fun lockScope(version: Version): Either<DomainError, Unit> =
         versionsRepo
