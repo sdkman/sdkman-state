@@ -172,14 +172,7 @@ suspend fun ApplicationCall.respondDomainError(error: DomainError) {
             respond(HttpStatusCode.NotFound, ErrorResponse("Not Found", "Tag '${error.tagName}' not found"))
 
         is DomainError.TagConflict ->
-            respond(
-                HttpStatusCode.Conflict,
-                TagConflictResponse(
-                    error = "Conflict",
-                    message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
-                    tags = error.tags,
-                ),
-            )
+            respond(HttpStatusCode.Conflict, tagConflictResponse(error.tags))
 
         is DomainError.CandidateNotFound ->
             respond(
@@ -188,16 +181,23 @@ suspend fun ApplicationCall.respondDomainError(error: DomainError) {
             )
 
         is DomainError.CandidateHasVersions ->
-            respond(
-                HttpStatusCode.Conflict,
-                CandidateConflictResponse(
-                    error = "Conflict",
-                    message = "Cannot delete candidate with existing versions. Remove the versions first.",
-                    versionCount = error.versionCount,
-                ),
-            )
+            respond(HttpStatusCode.Conflict, candidateConflictResponse(error.versionCount))
 
         is DomainError.DatabaseError ->
             respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.failure.message))
     }
 }
+
+private fun tagConflictResponse(tags: List<String>): TagConflictResponse =
+    TagConflictResponse(
+        error = "Conflict",
+        message = "Cannot delete version with active tags. Remove or reassign the following tags first.",
+        tags = tags,
+    )
+
+private fun candidateConflictResponse(versionCount: Long): CandidateConflictResponse =
+    CandidateConflictResponse(
+        error = "Conflict",
+        message = "Cannot delete candidate with existing versions. Remove the versions first.",
+        versionCount = versionCount,
+    )
