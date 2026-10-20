@@ -1,5 +1,10 @@
 # Community Role
 
+*Amended for java by [`java-supersession.md`](java-supersession.md): the community role is refused
+every java write, on `POST /versions/java`, `DELETE /versions/java` and the tag routes. The rows of
+§API Contract, the §Behaviour sentence leaving java to `sdkman-contrib`, and the out-of-scope entry on
+refusing java to the community role no longer hold for java.*
+
 State knows two kinds of caller today. The **admin** can do anything. A **vendor** can publish
 versions and tags for the candidates in its scope, and nothing else. Neither fits the public
 contribution path that replaces the archived `sdkman-db-migrations`: anyone opens a PR in

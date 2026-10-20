@@ -1,5 +1,9 @@
 # Semverish Four-Component Core
 
+*Amended by [`java-supersession.md`](java-supersession.md): the eligibility grammar and series key of
+§Impact on Java Version Supersession are replaced by its §Reading stored rows and §Series. The
+four-component grammar itself is amended by [`semverish-open-ended-core.md`](semverish-open-ended-core.md).*
+
 The semverish grammar introduced in [`semverish-version-validation.md`](semverish-version-validation.md) has a three-part numeric core, `M.N.P`. Java's own versioning scheme has four: [JEP 322 — Time-Based Release Versioning](https://openjdk.org/jeps/322) defines `$FEATURE.$INTERIM.$UPDATE.$PATCH`. Squeezing that fourth element into a three-part core forced producers to relocate it into build metadata (`25.0.2.1` → `25.0.2+1`), conflating JEP 322's patch counter with rebuild counters and runtime targets.
 
 This change extends the semverish core to **four mandatory numeric components**, `M.N.P.Q`, loosely aligned with JEP 322. A three-part version is no longer semverish: `29.0.0.0+ea.10` is valid, `29.0.0+ea.10` is not.

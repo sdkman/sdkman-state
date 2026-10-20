@@ -1,5 +1,9 @@
 # Semverish Open-Ended Core
 
+*Amended by [`java-supersession.md`](java-supersession.md): the grammar below stands, but it is the
+grammar of `POST /versions/java` for a vendor post. The feature flag of §Java Only is removed, and
+`POST /versions` applies no version-shape validation to any candidate.*
+
 [`semverish-four-component-core.md`](semverish-four-component-core.md) fixed the semverish core at exactly four numeric components and sent anything beyond the fourth into build metadata (`21.0.5.11.1` → `21.0.5.11+1`). That was stricter than Java's own scheme: [JEP 322](https://openjdk.org/jeps/322) assigns meaning to the first four elements, `$FEATURE.$INTERIM.$UPDATE.$PATCH`, and allows the sequence to be of arbitrary length.
 
 This change keeps four components as the **minimum** and lifts the maximum. `25.0.0.1.1.2` becomes valid; `25.0.1` stays invalid. The core components take their JEP 322 names. Semverish also becomes **java's rule**, switched by one enabled/disabled feature flag rather than an opt-in candidate list.

@@ -64,6 +64,10 @@ through two normalisations. The stored string is never rewritten.
 - A three-component core is padded to four: `27.0.0+35` reads as `27.0.0.0+35`, `17.0.20` as `17.0.20.0`.
 - A legacy dot variant reads as a semverish one: `26.0.2.fx` reads as `26.0.2.0-fx`, `17.0.19.crac` as `17.0.19.0-crac`.
 
+*(Assumption, planning 2026-10-20: the dot-variant rewrite applies to a `.fx` or `.crac` that directly
+follows the numeric core, whatever follows it, so `26.0.2.fx+1` reads as `26.0.2.0-fx+1`; the padding
+applies after the rewrite.)*
+
 A stored row is **readable** when the result matches the grammar. Anything else, such as
 `25.0.4.r25`, `25.r25` or `16.ea.36`, is **unreadable**: it belongs to no series, is never hidden
 by a post and never blocks one.
@@ -97,6 +101,9 @@ is part of the series.
 - **Any other build metadata** (`+r17`, `+1.r25`) is of an unknown kind. At equal core it cannot be
   ordered against different metadata, or against none.
 
+*(Assumption, planning 2026-10-20: numeric identifiers compare as integers, so `+01` and `+1` rank
+equal and differ only in spelling.)*
+
 Two versions are **equal** when they read the same. A post **beats** a stored row when it ranks
 higher, or ranks equal while spelled differently. Stored `27.0.0+35` and posted `27.0.0.0+35` read
 the same, so the post wins.
@@ -124,6 +131,9 @@ A vendor post is compared with the head of its series.
 - **It cannot be ordered against the head.** `409 Conflict`, naming the head. No row or tag is
   written. State writes a `REFUSE` audit entry, attributed to the poster and naming the posted
   version and the head, outside the transaction like every audit entry.
+
+*(Assumption, planning 2026-10-20: the `REFUSE` entry's `version_data` carries the posted candidate,
+version, distribution and platform, plus a `head` field naming the head's version.)*
 
 When the series has more than one head, the post must beat every one to become the head. It is
 refused if it cannot be ordered against any one of them, unless it is itself one of the heads:
@@ -176,6 +186,9 @@ distribution and platform take effect one at a time, whoever sends them: `POST /
 java. So two concurrent writes never leave two visible members in a series and never lose a tag
 move. The scope is distribution
 and platform, not series, because `latest` spans series.
+
+*(Assumption, planning 2026-10-20: the turn is a transaction-scoped Postgres advisory lock keyed on
+`java`, the distribution and the platform, which every java write takes before it reads.)*
 
 Each row a post hides gets its own `RETIRE` audit entry, attributed to the caller that posted. The
 posted row's `CREATE` entry records the visibility and tags it was stored with. Audit writes stay
@@ -359,6 +372,10 @@ to the community role.
   and places `lts`, `latest` and `<FEATURE>`, and amends `docs/contracts.md` §4.3 to match.
 
 ## Examples
+
+*(Assumption, planning 2026-10-20: "tagged X and Y" in a vendor scenario asserts that the row holds
+at least those tags, so `latest` may also sit on a head posted into a scope with no `latest` holder.
+"tagged X only" and "untagged" in an admin scenario assert the exact set.)*
 
 ```gherkin
 Feature: Java supersession on POST /versions/java
