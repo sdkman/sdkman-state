@@ -1,5 +1,7 @@
 package io.sdkman.state.application.validation
 
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
+
 sealed class ValidationError {
     abstract val field: String
     abstract val message: String
@@ -104,4 +106,24 @@ data class InvalidDescriptionError(
     val reason: String,
 ) : ValidationError() {
     override val message: String = "$field is invalid: $reason"
+}
+
+data class FixedByRouteError(
+    override val field: String,
+    val route: String,
+) : ValidationError() {
+    override val message: String = "$field is fixed by $route and must be omitted"
+}
+
+data class ServerDecidedFieldError(
+    override val field: String,
+) : ValidationError() {
+    override val message: String = "$field is decided by the server on a vendor post and must be omitted"
+}
+
+data class JavaRouteError(
+    val route: String,
+) : ValidationError() {
+    override val field: String = "candidate"
+    override val message: String = "$field '$JAVA_CANDIDATE' is not accepted here; use $route"
 }
