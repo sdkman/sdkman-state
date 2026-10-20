@@ -2,7 +2,7 @@ package io.sdkman.state.application.validation
 
 // Shared tag-name validation rules. A tag must be 1–50 characters, start and end
 // with an alphanumeric character, and use only alphanumerics, dots, hyphens, and
-// underscores in between. Both `VersionRequestValidator` (tag list on a version)
+// underscores in between. Both `VersionFieldRules` (tag list on a version)
 // and `TagAssignmentValidator` (single tag assignment) reuse this single rule so
 // the pattern and length bound are defined exactly once.
 object TagNameRules {
