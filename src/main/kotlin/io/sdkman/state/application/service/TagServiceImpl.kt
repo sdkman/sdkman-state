@@ -33,6 +33,17 @@ class TagServiceImpl(
             .replaceTags(versionId, candidate, distribution, platform, tags)
             .mapLeft { DomainError.DatabaseError(it) }
 
+    override suspend fun assignTagToVersion(
+        versionId: Int,
+        candidate: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+        tag: String,
+    ): Either<DomainError, Unit> =
+        tagsRepo
+            .assignTag(versionId, candidate, distribution, platform, tag)
+            .mapLeft { DomainError.DatabaseError(it) }
+
     override suspend fun findTagNamesByVersionId(versionId: Int): Either<DomainError, List<String>> =
         tagsRepo
             .findTagNamesByVersionId(versionId)
@@ -71,9 +82,7 @@ class TagServiceImpl(
                     ).mapLeft { DomainError.DatabaseError(it) }
                     .bind()
                     .getOrElse { raise(DomainError.VersionNotFound(assignment.candidate, assignment.version)) }
-            tagsRepo
-                .assignTag(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
-                .mapLeft { DomainError.DatabaseError(it) }
+            assignTagToVersion(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
                 .bind()
             auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.TAG, assignment)
         }

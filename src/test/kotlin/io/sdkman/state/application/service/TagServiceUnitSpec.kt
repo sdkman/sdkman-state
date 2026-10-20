@@ -79,6 +79,49 @@ class TagServiceUnitSpec :
             }
         }
 
+        context("assignTagToVersion") {
+
+            should("delegate to tag repository without recording an audit") {
+                // given: repository assigns the tag successfully
+                coEvery {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                } returns Either.Right(Unit)
+
+                // when: assigning the tag to the version
+                val result =
+                    service.assignTagToVersion(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+
+                // then: succeeds through the repository and leaves the audit to the caller
+                result.shouldBeRight()
+                coVerify {
+                    tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "latest")
+                }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("return DatabaseError when repository fails") {
+                // given: repository fails
+                val dbFailure =
+                    DatabaseFailure.QueryExecutionFailure(
+                        "tag error",
+                        RuntimeException("constraint violation"),
+                    )
+                coEvery {
+                    tagsRepo.assignTag(42, "java", none(), Platform.LINUX_X64, "latest")
+                } returns Either.Left(dbFailure)
+
+                // when: assigning the tag to the version
+                val result = service.assignTagToVersion(42, "java", none(), Platform.LINUX_X64, "latest")
+
+                // then: returns DatabaseError
+                result.shouldBeLeft()
+                result.onLeft { error ->
+                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
+                    error.failure shouldBe dbFailure
+                }
+            }
+        }
+
         context("findTagNamesByVersionId") {
 
             should("delegate to tag repository") {
