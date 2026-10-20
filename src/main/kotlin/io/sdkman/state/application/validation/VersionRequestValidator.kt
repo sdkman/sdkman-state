@@ -12,7 +12,6 @@ import arrow.core.toNonEmptyListOrNone
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.service.CandidateAllowList
-import kotlinx.serialization.json.Json
 
 class VersionRequestValidator(
     private val semverishEnabled: Boolean,
@@ -20,7 +19,6 @@ class VersionRequestValidator(
 ) {
     companion object {
         private const val SEMVERISH_CANDIDATE = "java"
-        private val json = Json { explicitNulls = false }
     }
 
     // A registry that has never loaded is not a validation failure: reporting it as one would
@@ -29,14 +27,7 @@ class VersionRequestValidator(
 
     fun validateRequest(jsonString: String): Either<NonEmptyList<ValidationError>, Version> =
         either {
-            val request =
-                Either
-                    .catch { json.decodeFromString<VersionRequest>(jsonString) }
-                    .mapLeft {
-                        DeserializationError("request", "Invalid JSON: ${it.message}")
-                            .nel()
-                    }.bind()
-
+            val request = VersionFieldRules.decodeRequest(jsonString).bind()
             validate(request).bind()
         }
 
