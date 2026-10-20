@@ -28,6 +28,11 @@ sealed interface DomainError {
         val versionCount: Long,
     ) : DomainError
 
+    data class JavaPostRefused(
+        val version: String,
+        val head: String,
+    ) : DomainError
+
     data class ValidationFailed(
         val message: String,
     ) : DomainError
