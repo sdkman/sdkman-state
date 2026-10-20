@@ -598,7 +598,7 @@ class VersionServiceUnitSpec :
 
             should("return TagConflict when version has active tags") {
                 // given: findUnique returns a version whose tags are already populated (mirrors
-                // production — PostgresVersionRepository.findUnique applies withTags(fetchTagNames(id)))
+                // production — PostgresVersionRepository.findUnique applies withBatchFetchedTags())
                 val uniqueVersion =
                     UniqueVersion(
                         candidate = "java",
