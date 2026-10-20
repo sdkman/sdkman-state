@@ -274,19 +274,21 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    private fun lockSeries(key: SeriesKey) {
-        val lockKey =
+    private fun lockSeries(key: SeriesKey) =
+        takeTransactionLock(
             listOf(
                 key.candidate,
                 key.distribution.map { it.name }.getOrElse { "" },
                 key.platform.name,
                 key.major.toString(),
                 key.variant.getOrElse { "" },
-            ).joinToString("|")
+            ),
+        )
 
+    private fun takeTransactionLock(keyParts: List<String>) {
         TransactionManager.current().exec(
             "SELECT pg_advisory_xact_lock(hashtext(?))",
-            listOf(TextColumnType() to lockKey),
+            listOf(TextColumnType() to keyParts.joinToString("|")),
         )
     }
 
