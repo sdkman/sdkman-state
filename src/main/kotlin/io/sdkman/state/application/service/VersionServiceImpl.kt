@@ -9,6 +9,7 @@ import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Auditable
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
@@ -20,8 +21,6 @@ import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.domain.service.VersionService
 import org.slf4j.LoggerFactory
 import java.util.UUID
-
-private const val JAVA_CANDIDATE = "java"
 
 class VersionServiceImpl(
     private val versionsRepo: VersionRepository,
