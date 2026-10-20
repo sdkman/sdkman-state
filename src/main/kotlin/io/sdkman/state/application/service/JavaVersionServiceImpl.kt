@@ -51,15 +51,8 @@ class JavaVersionServiceImpl(
         either {
             val decision = decideInLockedScope(version, post).bind()
             val stored = version.copy(visible = decision.visible.some())
-            val versionId =
-                versionsRepo
-                    .createOrUpdate(stored)
-                    .mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
-            versionsRepo
-                .hideJavaVersions(version.distribution, version.platform, decision.hidden.map(Version::version))
-                .mapLeft { DomainError.DatabaseError(it) }
-                .bind()
+            val versionId = upsert(stored).bind()
+            hideInScope(version, decision.hidden).bind()
             val storedTags = moveTagsOnto(versionId, version, decision.tagsToMove).bind()
             Publication(
                 stored = stored.copy(tags = storedTags.some()),
@@ -84,20 +77,35 @@ class JavaVersionServiceImpl(
         post: JavaVersion,
     ): Either<DomainError, VendorDecision> =
         either {
-            versionsRepo
-                .lockJavaWrites(version.distribution, version.platform)
-                .mapLeft { DomainError.DatabaseError(it) }
-                .bind()
-            val rows =
-                versionsRepo
-                    .findJavaRows(version.distribution, version.platform)
-                    .mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
+            lockScope(version).bind()
             JavaSupersession
-                .decide(post, rows)
+                .decide(post, findScopeRows(version).bind())
                 .mapLeft { refusal -> DomainError.JavaPostRefused(version.version, refusal.head) }
                 .bind()
         }
+
+    private suspend fun lockScope(version: Version): Either<DomainError, Unit> =
+        versionsRepo
+            .lockJavaWrites(version.distribution, version.platform)
+            .mapLeft { DomainError.DatabaseError(it) }
+
+    private suspend fun findScopeRows(version: Version): Either<DomainError, List<Version>> =
+        versionsRepo
+            .findJavaRows(version.distribution, version.platform)
+            .mapLeft { DomainError.DatabaseError(it) }
+
+    private suspend fun upsert(version: Version): Either<DomainError, Int> =
+        versionsRepo
+            .createOrUpdate(version)
+            .mapLeft { DomainError.DatabaseError(it) }
+
+    private suspend fun hideInScope(
+        version: Version,
+        rows: List<Version>,
+    ): Either<DomainError, Int> =
+        versionsRepo
+            .hideJavaVersions(version.distribution, version.platform, rows.map(Version::version))
+            .mapLeft { DomainError.DatabaseError(it) }
 
     private suspend fun recordPublication(
         publication: Publication,
