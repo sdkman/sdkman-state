@@ -18,6 +18,14 @@ interface TagService {
         tags: List<String>,
     ): Either<DomainError, Unit>
 
+    suspend fun assignTagToVersion(
+        versionId: Int,
+        candidate: String,
+        distribution: Option<Distribution>,
+        platform: Platform,
+        tag: String,
+    ): Either<DomainError, Unit>
+
     suspend fun findTagNamesByVersionId(versionId: Int): Either<DomainError, List<String>>
 
     suspend fun deleteTag(
