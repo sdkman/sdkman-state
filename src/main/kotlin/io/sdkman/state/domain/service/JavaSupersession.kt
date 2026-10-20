@@ -35,8 +35,13 @@ object JavaSupersession {
     fun overrideHides(
         post: JavaVersion,
         rows: List<Version>,
+    ): List<Version> = visibleRowsOtherThan(post, members(post.series, rows))
+
+    private fun visibleRowsOtherThan(
+        post: JavaVersion,
+        members: List<SeriesMember>,
     ): List<Version> =
-        members(post.series, rows)
+        members
             .filter { member -> member.isVisible && member.row.version != post.spelling }
             .map(SeriesMember::row)
 }
