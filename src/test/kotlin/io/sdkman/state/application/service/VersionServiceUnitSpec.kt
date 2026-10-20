@@ -24,21 +24,12 @@ import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.Transactional
+import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
-
-/**
- * Passthrough used so unit tests can exercise [VersionServiceImpl.createOrUpdate] without a
- * registered Exposed `Database`. Production uses `ExposedTransactional`; verifying the wrapping
- * call count from the service is covered by [transactional] being a mockk spy below.
- */
-private fun passthroughTransactional(): Transactional =
-    object : Transactional {
-        override suspend fun <E, A> inTransaction(block: suspend () -> Either<E, A>): Either<E, A> = block()
-    }
 
 class VersionServiceUnitSpec :
     ShouldSpec({
