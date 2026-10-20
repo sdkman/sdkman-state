@@ -15,7 +15,6 @@ import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 class TagServiceImpl(
@@ -23,8 +22,6 @@ class TagServiceImpl(
     private val auditRepo: AuditRepository,
     private val versionsRepo: VersionRepository,
 ) : TagService {
-    private val logger = LoggerFactory.getLogger(TagServiceImpl::class.java)
-
     override suspend fun replaceTags(
         versionId: Int,
         candidate: String,
@@ -53,11 +50,7 @@ class TagServiceImpl(
                     .mapLeft { DomainError.DatabaseError(it) }
                     .bind()
             if (deletedCount == 0) raise(DomainError.TagNotFound(uniqueTag.tag))
-            auditRepo
-                .recordAudit(vendorId, email, AuditOperation.DELETE, uniqueTag)
-                .onLeft { error ->
-                    logger.warn("Audit logging failed for tag deletion: ${error.message}")
-                }
+            auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, uniqueTag)
         }
 
     override suspend fun assignTag(
@@ -82,10 +75,6 @@ class TagServiceImpl(
                 .assignTag(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
                 .mapLeft { DomainError.DatabaseError(it) }
                 .bind()
-            auditRepo
-                .recordAudit(vendorId, email, AuditOperation.TAG, assignment)
-                .onLeft { error ->
-                    logger.warn("Audit logging failed for tag assignment: ${error.message}")
-                }
+            auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.TAG, assignment)
         }
 }

@@ -7,7 +7,6 @@ import arrow.core.raise.either
 import arrow.core.right
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
-import io.sdkman.state.domain.model.Auditable
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
@@ -19,7 +18,6 @@ import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.domain.service.VersionService
-import org.slf4j.LoggerFactory
 import java.util.UUID
 
 class VersionServiceImpl(
@@ -28,8 +26,6 @@ class VersionServiceImpl(
     private val auditRepo: AuditRepository,
     private val transactional: Transactional,
 ) : VersionService {
-    private val logger = LoggerFactory.getLogger(VersionServiceImpl::class.java)
-
     override suspend fun findByCandidate(
         candidate: String,
         platform: Option<Platform>,
@@ -91,8 +87,8 @@ class VersionServiceImpl(
                 }
             }.also { result ->
                 result.onRight { retired ->
-                    logAudit(vendorId, email, AuditOperation.CREATE, version)
-                    retired.forEach { logAudit(vendorId, email, AuditOperation.RETIRE, it) }
+                    auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.CREATE, version)
+                    retired.forEach { auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.RETIRE, it) }
                 }
             }.map { }
 
@@ -133,7 +129,7 @@ class VersionServiceImpl(
                     }.bind()
             val tagNames = versionToDelete.tags.getOrElse { emptyList() }
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-            logAudit(vendorId, email, AuditOperation.DELETE, versionToDelete)
+            auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, versionToDelete)
             val deleted =
                 versionsRepo
                     .delete(uniqueVersion)
@@ -143,15 +139,4 @@ class VersionServiceImpl(
                 raise(DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version))
             }
         }
-
-    private suspend fun logAudit(
-        vendorId: UUID,
-        email: String,
-        operation: AuditOperation,
-        data: Auditable,
-    ) {
-        auditRepo.recordAudit(vendorId, email, operation, data).onLeft { error ->
-            logger.warn("Audit logging failed: ${error.message}", error)
-        }
-    }
 }
