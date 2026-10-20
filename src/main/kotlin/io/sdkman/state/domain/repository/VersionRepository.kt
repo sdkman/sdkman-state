@@ -41,4 +41,20 @@ interface VersionRepository {
         key: SeriesKey,
         postedVersion: String,
     ): Either<DatabaseFailure, List<Version>>
+
+    suspend fun lockJavaWrites(
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, Unit>
+
+    suspend fun findJavaRows(
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, List<Version>>
+
+    suspend fun hideJavaVersions(
+        distribution: Option<Distribution>,
+        platform: Platform,
+        versions: List<String>,
+    ): Either<DatabaseFailure, Int>
 }

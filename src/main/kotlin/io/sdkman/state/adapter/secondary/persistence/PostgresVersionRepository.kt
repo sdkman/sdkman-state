@@ -8,6 +8,7 @@ import arrow.core.some
 import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
@@ -311,4 +312,73 @@ class PostgresVersionRepository : VersionRepository {
                     cause = error,
                 )
             }
+
+    override suspend fun lockJavaWrites(
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, Unit> =
+        Either
+            .catch {
+                dbQuery {
+                    takeTransactionLock(
+                        listOf(JAVA_CANDIDATE, distribution.map { it.name }.getOrElse { "" }, platform.name),
+                    )
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to lock java writes: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    override suspend fun findJavaRows(
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Either<DatabaseFailure, List<Version>> =
+        Either
+            .catch {
+                dbQuery {
+                    VersionsTable
+                        .selectAll()
+                        .where { javaScope(distribution, platform) }
+                        .map { it[VersionsTable.id].value to it.toVersion() }
+                        .withBatchFetchedTags()
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find java rows: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    override suspend fun hideJavaVersions(
+        distribution: Option<Distribution>,
+        platform: Platform,
+        versions: List<String>,
+    ): Either<DatabaseFailure, Int> =
+        Either
+            .catch {
+                dbQuery {
+                    if (versions.isEmpty()) {
+                        0
+                    } else {
+                        VersionsTable.update({ javaScope(distribution, platform) and (VersionsTable.version inList versions) }) {
+                            it[visible] = false
+                        }
+                    }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to hide java versions: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    private fun javaScope(
+        distribution: Option<Distribution>,
+        platform: Platform,
+    ): Op<Boolean> =
+        (VersionsTable.candidate eq JAVA_CANDIDATE) and
+            distributionEq(distribution) and
+            (VersionsTable.platform eq platform.name)
 }
