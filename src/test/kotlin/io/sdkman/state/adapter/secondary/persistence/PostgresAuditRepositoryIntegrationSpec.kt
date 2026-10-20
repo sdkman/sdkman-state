@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JavaRefusal
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.Version
@@ -17,6 +18,7 @@ import io.sdkman.state.support.selectAuditRecordsByEmail
 import io.sdkman.state.support.selectAuditRecordsByOperation
 import io.sdkman.state.support.shouldBeRight
 import io.sdkman.state.support.withCleanDatabase
+import kotlinx.serialization.json.Json
 import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
@@ -157,6 +159,40 @@ class PostgresAuditRepositoryIntegrationSpec :
                     val deleteRecords = selectAuditRecordsByOperation(AuditOperation.DELETE)
                     deleteRecords shouldHaveSize 1
                     deleteRecords.first().versionData shouldContain "latest"
+                }
+            }
+
+            should("record a REFUSE audit naming the posted version and the series head") {
+                withCleanDatabase {
+                    // given: a java post refused against an unordered head
+                    val refusal =
+                        JavaRefusal(
+                            version =
+                                Version(
+                                    candidate = "java",
+                                    version = "21.0.9.0+1",
+                                    platform = Platform.LINUX_X64,
+                                    url = "https://java-21.0.9.0+1",
+                                    distribution = Distribution.KONA.some(),
+                                ),
+                            head = "21.0.9.0+r17",
+                        )
+
+                    // when: recording a REFUSE audit
+                    val result = repo.recordAudit(VENDOR_UUID, "disco@example.com", AuditOperation.REFUSE, refusal)
+
+                    // then: the version data carries the posted coordinates and the head
+                    result.shouldBeRight()
+                    val records = selectAuditRecordsByOperation(AuditOperation.REFUSE)
+                    records shouldHaveSize 1
+                    Json.decodeFromString(AuditRefusalData.serializer(), records.first().versionData) shouldBe
+                        AuditRefusalData(
+                            candidate = "java",
+                            version = "21.0.9.0+1",
+                            platform = Platform.LINUX_X64,
+                            distribution = Distribution.KONA.some(),
+                            head = "21.0.9.0+r17",
+                        )
                 }
             }
 
