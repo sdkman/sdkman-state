@@ -29,6 +29,8 @@ import java.util.UUID
 
 private val VENDOR_UUID: UUID = UUID.fromString("22222222-2222-2222-2222-222222222222")
 private const val VENDOR_EMAIL = "disco@sdkman.io"
+private val ADMIN_UUID: UUID = UUID.fromString("11111111-1111-1111-1111-111111111111")
+private const val ADMIN_EMAIL = "admin@sdkman.io"
 private const val VERSION_ID = 42
 
 class JavaVersionServiceUnitSpec :
@@ -62,12 +64,21 @@ class JavaVersionServiceUnitSpec :
 
         val databaseFailure = DatabaseFailure.QueryExecutionFailure("write failed", RuntimeException("deadlock"))
 
+        fun serviceWithUnrunTransaction(): JavaVersionServiceImpl {
+            val transactional = mockk<Transactional>()
+            coEvery {
+                transactional.inTransaction<DomainError, Any>(any())
+            } returns Either.Left(DomainError.DatabaseError(databaseFailure))
+            return JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+        }
+
         beforeEach {
             clearAllMocks()
             coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
             coEvery { versionsRepo.createOrUpdate(any()) } returns Either.Right(VERSION_ID)
             coEvery { versionsRepo.hideJavaVersions(any(), any(), any()) } returns Either.Right(0)
             coEvery { tagService.assignTagToVersion(any(), any(), any(), any(), any()) } returns Either.Right(Unit)
+            coEvery { tagService.replaceTags(any(), any(), any(), any(), any()) } returns Either.Right(Unit)
             coEvery { tagService.findTagNamesByVersionId(VERSION_ID) } returns Either.Right(emptyList())
             coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Right(Unit)
         }
@@ -90,11 +101,7 @@ class JavaVersionServiceUnitSpec :
 
             should("make every repository call inside the transaction") {
                 // given: a transaction that never runs its block and answers a database failure
-                val transactional = mockk<Transactional>()
-                coEvery {
-                    transactional.inTransaction<DomainError, Any>(any())
-                } returns Either.Left(DomainError.DatabaseError(databaseFailure))
-                val txService = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+                val txService = serviceWithUnrunTransaction()
 
                 // when: the vendor posts TEMURIN 25.0.5.0+3
                 val result = txService.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
@@ -274,6 +281,209 @@ class JavaVersionServiceUnitSpec :
 
                 // then: the java scope is never locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+            }
+        }
+
+        context("overrideAsAdmin") {
+
+            should("take the java write lock of the post's scope before storing it") {
+                // given: TEMURIN 25.0.4.1+1 is visible
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the admin posts TEMURIN 25.0.4.0+9
+                service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the scope is locked before the post is stored
+                coVerifyOrder {
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.createOrUpdate(any())
+                }
+            }
+
+            should("make every repository call inside the transaction") {
+                // given: a transaction that never runs its block and answers a database failure
+                val txService = serviceWithUnrunTransaction()
+
+                // when: the admin posts TEMURIN 25.0.4.0+9
+                val result = txService.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the failure surfaces and no repository was touched outside the block
+                result shouldBeLeft DomainError.DatabaseError(databaseFailure)
+                coVerify { versionsRepo wasNot Called }
+                coVerify { tagService wasNot Called }
+            }
+
+            should("store a post without visible as visible, whatever its order") {
+                // given: TEMURIN 25.0.4.1+1 is the head
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the admin posts the older TEMURIN 25.0.4.0+9 without visible
+                val result = service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the post is stored visible
+                result.shouldBeRight()
+                coVerify { versionsRepo.createOrUpdate(post("25.0.4.0+9").copy(visible = true.some())) }
+            }
+
+            should("store a post with visible false as hidden") {
+                // when: the admin posts TEMURIN 25.0.4.1+1 with visible false
+                val result = service.overrideAsAdmin(post("25.0.4.1+1").copy(visible = false.some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the post is stored hidden
+                result.shouldBeRight()
+                coVerify { versionsRepo.createOrUpdate(post("25.0.4.1+1").copy(visible = false.some())) }
+            }
+
+            should("hide every other visible row of the series when visible is true") {
+                // given: the stored post, two visible and one hidden row of the 25 feature line, and a 21 row
+                givenScopeRows(
+                    visibleRow("25.0.4.1+1"),
+                    visibleRow("25.0.4.0+9"),
+                    visibleRow("25.0.3.0"),
+                    visibleRow("25.0.2.0").copy(visible = false.some()),
+                    visibleRow("21.0.12+1.1"),
+                )
+
+                // when: the admin posts the older TEMURIN 25.0.4.0+9 with visible true
+                service.overrideAsAdmin(post("25.0.4.0+9").copy(visible = true.some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: only the other visible rows of the 25 feature line are hidden
+                coVerify {
+                    versionsRepo.hideJavaVersions(
+                        Distribution.TEMURIN.some(),
+                        Platform.LINUX_X64,
+                        listOf("25.0.4.1+1", "25.0.3.0"),
+                    )
+                }
+            }
+
+            should("hide every other visible row of the series when visible is absent") {
+                // given: TEMURIN 25.0.4.1+1 is the head
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the admin posts the older TEMURIN 25.0.4.0+9 without visible
+                service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the head is hidden
+                coVerify { versionsRepo.hideJavaVersions(Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("25.0.4.1+1")) }
+            }
+
+            should("hide no other row when visible is false") {
+                // given: TEMURIN 25.0.4.1+1 and 25.0.3.0 are visible
+                givenScopeRows(visibleRow("25.0.4.1+1"), visibleRow("25.0.3.0"))
+
+                // when: the admin posts TEMURIN 25.0.3.0 with visible false
+                service.overrideAsAdmin(post("25.0.3.0").copy(visible = false.some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: no row is hidden besides the post itself
+                coVerify(exactly = 0) { versionsRepo.hideJavaVersions(any(), any(), any()) }
+            }
+
+            should("store a legacy version the grammar rejects") {
+                // when: the admin posts the three-component TEMURIN 25.0.3
+                val result = service.overrideAsAdmin(post("25.0.3"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the post is stored as given, visible
+                result.shouldBeRight()
+                coVerify { versionsRepo.createOrUpdate(post("25.0.3").copy(visible = true.some())) }
+            }
+
+            should("hide nothing for a legacy version") {
+                // given: TEMURIN 25.0.4.1+1 is visible
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the admin posts the three-component TEMURIN 25.0.3
+                service.overrideAsAdmin(post("25.0.3"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: no row is hidden
+                coVerify(exactly = 0) { versionsRepo.hideJavaVersions(any(), any(), any()) }
+            }
+
+            should("give the posted row exactly the listed tags") {
+                // given: TEMURIN 25.0.4.1+1 is visible and tagged "lts" and "25"
+                givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
+
+                // when: the admin posts TEMURIN 25.0.4.0+9 with tags "lts"
+                service.overrideAsAdmin(post("25.0.4.0+9").copy(tags = listOf("lts").some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the posted row's tags are replaced with "lts" within the scope
+                coVerify {
+                    tagService.replaceTags(VERSION_ID, JAVA_CANDIDATE, Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("lts"))
+                }
+            }
+
+            should("strip every tag from the posted row when tags are absent") {
+                // given: TEMURIN 25.0.4.1+1 is visible and tagged "lts" and "25"
+                givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
+
+                // when: the admin posts TEMURIN 25.0.4.1+1 without tags
+                service.overrideAsAdmin(post("25.0.4.1+1"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the posted row's tags are replaced with none
+                coVerify {
+                    tagService.replaceTags(VERSION_ID, JAVA_CANDIDATE, Distribution.TEMURIN.some(), Platform.LINUX_X64, emptyList())
+                }
+            }
+
+            should("move no tag besides the listed ones") {
+                // given: TEMURIN 25.0.4.1+1 is the head, tagged "lts" and "25"
+                givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
+
+                // when: the admin posts the newer TEMURIN 25.0.5.0+3 without tags
+                service.overrideAsAdmin(post("25.0.5.0+3"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: no single tag is moved onto the post
+                coVerify(exactly = 0) { tagService.assignTagToVersion(any(), any(), any(), any(), any()) }
+            }
+
+            should("audit an override with the visibility and tags it was stored with") {
+                // given: the stored post ends up holding "lts"
+                givenScopeRows(visibleRow("25.0.4.1+1", "25"))
+                coEvery { tagService.findTagNamesByVersionId(VERSION_ID) } returns Either.Right(listOf("lts"))
+
+                // when: the admin posts TEMURIN 25.0.4.0+9 with tags "lts"
+                service.overrideAsAdmin(post("25.0.4.0+9").copy(tags = listOf("lts").some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the CREATE entry records the stored visibility and tags, attributed to the admin
+                val stored = post("25.0.4.0+9").copy(visible = true.some(), tags = listOf("lts").some())
+                coVerify { auditRepo.recordAudit(ADMIN_UUID, ADMIN_EMAIL, AuditOperation.CREATE, stored) }
+            }
+
+            should("audit each hidden row as retired, with the tags it kept") {
+                // given: after the listed "lts" moved off it, TEMURIN 25.0.4.1+1 holds "25" only
+                givenScopeRows(visibleRow("25.0.4.1+1", "25"))
+
+                // when: the admin posts TEMURIN 25.0.4.0+9 with tags "lts"
+                service.overrideAsAdmin(post("25.0.4.0+9").copy(tags = listOf("lts").some()), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the RETIRE entry records the row hidden and holding "25", attributed to the admin
+                val retired = visibleRow("25.0.4.1+1", "25").copy(visible = false.some())
+                coVerify { auditRepo.recordAudit(ADMIN_UUID, ADMIN_EMAIL, AuditOperation.RETIRE, retired) }
+            }
+
+            should("return DatabaseError and audit nothing when hiding fails") {
+                // given: TEMURIN 25.0.4.1+1 is visible and hiding it fails
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+                coEvery { versionsRepo.hideJavaVersions(any(), any(), any()) } returns Either.Left(databaseFailure)
+
+                // when: the admin posts TEMURIN 25.0.4.0+9
+                val result = service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the failure surfaces and no audit entry is written
+                result shouldBeLeft DomainError.DatabaseError(databaseFailure)
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("still succeed when audit logging fails") {
+                // given: TEMURIN 25.0.4.1+1 is visible and every audit write fails
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+                coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Left(databaseFailure)
+
+                // when: the admin posts TEMURIN 25.0.4.0+9
+                val result = service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the post still succeeds
+                result.shouldBeRight()
             }
         }
     })
