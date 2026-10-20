@@ -7,4 +7,5 @@ enum class AuditOperation {
     DELETE,
     TAG,
     RETIRE,
+    REFUSE,
 }

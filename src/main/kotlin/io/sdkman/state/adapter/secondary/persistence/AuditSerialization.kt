@@ -6,6 +6,7 @@ import arrow.core.Option
 import arrow.core.none
 import arrow.core.serialization.OptionSerializer
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JavaRefusal
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
@@ -44,6 +45,15 @@ internal data class AuditTagAssignmentData(
     val platform: Platform,
 )
 
+@Serializable
+internal data class AuditRefusalData(
+    val candidate: String,
+    val version: String,
+    val platform: Platform,
+    val distribution: Option<Distribution> = none(),
+    val head: String,
+)
+
 internal fun Version.toAuditData(): AuditVersionData =
     AuditVersionData(
         candidate = candidate,
@@ -73,6 +83,15 @@ internal fun TagAssignment.toAuditData(): AuditTagAssignmentData =
         tag = tag,
         distribution = distribution,
         platform = platform,
+    )
+
+internal fun JavaRefusal.toAuditData(): AuditRefusalData =
+    AuditRefusalData(
+        candidate = version.candidate,
+        version = version.version,
+        platform = version.platform,
+        distribution = version.distribution,
+        head = head,
     )
 
 internal fun AuditVersionData.toDomain(): Version =
