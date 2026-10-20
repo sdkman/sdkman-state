@@ -56,12 +56,6 @@ class PostgresVersionRepository : VersionRepository {
 
     private fun Version.withTags(tags: List<String>): Version = copy(tags = tags.some())
 
-    private fun fetchTagNames(versionId: Int): List<String> =
-        VersionTagsTable
-            .select(VersionTagsTable.tag)
-            .where { VersionTagsTable.versionId eq versionId }
-            .map { it[VersionTagsTable.tag] }
-
     private fun batchFetchTags(versionIds: List<Int>): Map<Int, List<String>> =
         if (versionIds.isEmpty()) {
             emptyMap()
@@ -72,6 +66,11 @@ class PostgresVersionRepository : VersionRepository {
                 .groupBy { it[VersionTagsTable.versionId] }
                 .mapValues { (_, rows) -> rows.map { it[VersionTagsTable.tag] } }
         }
+
+    private fun List<Pair<Int, Version>>.withBatchFetchedTags(): List<Version> {
+        val tagsByVersionId = batchFetchTags(map { (id, _) -> id })
+        return map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
+    }
 
     override suspend fun findByCandidate(
         candidate: String,
@@ -92,10 +91,8 @@ class PostgresVersionRepository : VersionRepository {
                                     visible.map { VersionsTable.visible eq it }.getOrElse { Op.TRUE }
                             }.map { it[VersionsTable.id].value to it.toVersion() }
 
-                    val tagsByVersionId = batchFetchTags(rows.map { it.first })
-
                     rows
-                        .map { (id, version) -> version.withTags(tagsByVersionId.getOrDefault(id, emptyList())) }
+                        .withBatchFetchedTags()
                         .sortedWith(
                             compareBy(
                                 { it.candidate },
@@ -129,8 +126,8 @@ class PostgresVersionRepository : VersionRepository {
                                 (VersionsTable.platform eq platform.name) and
                                 distributionEq(distribution)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
+                        .withBatchFetchedTags()
                         .firstOrNone()
-                        .map { (id, v) -> v.withTags(fetchTagNames(id)) }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
@@ -225,8 +222,8 @@ class PostgresVersionRepository : VersionRepository {
                                 distributionEq(distribution) and
                                 (VersionTagsTable.platform eq platform.name)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
+                        .withBatchFetchedTags()
                         .firstOrNone()
-                        .map { (id, v) -> v.withTags(fetchTagNames(id)) }
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
