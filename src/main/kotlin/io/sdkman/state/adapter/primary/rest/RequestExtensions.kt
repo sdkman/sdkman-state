@@ -183,6 +183,15 @@ suspend fun ApplicationCall.respondDomainError(error: DomainError) {
         is DomainError.CandidateHasVersions ->
             respond(HttpStatusCode.Conflict, candidateConflictResponse(error.versionCount))
 
+        is DomainError.JavaPostRefused ->
+            respond(
+                HttpStatusCode.Conflict,
+                ErrorResponse(
+                    "Conflict",
+                    "Cannot order version '${error.version}' against the series head '${error.head}'.",
+                ),
+            )
+
         is DomainError.DatabaseError ->
             respond(HttpStatusCode.InternalServerError, ErrorResponse("Database error", error.failure.message))
     }
