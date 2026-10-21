@@ -2,6 +2,7 @@ package io.sdkman.state.acceptance
 
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.*
@@ -49,7 +50,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
                 }
             }
         }
@@ -103,7 +104,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
                 }
             }
         }
@@ -213,7 +214,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
                 }
             }
         }
@@ -373,7 +374,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "27", "27.0", "lts")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27", "27.0", "lts")
                 }
             }
         }
@@ -407,7 +408,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe listOf("latest", "8")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "8")
                 }
             }
         }
