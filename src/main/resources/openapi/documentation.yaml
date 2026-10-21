@@ -100,7 +100,7 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request - Validation failed. The candidate must be registered in the candidate registry; an unregistered candidate is rejected here, and the message enumerates the registered candidates sorted ascending. For java, this includes semverish format violations on the version field."
+          description: "Bad Request - Validation failed. The candidate must be registered in the candidate registry; an unregistered candidate is rejected here, and the message enumerates the registered candidates sorted ascending."
           content:
             'application/json':
               schema:
