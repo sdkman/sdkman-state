@@ -21,6 +21,7 @@ import io.sdkman.state.support.deleteJavaVersion
 import io.sdkman.state.support.insertVersions
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
+import io.sdkman.state.support.postJavaBody
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.toJavaRouteJsonString
@@ -53,6 +54,16 @@ class JavaRouteAccessAcceptanceSpec :
                 val response = postJavaVersion(postedBuild, kotlinVendorToken)
 
                 // then: the post is forbidden
+                response.status shouldBe HttpStatusCode.Forbidden
+            }
+        }
+
+        should("refuse a post from a vendor without java in scope with 403 before reading its body") {
+            withRegisteredJava {
+                // when: a vendor scoped to kotlin posts a body that is not json
+                val response = postJavaBody("not json", kotlinVendorToken)
+
+                // then: the post is forbidden rather than rejected as a bad request
                 response.status shouldBe HttpStatusCode.Forbidden
             }
         }
