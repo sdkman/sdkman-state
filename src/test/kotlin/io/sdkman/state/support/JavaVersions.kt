@@ -13,6 +13,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JavaVersion
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 
@@ -31,6 +32,10 @@ fun javaVersion(
         visible = if (visible) none() else false.some(),
         distribution = distribution.some(),
     )
+
+fun posted(version: String): JavaVersion = JavaVersion.parse(version).shouldBeSome()
+
+fun stored(version: String): JavaVersion = JavaVersion.read(version).shouldBeSome()
 
 fun javaVendorToken(): String = JwtTestSupport.vendorToken(candidates = listOf("java"))
 

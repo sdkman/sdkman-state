@@ -12,22 +12,18 @@ import io.kotest.matchers.shouldNotBe
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.JavaSeries
-import io.sdkman.state.domain.model.JavaVersion
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.ReleaseLine
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.model.series
+import io.sdkman.state.support.posted
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
-import io.sdkman.state.support.shouldBeSome
+import io.sdkman.state.support.stored
 import java.math.BigInteger
 
 class JavaSupersessionSpec :
     ShouldSpec({
-
-        fun posted(version: String): JavaVersion = JavaVersion.parse(version).shouldBeSome()
-
-        fun stored(version: String): JavaVersion = JavaVersion.read(version).shouldBeSome()
 
         fun row(
             version: String,

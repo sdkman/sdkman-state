@@ -9,18 +9,16 @@ import io.sdkman.state.domain.model.BuildMetadata.Absent
 import io.sdkman.state.domain.model.BuildMetadata.EarlyAccess
 import io.sdkman.state.domain.model.BuildMetadata.Numeric
 import io.sdkman.state.domain.model.BuildMetadata.Unknown
+import io.sdkman.state.support.posted
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
+import io.sdkman.state.support.stored
 import java.math.BigInteger
 
 class JavaVersionSpec :
     ShouldSpec({
 
         fun numbers(vararg components: Int): List<BigInteger> = components.map { it.toBigInteger() }
-
-        fun posted(version: String): JavaVersion = JavaVersion.parse(version).shouldBeSome()
-
-        fun stored(version: String): JavaVersion = JavaVersion.read(version).shouldBeSome()
 
         context("parsing a posted version") {
 
