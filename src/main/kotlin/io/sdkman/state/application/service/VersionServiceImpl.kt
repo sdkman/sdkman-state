@@ -53,10 +53,9 @@ class VersionServiceImpl(
             .findByTag(candidate, tag, platform, distribution)
             .mapLeft { DomainError.DatabaseError(it) }
 
-    // R3/R5: the version write and tag replacement run inside a single Transactional block so a
-    // tag-replacement failure rolls back the version write (today they were in separate
-    // transactions, leaving orphan version rows on partial failure). R6: audit logging stays
-    // outside the transaction so an audit failure cannot roll back a successful version write.
+    // The version write and tag replacement share one transaction, so a tag-replacement failure
+    // rolls back the version write. Audit logging stays outside it, so an audit failure never
+    // rolls back a successful write.
     override suspend fun createOrUpdate(
         version: Version,
         vendorId: UUID,
