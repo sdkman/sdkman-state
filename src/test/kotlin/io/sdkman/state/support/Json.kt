@@ -2,6 +2,7 @@ package io.sdkman.state.support
 
 import arrow.core.getOrElse
 import arrow.core.toOption
+import io.sdkman.state.adapter.primary.rest.dto.JavaUniqueVersionDto
 import io.sdkman.state.adapter.primary.rest.dto.TagAssignmentDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
@@ -15,13 +16,18 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 fun Version.toJson() = Json.encodeToJsonElement<VersionDto>(this.toDto())
 
 fun Version.toJsonString() = this.toJson().toString()
 
+fun Version.toJavaRouteJsonString() = JsonObject(this.toJson().jsonObject - "candidate").toString()
+
 fun UniqueVersion.toJsonString() = Json.encodeToJsonElement(UniqueVersionDto(candidate, version, distribution, platform)).toString()
+
+fun Version.toJavaUniqueVersionJsonString() = Json.encodeToJsonElement(JavaUniqueVersionDto(version, platform, distribution)).toString()
 
 fun UniqueTag.toJsonString() = Json.encodeToJsonElement(UniqueTagDto(candidate, tag, distribution, platform)).toString()
 
