@@ -405,7 +405,7 @@ paths:
                     error: "Internal Server Error"
                     message: "Candidate registry unavailable"
     delete:
-      description: "Delete one java row, as DELETE /versions deletes a row of any other candidate. The route fixes the candidate, so the body carries no candidate field. The version is any stored string, legacy spellings included. The admin and a vendor with java in scope may delete; every other caller is refused with 403. A delete promotes nothing: deleting a series head leaves the series without a visible member until the next post. A tagged row cannot be deleted. Java posts and deletes for one distribution and platform take effect one at a time."
+      description: "Delete a java version by its unique coordinates (version, distribution, platform)"
       security:
         - bearerAuth: []
       requestBody:
