@@ -1,11 +1,7 @@
 package io.sdkman.state.adapter.primary.rest
 
-import arrow.core.Either
-import arrow.core.getOrElse
 import arrow.core.raise.either
-import arrow.core.toOption
 import io.ktor.http.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
@@ -29,15 +25,7 @@ private fun Route.assignTagRoute(tagService: TagService) {
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         either<DomainError, Unit> {
-            val assignment =
-                Either
-                    .catch { call.receive<TagAssignmentDto>() }
-                    .map { it.toDomain() }
-                    .mapLeft {
-                        DomainError.ValidationFailed(
-                            "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
-                        )
-                    }.bind()
+            val assignment = call.receiveRequestBody<TagAssignmentDto>().map { it.toDomain() }.bind()
             TagAssignmentValidator
                 .validate(assignment)
                 .mapLeft { errors ->
@@ -64,15 +52,7 @@ private fun Route.deleteTagRoute(tagService: TagService) {
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         either<DomainError, Unit> {
-            val uniqueTag =
-                Either
-                    .catch { call.receive<UniqueTagDto>() }
-                    .map { it.toDomain() }
-                    .mapLeft {
-                        DomainError.ValidationFailed(
-                            "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
-                        )
-                    }.bind()
+            val uniqueTag = call.receiveRequestBody<UniqueTagDto>().map { it.toDomain() }.bind()
             UniqueTagValidator
                 .validate(uniqueTag)
                 .mapLeft { errors ->

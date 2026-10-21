@@ -1,6 +1,5 @@
 package io.sdkman.state.adapter.primary.rest
 
-import arrow.core.Either
 import arrow.core.getOrElse
 import arrow.core.raise.either
 import arrow.core.toOption
@@ -174,15 +173,7 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
         val vendorId = call.authenticatedVendorId()
         val email = call.authenticatedEmail()
         either<DomainError, Unit> {
-            val uniqueVersion =
-                Either
-                    .catch { call.receive<UniqueVersionDto>() }
-                    .map { it.toDomain() }
-                    .mapLeft {
-                        DomainError.ValidationFailed(
-                            "Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}",
-                        )
-                    }.bind()
+            val uniqueVersion = call.receiveRequestBody<UniqueVersionDto>().map { it.toDomain() }.bind()
             val validUniqueVersion =
                 UniqueVersionValidator
                     .validate(uniqueVersion)
