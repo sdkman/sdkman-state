@@ -42,11 +42,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
               examples:
-                Example#1:
-                  description: ""
+                blank_candidate:
+                  description: "A blank candidate"
                   value:
-                    error: "Validation failed"
-                    message: "null"
+                    error: "Bad Request"
+                    message: "candidate cannot be empty"
                 java_candidate:
                   description: "Java belongs on DELETE /versions/java"
                   value:
