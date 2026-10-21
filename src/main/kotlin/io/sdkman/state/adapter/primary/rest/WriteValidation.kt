@@ -10,6 +10,8 @@ import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.ValidationFailure
 import io.sdkman.state.application.validation.CandidateRequestValidator
+import io.sdkman.state.application.validation.JavaPoster
+import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.ValidationError
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.model.CandidateRegistration
@@ -17,6 +19,11 @@ import io.sdkman.state.domain.model.Version
 
 fun VersionRequestValidator.checkVersionBody(body: String): Either<RejectedBody, Version> =
     checkUnlessRegistryUnavailable(allowListLoaded()) { validateRequest(body) }
+
+fun JavaVersionRequestValidator.checkJavaVersionBody(
+    body: String,
+    poster: JavaPoster,
+): Either<RejectedBody, Version> = checkUnlessRegistryUnavailable(allowListLoaded()) { validateRequest(body, poster) }
 
 fun checkCandidateBody(body: String): Either<RejectedBody, CandidateRegistration> =
     CandidateRequestValidator.validateRequest(body).mapLeft { it.toInvalidBody() }

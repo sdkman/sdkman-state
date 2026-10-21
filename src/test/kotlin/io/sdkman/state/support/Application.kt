@@ -5,6 +5,7 @@ import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import io.sdkman.state.adapter.primary.rest.configureCandidateRouting
 import io.sdkman.state.adapter.primary.rest.configureHTTP
+import io.sdkman.state.adapter.primary.rest.configureJavaRouting
 import io.sdkman.state.adapter.primary.rest.configureRouting
 import io.sdkman.state.adapter.primary.rest.configureSerialization
 import io.sdkman.state.adapter.secondary.persistence.ExposedTransactional
@@ -16,10 +17,12 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
+import io.sdkman.state.application.service.JavaVersionServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.RefreshingCandidateAllowList
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
+import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.AppConfig
 import io.sdkman.state.config.DefaultAppConfig
@@ -120,9 +123,10 @@ fun Application.configureTestApplication(
 
     val versionRequestValidator =
         VersionRequestValidator(appConfig.semverishEnabled, candidateAllowList)
+    val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(
-        versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        versionService = versionService,
         tagService = tagService,
         healthRepo = PostgresHealthRepository(),
         authService = authService,
@@ -131,4 +135,9 @@ fun Application.configureTestApplication(
         versionRequestValidator = versionRequestValidator,
     )
     configureCandidateRouting(candidateService, candidateAllowList)
+    configureJavaRouting(
+        versionService = versionService,
+        javaVersionService = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        javaVersionRequestValidator = JavaVersionRequestValidator(candidateAllowList),
+    )
 }

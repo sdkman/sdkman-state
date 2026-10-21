@@ -11,10 +11,12 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
+import io.sdkman.state.application.service.JavaVersionServiceImpl
 import io.sdkman.state.application.service.RateLimiter
 import io.sdkman.state.application.service.RefreshingCandidateAllowList
 import io.sdkman.state.application.service.TagServiceImpl
 import io.sdkman.state.application.service.VersionServiceImpl
+import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.config.*
 import kotlinx.coroutines.delay
@@ -57,9 +59,10 @@ fun Application.module() {
     scheduleCandidateRefresh(candidateAllowList, appConfig.candidateRefreshIntervalMs)
 
     val versionRequestValidator = VersionRequestValidator(appConfig.semverishEnabled, candidateAllowList)
+    val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(
-        versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        versionService = versionService,
         tagService = tagService,
         healthRepo = PostgresHealthRepository(),
         authService = authService,
@@ -68,4 +71,9 @@ fun Application.module() {
         versionRequestValidator = versionRequestValidator,
     )
     configureCandidateRouting(candidateService, candidateAllowList)
+    configureJavaRouting(
+        versionService = versionService,
+        javaVersionService = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        javaVersionRequestValidator = JavaVersionRequestValidator(candidateAllowList),
+    )
 }
