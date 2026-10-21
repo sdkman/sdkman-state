@@ -121,6 +121,9 @@ data class ServerDecidedFieldError(
     override val message: String = "$field is decided by the server on a vendor post and must be omitted"
 }
 
+const val JAVA_POST_ROUTE = "POST /versions/java"
+const val JAVA_DELETE_ROUTE = "DELETE /versions/java"
+
 data class JavaRouteError(
     val route: String,
 ) : ValidationError() {
