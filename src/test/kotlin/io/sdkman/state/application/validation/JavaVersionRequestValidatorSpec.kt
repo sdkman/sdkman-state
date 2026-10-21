@@ -4,6 +4,7 @@ import arrow.core.nonEmptyListOf
 import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -141,6 +142,30 @@ class JavaVersionRequestValidatorSpec :
 
                 // then: every failure is reported
                 result.shouldBeLeft().map { it.field } shouldContainExactlyInAnyOrder listOf("version", "url", "tags")
+            }
+
+            should("report the field errors in field order") {
+                // given: a vendor body failing every field rule
+                val json =
+                    javaBody(
+                        "candidate" to JsonPrimitive(JAVA_CANDIDATE),
+                        "version" to JsonPrimitive("25.0.5"),
+                        "platform" to JsonPrimitive("INVALID_PLATFORM"),
+                        "url" to JsonPrimitive("http://example.com/java.tar.gz"),
+                        "distribution" to JsonPrimitive("INVALID_DISTRIBUTION"),
+                        "md5sum" to JsonPrimitive("tooshort"),
+                        "sha256sum" to JsonPrimitive("tooshort"),
+                        "sha512sum" to JsonPrimitive("tooshort"),
+                        "visible" to JsonPrimitive(true),
+                        "tags" to tagList("lts"),
+                    )
+
+                // when: validating it for a vendor
+                val result = validator.validateRequest(json, JavaPoster.VENDOR)
+
+                // then: one error per field, in the order of the fields
+                result.shouldBeLeft().map { it.field } shouldContainExactly
+                    listOf("candidate", "version", "platform", "url", "distribution", "md5sum", "sha256sum", "sha512sum", "visible", "tags")
             }
         }
 
