@@ -424,8 +424,14 @@ paths:
       responses:
         "204":
           description: "No Content - The row is deleted"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStoreWrite"
         "400":
           description: "Bad Request - The body is malformed or carries candidate, or the version is blank"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -440,6 +446,9 @@ paths:
           description: "Unauthorized - Missing or invalid token"
         "403":
           description: "Forbidden - The caller may not delete java: the community role, a vendor without java in scope, or an unknown role. Only the admin and a vendor with java in scope may delete."
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -452,8 +461,14 @@ paths:
                     message: "Not authorized for candidate: java"
         "404":
           description: "Not Found - No java row matches the version, distribution and platform"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStoreWrite"
         "409":
           description: "Conflict - The row has active tags that must be removed or reassigned before deletion"
+          headers:
+            Cache-Control:
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -1037,6 +1052,12 @@ components:
   headers:
     NoStore:
       description: "The answer depends on the candidate registry at that moment and must not be cached"
+      schema:
+        type: "string"
+        enum:
+          - "no-store"
+    NoStoreWrite:
+      description: "The answer to a write request must not be cached"
       schema:
         type: "string"
         enum:
