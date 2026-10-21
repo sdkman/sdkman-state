@@ -37,10 +37,15 @@ fun javaVendorToken(): String = JwtTestSupport.vendorToken(candidates = listOf("
 suspend fun ApplicationTestBuilder.postJavaVersion(
     version: Version,
     token: String = JwtTestSupport.adminToken(),
+): HttpResponse = postJavaBody(version.toJavaRouteJsonString(), token)
+
+suspend fun ApplicationTestBuilder.postJavaBody(
+    body: String,
+    token: String,
 ): HttpResponse =
     client.post("/versions/java") {
         contentType(ContentType.Application.Json)
-        setBody(version.toJavaRouteJsonString())
+        setBody(body)
         bearerAuth(token)
     }
 
