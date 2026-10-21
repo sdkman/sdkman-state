@@ -8,6 +8,7 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.support.JwtTestSupport
@@ -52,6 +53,22 @@ class JavaDeleteAcceptanceSpec :
 
                     // then: the row is not found
                     response.status shouldBe HttpStatusCode.NotFound
+                }
+            }
+        }
+
+        should("refuse with 400 a delete whose version is blank") {
+            val blankVersionRow = javaVersion(Distribution.TEMURIN, " ")
+
+            withCleanDatabase {
+                // when: DISCO deletes a TEMURIN row by a blank version
+                withTestApplication {
+                    val response = deleteJavaVersion(blankVersionRow, javaVendorToken())
+
+                    // then: the delete names the empty version
+                    response.status shouldBe HttpStatusCode.BadRequest
+                    Json.decodeFromString<ErrorResponse>(response.bodyAsText()) shouldBe
+                        ErrorResponse("Bad Request", "version cannot be empty")
                 }
             }
         }
