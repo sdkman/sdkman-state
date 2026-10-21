@@ -36,7 +36,7 @@ paths:
         required: true
       responses:
         "400":
-          description: "Bad Request"
+          description: "Bad Request - Validation failed. Java is rejected for every caller, and the message names DELETE /versions/java, the only route that deletes a java version."
           content:
             '*/*':
               schema:
@@ -47,6 +47,11 @@ paths:
                   value:
                     error: "Validation failed"
                     message: "null"
+                java_candidate:
+                  description: "Java belongs on DELETE /versions/java"
+                  value:
+                    error: "Bad Request"
+                    message: "candidate 'java' is not accepted here; use DELETE /versions/java"
         "204":
           description: "No Content"
           content:
@@ -84,7 +89,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version. For java, while semverish validation is enabled, the version string must conform to the format FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]: four or more numeric components, and a three-component version is rejected. Publishing a visible, eligible java version supersedes its release series: every other version in the same (candidate, distribution, platform, major, variant) series is set visible=false. A version is eligible when it carries three or four numeric core components with an optional 'fx' or 'crac' variant, so a four-component publication also retires stored three-component versions in its series; the fourth core component (Q) and build metadata are not part of the series key. A version posted with visible=false, or one outside that grammar, retires nothing, and no other candidate is affected. Retirement is not deletion: a retired version still resolves by its explicit identifier through GET /versions/{candidate}/{version} and keeps its tags; only listings filter it out."
+      description: "Create or update a version of any registered candidate but java. The version must not be blank and is otherwise stored as posted: no format is enforced. Visibility is stored as posted, absent meaning true, and the post hides no other version. Java is rejected with 400 for every caller, identifying the candidate field and naming POST /versions/java, the only route that writes a java version."
       security:
         - bearerAuth: []
       requestBody:
@@ -108,13 +113,13 @@ paths:
                     failures:
                       - field: "url"
                         message: "URL 'http://example.com' must be a valid HTTPS URL"
-                semverish_error:
-                  summary: "Semverish format violation for java"
+                java_candidate:
+                  summary: "Java belongs on POST /versions/java"
                   value:
                     error: "Validation failed"
                     failures:
-                      - field: "version"
-                        message: "Version '29.0.0+ea.10' does not conform to the semverish format: FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]"
+                      - field: "candidate"
+                        message: "candidate 'java' is not accepted here; use POST /versions/java"
         "204":
           description: "No Content"
           content:
@@ -193,7 +198,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Java tags are admin-only: every other role is refused java, the community role and a vendor with java in scope included. For any other candidate, admin and community tokens may write it; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -260,7 +265,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Java tags are admin-only: every other role is refused java, the community role and a vendor with java in scope included. For any other candidate, admin and community tokens may write it; a vendor token only its own candidates; any other role is refused."
           content:
             'application/json':
               schema:
@@ -735,7 +740,7 @@ paths:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
         "400":
-          description: "Bad Request - Validation failed; identical to the POST /versions answer for the same body"
+          description: "Bad Request - Validation failed; identical to the POST /versions answer for the same body. Java is rejected, identifying the candidate field and naming POST /versions/java, which has no validate twin."
           headers:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
@@ -743,6 +748,14 @@ paths:
             'application/json':
               schema:
                 $ref: "#/components/schemas/ValidationErrorResponse"
+              examples:
+                java_candidate:
+                  summary: "Java belongs on POST /versions/java"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "candidate"
+                        message: "candidate 'java' is not accepted here; use POST /versions/java"
         "413":
           description: "Content Too Large - The body exceeds 16384 bytes and is refused unread"
           headers:
@@ -1439,7 +1452,7 @@ components:
           type: "string"
         version:
           type: "string"
-          description: "Version identifier. For java, must conform to FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata] where FEATURE, INTERIM, UPDATE and PATCH are four mandatory non-negative integers without leading zeros, trailing elements are further dot-separated non-negative integers without leading zeros, the last trailing element is not 0, variant is exactly one of 'fx' or 'crac' (case-sensitive), and build metadata is plus-separated dot-delimited identifiers [a-zA-Z0-9-]+."
+          description: "Version identifier. On POST /versions it must not be blank, and no format is enforced. Java versions are posted to POST /versions/java, whose JavaVersion body states the java grammar."
         platform:
           type: "string"
           enum:
