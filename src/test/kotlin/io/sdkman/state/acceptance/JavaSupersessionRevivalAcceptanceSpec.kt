@@ -6,6 +6,7 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainAll
+import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.ktor.http.HttpStatusCode
 import io.sdkman.state.domain.model.AuditOperation
@@ -17,6 +18,7 @@ import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.selectAuditRecordsByOperation
+import io.sdkman.state.support.selectVersion
 import io.sdkman.state.support.tagsOf
 import io.sdkman.state.support.visibilityOf
 import io.sdkman.state.support.withCleanDatabase
@@ -72,6 +74,29 @@ class JavaSupersessionRevivalAcceptanceSpec :
                 // and: the head holds lts and 25, and no RETIRE entry is written
                 tagsOf(head) shouldContainAll listOf("lts", "25")
                 selectAuditRecordsByOperation(AuditOperation.RETIRE).shouldBeEmpty()
+            }
+        }
+
+        should("write the url and a CREATE entry of every re-post of the head") {
+            val head = javaVersion(Distribution.TEMURIN, "25.0.4.1+1")
+            val respunHead = head.copy(url = "https://example.com/java-25.0.4.1+1-temurin-respun.tar.gz")
+            val disco = javaVendorToken()
+
+            withCleanDatabase {
+                // given: the head is the only visible row of its series
+                insertVersions(head)
+
+                // when: DISCO posts the head, then posts it again with a changed url
+                withTestApplication {
+                    registerCandidates("java")
+                    listOf(head, respunHead).forEach { post ->
+                        postJavaVersion(post, disco).status shouldBe HttpStatusCode.NoContent
+                    }
+                }
+
+                // then: the head carries the url of the second post, and each post has its CREATE entry
+                selectVersion(head.candidate, head.version, head.distribution, head.platform).map { it.url } shouldBe respunHead.url.some()
+                selectAuditRecordsByOperation(AuditOperation.CREATE) shouldHaveSize 2
             }
         }
     })
