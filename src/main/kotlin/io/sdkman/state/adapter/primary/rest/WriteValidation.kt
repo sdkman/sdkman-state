@@ -16,11 +16,7 @@ import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Version
 
 fun VersionRequestValidator.checkVersionBody(body: String): Either<RejectedBody, Version> =
-    if (allowListLoaded()) {
-        validateRequest(body).mapLeft { it.toInvalidBody() }
-    } else {
-        RejectedBody.RegistryUnavailable.left()
-    }
+    checkUnlessRegistryUnavailable(allowListLoaded()) { validateRequest(body) }
 
 fun checkCandidateBody(body: String): Either<RejectedBody, CandidateRegistration> =
     CandidateRequestValidator.validateRequest(body).mapLeft { it.toInvalidBody() }
@@ -34,6 +30,16 @@ suspend fun ApplicationCall.respondRejectedBody(rejection: RejectedBody) =
             )
         is RejectedBody.Invalid ->
             respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", rejection.failures))
+    }
+
+private fun checkUnlessRegistryUnavailable(
+    registryLoaded: Boolean,
+    validate: () -> Either<NonEmptyList<ValidationError>, Version>,
+): Either<RejectedBody, Version> =
+    if (registryLoaded) {
+        validate().mapLeft { it.toInvalidBody() }
+    } else {
+        RejectedBody.RegistryUnavailable.left()
     }
 
 private fun NonEmptyList<ValidationError>.toInvalidBody(): RejectedBody =
