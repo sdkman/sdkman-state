@@ -164,7 +164,7 @@ class PostgresVersionRepository : VersionRepository {
                             it[distribution] = version.distribution.map { it.name }.getOrNull()
                             it[platform] = version.platform.name
                             it[url] = version.url
-                            it[visible] = version.visible.getOrElse { true }
+                            it[visible] = version.isVisible
                             it[md5sum] = version.md5sum.getOrNull()
                             it[sha256sum] = version.sha256sum.getOrNull()
                             it[sha512sum] = version.sha512sum.getOrNull()
