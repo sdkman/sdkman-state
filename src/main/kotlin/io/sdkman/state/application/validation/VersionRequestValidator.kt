@@ -10,6 +10,7 @@ import arrow.core.raise.either
 import arrow.core.right
 import arrow.core.toNonEmptyListOrNone
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.service.CandidateAllowList
 
@@ -78,6 +79,7 @@ class VersionRequestValidator(
                 val registeredCandidates = candidateAllowList.registered().getOrElse { emptySet() }
                 when {
                     value.isBlank() -> EmptyFieldError("candidate").nel().left()
+                    value == JAVA_CANDIDATE -> JavaRouteError(JAVA_POST_ROUTE).nel().left()
                     value !in registeredCandidates ->
                         InvalidCandidateError(
                             candidate = value,

@@ -9,6 +9,7 @@ import io.kotest.matchers.shouldBe
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueVersion
+import io.sdkman.state.support.shouldBeLeft
 
 class UniqueVersionValidatorSpec :
     ShouldSpec({
@@ -62,6 +63,24 @@ class UniqueVersionValidatorSpec :
 
                 val expected = EmptyFieldError("candidate").left()
                 UniqueVersionValidator.validate(uniqueVersion) shouldBe expected
+            }
+
+            should("reject java with a JavaRouteError on candidate naming DELETE /versions/java") {
+                // given: a java row's unique version
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = "java",
+                        version = "25.0.4.1+1",
+                        distribution = Distribution.TEMURIN.some(),
+                        platform = Platform.LINUX_X64,
+                    )
+
+                // when: validating it for the generic delete
+                val error = UniqueVersionValidator.validate(uniqueVersion).shouldBeLeft()
+
+                // then: the error identifies candidate and points at the java route
+                (error.field to error.message) shouldBe
+                    ("candidate" to "candidate 'java' is not accepted here; use DELETE /versions/java")
             }
 
             should("reject when version is blank") {
