@@ -114,6 +114,23 @@ fun selectTagNames(versionId: Int): List<String> =
             .map { it[VersionTagsTable.tag] }
     }
 
+fun selectTagNamesOf(
+    candidate: String,
+    version: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+): List<String> =
+    dbQuery {
+        VersionTagsTable
+            .join(
+                VersionsTable,
+                JoinType.INNER,
+                additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
+            ).select(VersionTagsTable.tag)
+            .where { matchesVersionRow(candidate, version, distribution, platform) }
+            .map { it[VersionTagsTable.tag] }
+    }
+
 fun selectAllTags(): List<Pair<Int, String>> =
     dbQuery {
         VersionTagsTable
