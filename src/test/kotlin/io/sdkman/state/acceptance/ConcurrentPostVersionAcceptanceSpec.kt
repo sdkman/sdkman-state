@@ -43,10 +43,10 @@ class ConcurrentPostVersionAcceptanceSpec :
         should("collapse concurrent POST /versions for the same payload into a single row") {
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "21.0.4.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-21.0.4.0-temurin",
+                    url = "https://jpx-21.0.4.0-temurin",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -56,7 +56,7 @@ class ConcurrentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val token = JwtTestSupport.adminToken()
                     val statuses =

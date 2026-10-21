@@ -26,10 +26,10 @@ class PostVersionAcceptanceSpec :
         should("POST a new version for a candidate, platform and distribution") {
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.1.0",
                     platform = Platform.MAC_X64,
-                    url = "https://java-17.0.1.0-tem",
+                    url = "https://jpx-17.0.1.0-tem",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some(),
@@ -38,7 +38,7 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -58,13 +58,13 @@ class PostVersionAcceptanceSpec :
         }
 
         should("store a valid version longer than the former 25-character column limit") {
-            // given: a grammatically valid java version of 26 characters
+            // given: a jpx version of 26 characters
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "25.0.2.0-crac+1.r25.ea.123",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-25.0.2.0-crac-zulu",
+                    url = "https://jpx-25.0.2.0-crac-zulu",
                     visible = true.some(),
                     distribution = Distribution.ZULU.some(),
                 )
@@ -72,7 +72,7 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     // when: the version is posted
                     val response =
@@ -164,10 +164,10 @@ class PostVersionAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "17.0.1.0",
                     "platform": "LINUX_X64",
-                    "url": "https://example.com/java.tar.gz",
+                    "url": "https://example.com/jpx.tar.gz",
                     "visible": true,
                     "distribution": "INVALID_DISTRO"
                 }
@@ -175,7 +175,7 @@ class PostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {

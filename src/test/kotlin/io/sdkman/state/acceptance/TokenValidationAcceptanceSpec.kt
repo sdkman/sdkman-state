@@ -17,12 +17,12 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when no token is provided") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
-                            setBody("""{"candidate":"java","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
+                            setBody("""{"candidate":"jpx","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
                         }
 
                     response.status shouldBe HttpStatusCode.Unauthorized
@@ -33,12 +33,12 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when token is expired") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
-                            setBody("""{"candidate":"java","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
+                            setBody("""{"candidate":"jpx","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
                             bearerAuth(JwtTestSupport.expiredToken())
                         }
 
@@ -50,12 +50,12 @@ class TokenValidationAcceptanceSpec :
         should("return 401 when token has invalid signature") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
-                            setBody("""{"candidate":"java","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
+                            setBody("""{"candidate":"jpx","version":"1.0","platform":"LINUX_X64","url":"https://x"}""")
                             bearerAuth(JwtTestSupport.tokenWithWrongSecret())
                         }
 
