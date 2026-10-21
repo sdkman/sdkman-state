@@ -4,13 +4,10 @@ import arrow.core.Either
 import arrow.core.Option
 import arrow.core.getOrElse
 import arrow.core.raise.either
-import arrow.core.right
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
-import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
-import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
@@ -83,31 +80,9 @@ class VersionServiceImpl(
                                 tags = tagList,
                             ).bind()
                     }
-                    retireSupersededVersions(version).bind()
+                    Unit
                 }
-            }.also { result ->
-                result.onRight { retired ->
-                    auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.CREATE, version)
-                    retired.forEach { auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.RETIRE, it) }
-                }
-            }.map { }
-
-    private suspend fun retireSupersededVersions(version: Version): Either<DomainError, List<Version>> =
-        if (version.candidate != JAVA_CANDIDATE || !version.visible.getOrElse { true }) {
-            emptyList<Version>().right()
-        } else {
-            SeriesKey
-                .of(
-                    candidate = version.candidate,
-                    distribution = version.distribution,
-                    platform = version.platform,
-                    version = version.version,
-                ).map { key ->
-                    versionsRepo
-                        .retireOtherVersionsInSeries(key, version.version)
-                        .mapLeft { DomainError.DatabaseError(it) }
-                }.getOrElse { emptyList<Version>().right() }
-        }
+            }.onRight { auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.CREATE, version) }
 
     override suspend fun delete(
         uniqueVersion: UniqueVersion,

@@ -19,7 +19,6 @@ import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
-import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
@@ -42,9 +41,6 @@ class VersionServiceUnitSpec :
 
         beforeEach {
             clearAllMocks()
-            coEvery {
-                versionsRepo.retireOtherVersionsInSeries(any(), any())
-            } returns Either.Right(emptyList())
             coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
         }
 
@@ -288,171 +284,6 @@ class VersionServiceUnitSpec :
                 coVerify(exactly = 0) {
                     auditRepo.recordAudit(any(), any(), any(), any())
                 }
-            }
-
-            should("retire the rest of the series when a visible java version is published") {
-                // given: the repository retires one legacy row of the posted version's series
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2-fx+1.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/liberica-26-fx.tar.gz",
-                        distribution = Distribution.LIBERICA.some(),
-                    )
-                val retired =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2.fx",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/liberica-26-fx-legacy.tar.gz",
-                        visible = false.some(),
-                        distribution = Distribution.LIBERICA.some(),
-                    )
-                val key =
-                    SeriesKey(
-                        candidate = "java",
-                        distribution = Distribution.LIBERICA.some(),
-                        platform = Platform.LINUX_X64,
-                        major = 26,
-                        variant = "fx".some(),
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    versionsRepo.retireOtherVersionsInSeries(key, "26.0.2-fx+1.1")
-                } returns Either.Right(listOf(retired))
-                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
-
-                // when: publishing the semverish successor of a legacy row
-                val result = service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: the series is retired for the derived key
-                result.shouldBeRight()
-                coVerify { versionsRepo.retireOtherVersionsInSeries(key, "26.0.2-fx+1.1") }
-            }
-
-            should("record one RETIRE audit entry per retired version") {
-                // given: a publication that displaces one row
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2+1.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-26.tar.gz",
-                    )
-                val retired =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-26-legacy.tar.gz",
-                        visible = false.some(),
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    versionsRepo.retireOtherVersionsInSeries(any(), "26.0.2+1.1")
-                } returns Either.Right(listOf(retired))
-                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
-
-                // when: publishing a version that displaces one row
-                service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: the retired row produces its own audit entry
-                coVerify(exactly = 1) {
-                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.RETIRE, retired)
-                }
-            }
-
-            should("retire nothing when the candidate is not java") {
-                // given: a non-java publication whose spelling would be eligible
-                val version =
-                    Version(
-                        candidate = "scala",
-                        version = "3.3.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/scala-3.3.1.zip",
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
-
-                // when: publishing a non-java version whose spelling would be eligible
-                val result = service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: no series is retired
-                result.shouldBeRight()
-                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
-            }
-
-            should("retire nothing when the publication is hidden") {
-                // given: a publication carrying visible=false
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2+1.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-26.tar.gz",
-                        visible = false.some(),
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
-
-                // when: publishing with visible=false
-                val result = service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: no series is retired
-                result.shouldBeRight()
-                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
-            }
-
-            should("retire nothing when the posted version is ineligible") {
-                // given: a publication whose spelling belongs to no series
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "25.0.4.r25",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-25.tar.gz",
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery { auditRepo.recordAudit(NIL_UUID, "admin", any(), any()) } returns Either.Right(Unit)
-
-                // when: publishing an ineligible spelling
-                val result = service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: no series is retired
-                result.shouldBeRight()
-                coVerify(exactly = 0) { versionsRepo.retireOtherVersionsInSeries(any(), any()) }
-            }
-
-            should("fail the POST and skip audit when retirement fails") {
-                // given: a publication whose retirement step fails
-                val version =
-                    Version(
-                        candidate = "java",
-                        version = "26.0.2+1.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-26.tar.gz",
-                    )
-                val dbFailure =
-                    DatabaseFailure.QueryExecutionFailure(
-                        "deadlock detected",
-                        RuntimeException("lock timeout"),
-                    )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    versionsRepo.retireOtherVersionsInSeries(any(), "26.0.2+1.1")
-                } returns Either.Left(dbFailure)
-
-                // when: the retirement step fails
-                val result = service.createOrUpdate(version, NIL_UUID, "admin")
-
-                // then: the failure surfaces and nothing is audited
-                result.shouldBeLeft()
-                result.onLeft { error ->
-                    error.shouldBeInstanceOf<DomainError.DatabaseError>()
-                    error.failure shouldBe dbFailure
-                }
-                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
             }
 
             should("roll back the outer transaction when tag processing fails") {
