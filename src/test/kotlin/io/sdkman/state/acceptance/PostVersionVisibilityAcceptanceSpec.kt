@@ -24,10 +24,10 @@ class PostVersionVisibilityAcceptanceSpec :
         should("POST new version with explicit visible=true stores version with visible=true") {
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.1.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.1.0.tar.gz",
+                    url = "https://example.com/jpx-17.0.1.0.tar.gz",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                 )
@@ -35,7 +35,7 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -57,10 +57,10 @@ class PostVersionVisibilityAcceptanceSpec :
         should("POST new version with explicit visible=false stores version with visible=false") {
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.2.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.2.0.tar.gz",
+                    url = "https://example.com/jpx-17.0.2.0.tar.gz",
                     visible = false.some(),
                     distribution = Distribution.TEMURIN.some(),
                 )
@@ -68,7 +68,7 @@ class PostVersionVisibilityAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {

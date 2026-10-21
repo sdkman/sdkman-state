@@ -28,10 +28,10 @@ class IdempotentPostVersionAcceptanceSpec :
         should("POST be idempotent - same version posted twice should succeed with 204") {
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.2.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.2.0-original",
+                    url = "https://jpx-17.0.2.0-original",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -40,7 +40,7 @@ class IdempotentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     // First POST
                     val response1 =
@@ -73,10 +73,10 @@ class IdempotentPostVersionAcceptanceSpec :
         should("POST overwrite existing version with different data") {
             val originalVersion =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.3.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.3.0-original",
+                    url = "https://jpx-17.0.3.0-original",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -84,10 +84,10 @@ class IdempotentPostVersionAcceptanceSpec :
 
             val updatedVersion =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.3.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://java-17.0.3.0-updated",
+                    url = "https://jpx-17.0.3.0-updated",
                     visible = false.some(),
                     distribution = Distribution.TEMURIN.some(),
                     sha256sum = "abc123def456abc123def456abc123def456abc123def456abc123def456abc1".some(),
@@ -95,7 +95,7 @@ class IdempotentPostVersionAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     // First POST
                     val response1 =

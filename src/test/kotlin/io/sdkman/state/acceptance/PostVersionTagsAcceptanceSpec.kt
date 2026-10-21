@@ -22,18 +22,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val postResponse =
                         client.post("/versions") {
@@ -44,7 +44,7 @@ class PostVersionTagsAcceptanceSpec :
                     postResponse.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -59,11 +59,11 @@ class PostVersionTagsAcceptanceSpec :
             val initialPost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
@@ -71,17 +71,17 @@ class PostVersionTagsAcceptanceSpec :
             val updatePost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-updated-url.tar.gz"
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-updated-url.tar.gz"
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -98,7 +98,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -113,11 +113,11 @@ class PostVersionTagsAcceptanceSpec :
             val initialPost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
@@ -125,18 +125,18 @@ class PostVersionTagsAcceptanceSpec :
             val clearTagsPost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": []
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -153,7 +153,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -168,11 +168,11 @@ class PostVersionTagsAcceptanceSpec :
             val initialPost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27", "lts"]
                 }
                 """.trimIndent()
@@ -180,18 +180,18 @@ class PostVersionTagsAcceptanceSpec :
             val replacePost =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -208,7 +208,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -223,11 +223,11 @@ class PostVersionTagsAcceptanceSpec :
             val versionA =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.1.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.1.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.1.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest"]
                 }
                 """.trimIndent()
@@ -235,18 +235,18 @@ class PostVersionTagsAcceptanceSpec :
             val versionB =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -263,7 +263,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getA =
-                        client.get("/versions/java/27.0.1.0") {
+                        client.get("/versions/jpx/27.0.1.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -271,7 +271,7 @@ class PostVersionTagsAcceptanceSpec :
                     getA.bodyAsText().extractTags() shouldBe emptyList()
 
                     val getB =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -285,11 +285,11 @@ class PostVersionTagsAcceptanceSpec :
             val versionA =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.1.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.1.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.1.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
@@ -297,18 +297,18 @@ class PostVersionTagsAcceptanceSpec :
             val versionB =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -325,7 +325,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getA =
-                        client.get("/versions/java/27.0.1.0") {
+                        client.get("/versions/jpx/27.0.1.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -333,7 +333,7 @@ class PostVersionTagsAcceptanceSpec :
                     getA.bodyAsText().extractTags() shouldBe listOf("27")
 
                     val getB =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -347,18 +347,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27", "27.0", "lts"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -368,7 +368,7 @@ class PostVersionTagsAcceptanceSpec :
                         }.status shouldBe HttpStatusCode.NoContent
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
@@ -416,18 +416,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["inv@lid!"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -448,18 +448,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["   "]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -481,18 +481,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["$longTag"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -513,18 +513,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": [".hidden"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -545,18 +545,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["   ", ".hidden"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -579,18 +579,18 @@ class PostVersionTagsAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "inv@lid!"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -604,7 +604,7 @@ class PostVersionTagsAcceptanceSpec :
                     responseBody shouldContain "tags[1]"
 
                     val getResponse =
-                        client.get("/versions/java/27.0.2.0") {
+                        client.get("/versions/jpx/27.0.2.0") {
                             parameter("platform", "LINUX_X64")
                             parameter("distribution", "TEMURIN")
                         }
