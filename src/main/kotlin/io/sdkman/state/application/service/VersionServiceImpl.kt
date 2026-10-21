@@ -114,7 +114,14 @@ class VersionServiceImpl(
         vendorId: UUID,
         email: String,
     ): Either<DomainError, Unit> =
+        transactional
+            .inTransaction { deleteUntagged(uniqueVersion) }
+            .onRight { deleted -> auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, deleted) }
+            .map { }
+
+    private suspend fun deleteUntagged(uniqueVersion: UniqueVersion): Either<DomainError, Version> =
         either {
+            lockJavaScope(uniqueVersion).bind()
             val versionToDelete =
                 versionsRepo
                     .findUnique(
@@ -129,7 +136,6 @@ class VersionServiceImpl(
                     }.bind()
             val tagNames = versionToDelete.tags.getOrElse { emptyList() }
             if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-            auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, versionToDelete)
             val deleted =
                 versionsRepo
                     .delete(uniqueVersion)
@@ -138,5 +144,15 @@ class VersionServiceImpl(
             if (deleted == 0) {
                 raise(DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version))
             }
+            versionToDelete
+        }
+
+    private suspend fun lockJavaScope(uniqueVersion: UniqueVersion): Either<DomainError, Unit> =
+        if (uniqueVersion.candidate == JAVA_CANDIDATE) {
+            versionsRepo
+                .lockJavaWrites(uniqueVersion.distribution, uniqueVersion.platform)
+                .mapLeft { DomainError.DatabaseError(it) }
+        } else {
+            Unit.right()
         }
 }
