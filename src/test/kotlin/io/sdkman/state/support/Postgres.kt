@@ -127,6 +127,20 @@ private fun <T> dbQuery(block: suspend () -> T): T =
         suspendTransaction { block() }
     }
 
+private fun matchesVersionRow(
+    candidate: String,
+    version: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+): Op<Boolean> =
+    (VersionsTable.candidate eq candidate) and
+        (VersionsTable.version eq version) and
+        distribution.fold(
+            { VersionsTable.distribution.isNull() },
+            { VersionsTable.distribution eq it.name },
+        ) and
+        (VersionsTable.platform eq platform.name)
+
 fun selectVersion(
     candidate: String,
     version: String,
@@ -136,15 +150,8 @@ fun selectVersion(
     dbQuery {
         VersionsTable
             .selectAll()
-            .where {
-                (VersionsTable.candidate eq candidate) and
-                    (VersionsTable.version eq version) and
-                    distribution.fold(
-                        { VersionsTable.distribution.isNull() },
-                        { VersionsTable.distribution eq it.name },
-                    ) and
-                    (VersionsTable.platform eq platform.name)
-            }.map {
+            .where { matchesVersionRow(candidate, version, distribution, platform) }
+            .map {
                 Version(
                     candidate = it[VersionsTable.candidate],
                     version = it[VersionsTable.version],
@@ -168,15 +175,8 @@ fun selectLastUpdatedAt(
     dbQuery {
         VersionsTable
             .selectAll()
-            .where {
-                (VersionsTable.candidate eq candidate) and
-                    (VersionsTable.version eq version) and
-                    distribution.fold(
-                        { VersionsTable.distribution.isNull() },
-                        { VersionsTable.distribution eq it.name },
-                    ) and
-                    (VersionsTable.platform eq platform.name)
-            }.map {
+            .where { matchesVersionRow(candidate, version, distribution, platform) }
+            .map {
                 val javaInstant = it[VersionsTable.lastUpdatedAt]
                 kotlin.time.Instant.fromEpochSeconds(javaInstant.epochSecond, javaInstant.nano.toLong())
             }.firstOrNone()
