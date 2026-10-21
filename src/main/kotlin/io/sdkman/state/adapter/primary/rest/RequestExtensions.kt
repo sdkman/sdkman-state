@@ -73,6 +73,11 @@ suspend fun ApplicationCall.receiveTextWithin(limitBytes: Long): Option<String> 
 
 private fun ApplicationCall.bodyCharset(): java.nio.charset.Charset = request.contentCharset().toOption().getOrElse { Charsets.UTF_8 }
 
+suspend inline fun <reified T : Any> ApplicationCall.receiveRequestBody(): Either<DomainError, T> =
+    Either
+        .catch { receive<T>() }
+        .mapLeft { DomainError.ValidationFailed("Invalid request: ${it.message.toOption().getOrElse { "Unknown error" }}") }
+
 fun Parameters.requiredPathParam(name: String): Either<ErrorResponse, String> =
     this[name].toOption().filter { it.isNotBlank() }.toEither {
         ErrorResponse("Bad Request", "Missing required path parameter: $name")
