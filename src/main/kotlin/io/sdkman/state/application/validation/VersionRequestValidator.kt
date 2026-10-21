@@ -33,9 +33,9 @@ class VersionRequestValidator(
         val platformResult = VersionFieldRules.validatePlatform(request.platform)
         val urlResult = VersionFieldRules.validateUrl(request.url)
         val distributionResult = VersionFieldRules.validateDistribution(request.distribution)
-        val md5sumResult = VersionFieldRules.validateHash("md5sum", request.md5sum, 32, VersionFieldRules.HEX_PATTERN_32)
-        val sha256sumResult = VersionFieldRules.validateHash("sha256sum", request.sha256sum, 64, VersionFieldRules.HEX_PATTERN_64)
-        val sha512sumResult = VersionFieldRules.validateHash("sha512sum", request.sha512sum, 128, VersionFieldRules.HEX_PATTERN_128)
+        val md5sumResult = VersionFieldRules.validateMd5sum(request.md5sum)
+        val sha256sumResult = VersionFieldRules.validateSha256sum(request.sha256sum)
+        val sha512sumResult = VersionFieldRules.validateSha512sum(request.sha512sum)
         val tagsResult = VersionFieldRules.validateTags(request.tags)
 
         val errors =

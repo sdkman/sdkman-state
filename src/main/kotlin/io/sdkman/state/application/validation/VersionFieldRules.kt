@@ -15,9 +15,9 @@ import io.sdkman.state.domain.model.Platform
 import kotlinx.serialization.json.Json
 
 internal object VersionFieldRules {
-    val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
-    val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
-    val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
+    private val HEX_PATTERN_32 = Regex("^[0-9a-fA-F]{32}$")
+    private val HEX_PATTERN_64 = Regex("^[0-9a-fA-F]{64}$")
+    private val HEX_PATTERN_128 = Regex("^[0-9a-fA-F]{128}$")
 
     private val json = Json { explicitNulls = false }
 
@@ -87,7 +87,16 @@ internal object VersionFieldRules {
             },
         )
 
-    fun validateHash(
+    fun validateMd5sum(md5sum: Option<String>): Either<NonEmptyList<ValidationError>, Option<String>> =
+        validateHash("md5sum", md5sum, 32, HEX_PATTERN_32)
+
+    fun validateSha256sum(sha256sum: Option<String>): Either<NonEmptyList<ValidationError>, Option<String>> =
+        validateHash("sha256sum", sha256sum, 64, HEX_PATTERN_64)
+
+    fun validateSha512sum(sha512sum: Option<String>): Either<NonEmptyList<ValidationError>, Option<String>> =
+        validateHash("sha512sum", sha512sum, 128, HEX_PATTERN_128)
+
+    private fun validateHash(
         field: String,
         hashOpt: Option<String>,
         expectedLength: Int,
@@ -119,7 +128,7 @@ internal object VersionFieldRules {
             { tags ->
                 val tagErrors =
                     tags.flatMapIndexed { index, tag ->
-                        validateTag(index, tag)
+                        TagNameRules.validate("tags[$index]", tag)
                     }
                 tagErrors.toNonEmptyListOrNone().fold(
                     { tags.some().right() },
@@ -127,9 +136,4 @@ internal object VersionFieldRules {
                 )
             },
         )
-
-    private fun validateTag(
-        index: Int,
-        tag: String,
-    ): List<ValidationError> = TagNameRules.validate("tags[$index]", tag)
 }
