@@ -24,10 +24,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -37,10 +37,10 @@ class VersionRequestValidatorSpec :
                 // then: validation succeeds
                 result.shouldBeRight()
                 result.onRight { version ->
-                    version.candidate shouldBe "java"
+                    version.candidate shouldBe "gradle"
                     version.version shouldBe "17.0.1"
                     version.platform shouldBe Platform.LINUX_X64
-                    version.url shouldBe "https://example.com/java-17.0.1.tar.gz"
+                    version.url shouldBe "https://example.com/gradle-17.0.1.tar.gz"
                     version.visible shouldBe none()
                     version.distribution shouldBe none()
                     version.md5sum shouldBe none()
@@ -87,10 +87,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "distribution": "TEMURIN"
                     }
                     """.trimIndent()
@@ -177,10 +177,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "md5sum": "AbC123DeF456AbC123DeF456AbC123dE"
                     }
                     """.trimIndent()
@@ -200,10 +200,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "sha256sum": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC1"
                     }
                     """.trimIndent()
@@ -228,7 +228,7 @@ class VersionRequestValidatorSpec :
                     {
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -250,9 +250,9 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -273,9 +273,9 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -296,7 +296,7 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64"
                     }
@@ -322,7 +322,7 @@ class VersionRequestValidatorSpec :
                         "candidate": "",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -342,10 +342,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -365,7 +365,7 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
                         "url": ""
@@ -438,10 +438,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "http://example.com/java-17.0.1.tar.gz"
+                        "url": "http://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -452,7 +452,7 @@ class VersionRequestValidatorSpec :
                 result.shouldBeLeft()
                 result.onLeft { errors ->
                     errors.head.shouldBeInstanceOf<InvalidUrlError>()
-                    errors.head.message shouldBe "URL 'http://example.com/java-17.0.1.tar.gz' must be a valid HTTPS URL"
+                    errors.head.message shouldBe "URL 'http://example.com/gradle-17.0.1.tar.gz' must be a valid HTTPS URL"
                 }
             }
 
@@ -461,7 +461,7 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
                         "url": "not-a-url"
@@ -483,10 +483,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "INVALID_PLATFORM",
-                        "url": "https://example.com/java-17.0.1.tar.gz"
+                        "url": "https://example.com/gradle-17.0.1.tar.gz"
                     }
                     """.trimIndent()
 
@@ -506,10 +506,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "distribution": "INVALID_DISTRO"
                     }
                     """.trimIndent()
@@ -530,10 +530,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "md5sum": "tooshort"
                     }
                     """.trimIndent()
@@ -554,10 +554,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "md5sum": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz1"
                     }
                     """.trimIndent()
@@ -577,10 +577,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "sha256sum": "abc123"
                     }
                     """.trimIndent()
@@ -601,10 +601,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "sha512sum": "abc123"
                     }
                     """.trimIndent()
@@ -625,10 +625,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java-17.0.1.tar.gz",
+                        "url": "https://example.com/gradle-17.0.1.tar.gz",
                         "md5sum": ""
                     }
                     """.trimIndent()
@@ -700,10 +700,10 @@ class VersionRequestValidatorSpec :
                 val json =
                     """
                     {
-                        "candidate": "java",
+                        "candidate": "gradle",
                         "version": "17.0.1",
                         "platform": "LINUX_X64",
-                        "url": "https://example.com/java.tar.gz",
+                        "url": "https://example.com/gradle.tar.gz",
                         "md5sum": "tooshort",
                         "sha256sum": "not-a-hex-value-!!!",
                         "sha512sum": "ABC123"
