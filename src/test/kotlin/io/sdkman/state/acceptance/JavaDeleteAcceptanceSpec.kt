@@ -165,4 +165,29 @@ class JavaDeleteAcceptanceSpec :
                 visibilityOf(rowWithoutDistribution) shouldBe none()
             }
         }
+
+        should("refuse with 400 a delete body that carries candidate java and keep the row") {
+            val storedRow = javaVersion(Distribution.TEMURIN, "25.0.3.0")
+
+            withCleanDatabase {
+                // given: TEMURIN 25.0.3.0 is visible and untagged
+                insertVersions(storedRow)
+
+                // when: DISCO deletes it by a body that also names candidate java
+                withTestApplication {
+                    val response =
+                        client.delete("/versions/java") {
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"candidate":"java","version":"25.0.3.0","platform":"LINUX_X64","distribution":"TEMURIN"}""")
+                            bearerAuth(javaVendorToken())
+                        }
+
+                    // then: the body is rejected
+                    response.status shouldBe HttpStatusCode.BadRequest
+                }
+
+                // and: the row is still stored and visible
+                visibilityOf(storedRow) shouldBe true.some()
+            }
+        }
     })
