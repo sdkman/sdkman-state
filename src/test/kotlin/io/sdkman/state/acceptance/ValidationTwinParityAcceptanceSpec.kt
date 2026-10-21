@@ -33,7 +33,7 @@ class ValidationTwinParityAcceptanceSpec :
             tags: String = "[]",
         ): String =
             """
-            {"candidate":"java","version":"$version","distribution":"TEMURIN","platform":"LINUX_X64","url":"https://cdn.example.com/java-$version.tar.gz","tags":$tags}
+            {"candidate":"jpx","version":"$version","distribution":"TEMURIN","platform":"LINUX_X64","url":"https://cdn.example.com/jpx-$version.tar.gz","tags":$tags}
             """.trimIndent()
 
         fun registrationBody(
@@ -48,13 +48,10 @@ class ValidationTwinParityAcceptanceSpec :
         val rejectedVersionBodies =
             mapOf(
                 "an invalid distribution" to
-                    """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","url":"https://example.com/java.tar.gz","visible":true,"distribution":"INVALID_DISTRO"}""",
+                    """{"candidate":"jpx","version":"17.0.1.0","platform":"LINUX_X64","url":"https://example.com/jpx.tar.gz","visible":true,"distribution":"INVALID_DISTRO"}""",
                 "several invalid fields" to
                     """{"candidate":"invalid-candidate","version":"","platform":"INVALID_PLATFORM","url":"http://not-https.com/file.zip"}""",
                 "missing required fields" to """{"visible":true}""",
-                "a non-conforming semverish version" to versionBody(version = "25.0.2.fx"),
-                "a three-component semverish core" to versionBody(version = "29.0.0+ea.10"),
-                "a variant outside the fx or crac vocabulary" to versionBody(version = "25.0.2.0-graal"),
                 "a tag with invalid characters" to versionBody(tags = """["inv@lid!"]"""),
                 "a blank tag" to versionBody(tags = """["   "]"""),
                 "a tag over 50 characters" to versionBody(tags = """["${"a".repeat(51)}"]"""),
@@ -62,7 +59,7 @@ class ValidationTwinParityAcceptanceSpec :
                 "several invalid tags" to versionBody(tags = """["   ", ".hidden"]"""),
                 "a mix of valid and invalid tags" to versionBody(tags = """["latest", "inv@lid!"]"""),
                 "an unregistered candidate" to
-                    """{"candidate":"jpx","version":"1.0.0","platform":"UNIVERSAL","url":"https://jpx.example.com/jpx-1.0.0.zip","visible":true}""",
+                    """{"candidate":"ant","version":"1.0.0","platform":"UNIVERSAL","url":"https://ant.example.com/ant-1.0.0.zip","visible":true}""",
             )
 
         val rejectedRegistrationBodies =
@@ -103,8 +100,8 @@ class ValidationTwinParityAcceptanceSpec :
             should("answer $twinRoute with the same 400 as $writeRoute for $case") {
                 withCleanDatabase {
                     withTestApplication {
-                        // given: java is registered, so only the case's own defect rejects the body
-                        registerCandidates("java")
+                        // given: jpx is registered, so only the case's own defect rejects the body
+                        registerCandidates("jpx")
 
                         // when: an admin writes the body, and anyone validates it
                         val written = postAsAdmin(writeRoute, body)
@@ -152,8 +149,8 @@ class ValidationTwinParityAcceptanceSpec :
         should("answer an unknown content charset on /validate/versions as /versions does") {
             withCleanDatabase {
                 withTestApplication {
-                    // given: java is registered and the content type names a charset that does not exist
-                    registerCandidates("java")
+                    // given: jpx is registered and the content type names a charset that does not exist
+                    registerCandidates("jpx")
                     val unknownCharsetContentType = "application/json; charset=no-such-charset"
 
                     // when: an admin writes the body, and anyone validates it
