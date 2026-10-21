@@ -56,11 +56,13 @@ The OpenAPI specification file (`src/main/resources/openapi/documentation.yaml`)
 
 ### POST a new version (requires authentication):
 ```bash
+TOKEN=$(http POST localhost:8080/login email=admin@sdkman.io password=changeme | jq -r .token)
+
 http POST localhost:8080/versions/java \
     version=21.0.2.0 \
     platform=LINUX_X64 \
     url=https://download.oracle.com/java/21/archive/jdk-21.0.1_linux-x64_bin.tar.gz \
-    --auth testuser:password123
+    --auth-type=bearer --auth "$TOKEN"
 ```
 
 ### GET versions for a candidate:
