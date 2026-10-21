@@ -12,7 +12,10 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.deleteJavaVersion
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.postJavaVersion
+import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 
@@ -56,6 +59,30 @@ class CacheHeadersAcceptanceSpec :
 
                     response.status shouldBe HttpStatusCode.OK
                     response.headers[HttpHeaders.CacheControl] shouldBe "max-age=600"
+                }
+            }
+        }
+
+        should("return Cache-Control no-store on POST /versions/java") {
+            withCleanDatabase {
+                withTestApplication {
+                    registerCandidates("java")
+                    val response = postJavaVersion(javaVersion)
+
+                    response.status shouldBe HttpStatusCode.NoContent
+                    response.headers[HttpHeaders.CacheControl] shouldBe "no-store"
+                }
+            }
+        }
+
+        should("return Cache-Control no-store on DELETE /versions/java") {
+            withCleanDatabase {
+                insertVersions(javaVersion)
+                withTestApplication {
+                    val response = deleteJavaVersion(javaVersion, JwtTestSupport.adminToken())
+
+                    response.status shouldBe HttpStatusCode.NoContent
+                    response.headers[HttpHeaders.CacheControl] shouldBe "no-store"
                 }
             }
         }
