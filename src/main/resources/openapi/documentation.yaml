@@ -318,12 +318,12 @@ paths:
           description: "No Content - Stored: as the series head, as a hidden row, or as the admin posted it"
           headers:
             Cache-Control:
-              $ref: "#/components/headers/NoStore"
+              $ref: "#/components/headers/NoStoreWrite"
         "400":
           description: "Bad Request - Validation failed, and nothing is written. A field fails validation; a vendor's version fails the grammar; a vendor body carries visible or tags, and the failure names the field; the body carries candidate; the body is not valid JSON; or java is not registered in the candidate registry, which is a failure on the request field naming java."
           headers:
             Cache-Control:
-              $ref: "#/components/headers/NoStore"
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -363,7 +363,7 @@ paths:
           description: "Forbidden - The caller may not write java, whatever the body: the community role, a vendor without java in scope, or an unknown role. Only the admin and a vendor with java in scope may post."
           headers:
             Cache-Control:
-              $ref: "#/components/headers/NoStore"
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -378,7 +378,7 @@ paths:
           description: "Conflict - A vendor post cannot be ordered against the head of its series, and the message names the head's version. No row or tag is written, and a REFUSE audit entry records the refusal."
           headers:
             Cache-Control:
-              $ref: "#/components/headers/NoStore"
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
@@ -393,7 +393,7 @@ paths:
           description: "Internal Server Error - a database error, answered with error \"Database error\", or a candidate registry that has never loaded successfully, as on POST /versions"
           headers:
             Cache-Control:
-              $ref: "#/components/headers/NoStore"
+              $ref: "#/components/headers/NoStoreWrite"
           content:
             'application/json':
               schema:
