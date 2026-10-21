@@ -6,8 +6,13 @@ import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
+import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.delete
+import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
 import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagConflictResponse
 import io.sdkman.state.domain.model.Distribution
@@ -135,6 +140,29 @@ class JavaDeleteAcceptanceSpec :
 
                 // then: the row is gone
                 visibilityOf(legacyRow) shouldBe none()
+            }
+        }
+
+        should("let DISCO delete a row without a distribution by a body of only version and platform with 204") {
+            val rowWithoutDistribution = javaVersion(Distribution.TEMURIN, "25.0.3.0", visible = false).copy(distribution = none())
+
+            withCleanDatabase {
+                // given: 25.0.3.0 is hidden, untagged and stored without a distribution
+                insertVersions(rowWithoutDistribution)
+
+                // when: DISCO deletes it by a body that names no distribution
+                withTestApplication {
+                    val response =
+                        client.delete("/versions/java") {
+                            contentType(ContentType.Application.Json)
+                            setBody("""{"version":"25.0.3.0","platform":"LINUX_X64"}""")
+                            bearerAuth(javaVendorToken())
+                        }
+                    response.status shouldBe HttpStatusCode.NoContent
+                }
+
+                // then: the row is gone
+                visibilityOf(rowWithoutDistribution) shouldBe none()
             }
         }
     })
