@@ -3,6 +3,7 @@ package io.sdkman.state.application.validation
 import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
@@ -754,6 +755,31 @@ class VersionRequestValidatorSpec :
                     errors.all { it is InvalidHashFormatError } shouldBe true
                     errors.map { it.field }.toSet() shouldBe setOf("md5sum", "sha256sum", "sha512sum")
                 }
+            }
+
+            should("report the field errors in field order") {
+                // given: JSON failing every field rule
+                val json =
+                    """
+                    {
+                        "candidate": "invalid-candidate",
+                        "version": "",
+                        "platform": "INVALID_PLATFORM",
+                        "url": "http://not-https.com/file.zip",
+                        "distribution": "INVALID_DISTRIBUTION",
+                        "md5sum": "tooshort",
+                        "sha256sum": "tooshort",
+                        "sha512sum": "tooshort",
+                        "tags": ["-invalid-"]
+                    }
+                    """.trimIndent()
+
+                // when: validating the request
+                val result = validator.validateRequest(json)
+
+                // then: one error per field, in the order of the fields
+                result.shouldBeLeft().map { it.field } shouldContainExactly
+                    listOf("candidate", "version", "platform", "url", "distribution", "md5sum", "sha256sum", "sha512sum", "tags[0]")
             }
         }
     })
