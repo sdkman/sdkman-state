@@ -1,6 +1,7 @@
 package io.sdkman.state.domain.model
 
 import arrow.core.Option
+import arrow.core.getOrElse
 import arrow.core.none
 
 data class Version(
@@ -14,7 +15,9 @@ data class Version(
     val sha256sum: Option<String> = none(),
     val sha512sum: Option<String> = none(),
     val tags: Option<List<String>> = none(),
-) : Auditable
+) : Auditable {
+    val isVisible: Boolean get() = visible.getOrElse { true }
+}
 
 data class UniqueVersion(
     val candidate: String,

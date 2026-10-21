@@ -48,7 +48,7 @@ class JavaVersionServiceImpl(
         email: String,
     ): Either<DomainError, Unit> =
         transactional
-            .inTransaction { storeAdminPost(version.copy(visible = version.visible.getOrElse { true }.some())) }
+            .inTransaction { storeAdminPost(version.copy(visible = version.isVisible.some())) }
             .onRight { publication -> recordPublication(publication, vendorId, email) }
             .map { }
 

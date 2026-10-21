@@ -18,7 +18,7 @@ data class SeriesMember(
     val row: Version,
     val reading: JavaVersion,
 ) {
-    val isVisible: Boolean get() = row.visible.getOrElse { true }
+    val isVisible: Boolean get() = row.isVisible
 }
 
 data class VendorDecision(
