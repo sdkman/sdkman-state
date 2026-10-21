@@ -22,7 +22,7 @@ class DeleteVersionAcceptanceSpec :
     ShouldSpec({
 
         should("DELETE a version for a candidate, platform and distribution") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "17.0.1"
             val distribution = Distribution.TEMURIN
             val platform = Platform.MAC_X64
@@ -41,7 +41,7 @@ class DeleteVersionAcceptanceSpec :
                         candidate = candidate,
                         version = version,
                         platform = platform,
-                        url = "https://java-17.0.1-tem",
+                        url = "https://jpx-17.0.1-tem",
                         visible = true.some(),
                         distribution = distribution.some(),
                         md5sum = "3bc0c1d7b4805831680ee5a8690ebb6e".some(),
@@ -116,7 +116,7 @@ class DeleteVersionAcceptanceSpec :
         should("return UNAUTHORIZED when deleting without authentication") {
             val requestBody =
                 UniqueVersion(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.1",
                     distribution = Distribution.TEMURIN.some(),
                     platform = Platform.MAC_X64,
@@ -159,7 +159,7 @@ class DeleteVersionAcceptanceSpec :
         should("return BAD_REQUEST for UniqueVersion with empty version field") {
             val invalidRequestBody =
                 UniqueVersion(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "",
                     distribution = none(),
                     platform = Platform.UNIVERSAL,
@@ -238,7 +238,7 @@ class DeleteVersionAcceptanceSpec :
         }
 
         should("return BAD_REQUEST for malformed JSON in delete request") {
-            val malformedJson = """{"candidate":"java","version":}"""
+            val malformedJson = """{"candidate":"jpx","version":}"""
 
             withCleanDatabase {
                 withTestApplication {
@@ -318,7 +318,7 @@ class DeleteVersionAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "17.0.1",
                     "distribution": "INVALID_DISTRO",
                     "platform": "LINUX_X64"

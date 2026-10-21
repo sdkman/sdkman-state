@@ -26,10 +26,10 @@ class VendorAuditAcceptanceSpec :
             // given: a valid version request
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.1.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.1.0.tar.gz",
+                    url = "https://example.com/jpx-17.0.1.0.tar.gz",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                     sha256sum = "abc123def456abc123def456abc123def456abc123def456abc123def456abc1".some(),
@@ -39,7 +39,7 @@ class VendorAuditAcceptanceSpec :
             withCleanDatabase {
                 // when: POST /versions is called
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -188,10 +188,10 @@ class VendorAuditAcceptanceSpec :
             // given: version with all optional fields
             val version =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "21.0.0.0",
                     platform = Platform.LINUX_ARM64,
-                    url = "https://example.com/java-21.0.0.0.tar.gz",
+                    url = "https://example.com/jpx-21.0.0.0.tar.gz",
                     visible = false.some(),
                     distribution = Distribution.ZULU.some(),
                     md5sum = "abc123def456abc123def456abc123de".some(),
@@ -203,7 +203,7 @@ class VendorAuditAcceptanceSpec :
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -273,18 +273,18 @@ class VendorAuditAcceptanceSpec :
             val requestBody =
                 """
                 {
-                    "candidate": "java",
+                    "candidate": "jpx",
                     "version": "27.0.2.0",
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
-                    "url": "https://cdn.example.com/java-27.0.2.0-temurin-linux-x64.tar.gz",
+                    "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
                     "tags": ["latest", "27"]
                 }
                 """.trimIndent()
 
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client
                         .post("/versions") {
@@ -304,19 +304,19 @@ class VendorAuditAcceptanceSpec :
             // given: two versions - one with distribution, one without
             val versionWithDist =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.0-temurin.tar.gz",
+                    url = "https://example.com/jpx-17.0.0-temurin.tar.gz",
                     visible = true.some(),
                     distribution = Distribution.TEMURIN.some(),
                 )
             val versionNoDist =
                 Version(
-                    candidate = "java",
+                    candidate = "jpx",
                     version = "17.0.0",
                     platform = Platform.LINUX_X64,
-                    url = "https://example.com/java-17.0.0.tar.gz",
+                    url = "https://example.com/jpx-17.0.0.tar.gz",
                     visible = true.some(),
                     distribution = none(),
                 )
@@ -326,11 +326,11 @@ class VendorAuditAcceptanceSpec :
 
                 // when: deleting version with distribution
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     client.delete("/versions") {
                         contentType(ContentType.Application.Json)
-                        setBody("""{"candidate":"java","version":"17.0.0","platform":"LINUX_X64","distribution":"TEMURIN"}""")
+                        setBody("""{"candidate":"jpx","version":"17.0.0","platform":"LINUX_X64","distribution":"TEMURIN"}""")
                         bearerAuth(JwtTestSupport.adminToken())
                     }
                 }

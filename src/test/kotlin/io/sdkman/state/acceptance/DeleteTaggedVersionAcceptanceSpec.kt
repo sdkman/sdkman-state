@@ -26,7 +26,7 @@ class DeleteTaggedVersionAcceptanceSpec :
     ShouldSpec({
 
         should("return 409 Conflict when deleting a version with multiple tags") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -47,7 +47,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -80,7 +80,7 @@ class DeleteTaggedVersionAcceptanceSpec :
         }
 
         should("return 409 Conflict when deleting a version with a single tag") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.1"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -101,7 +101,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.1-tem",
+                            url = "https://jpx-27.0.1-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -126,7 +126,7 @@ class DeleteTaggedVersionAcceptanceSpec :
         }
 
         should("return 204 No Content when deleting an untagged version") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "26.0.3"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -146,7 +146,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         candidate = candidate,
                         version = version,
                         platform = platform,
-                        url = "https://java-26.0.3-tem",
+                        url = "https://jpx-26.0.3-tem",
                         visible = true.some(),
                         distribution = distribution.some(),
                     ),
@@ -171,7 +171,7 @@ class DeleteTaggedVersionAcceptanceSpec :
         }
 
         should("return 204 No Content when deleting a version after its tags are removed") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -191,7 +191,7 @@ class DeleteTaggedVersionAcceptanceSpec :
                         candidate = candidate,
                         version = version,
                         platform = platform,
-                        url = "https://java-27.0.2-tem",
+                        url = "https://jpx-27.0.2-tem",
                         visible = true.some(),
                         distribution = distribution.some(),
                     ),

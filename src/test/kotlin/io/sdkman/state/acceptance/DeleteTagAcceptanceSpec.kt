@@ -30,7 +30,7 @@ class DeleteTagAcceptanceSpec :
         // Happy path tests
 
         should("delete a tag and return 204 No Content") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -51,7 +51,7 @@ class DeleteTagAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -77,7 +77,7 @@ class DeleteTagAcceptanceSpec :
         }
 
         should("delete a tag while preserving other tags on the same version") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -90,7 +90,7 @@ class DeleteTagAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -123,7 +123,7 @@ class DeleteTagAcceptanceSpec :
         }
 
         should("delete a tag while preserving the version itself") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -136,7 +136,7 @@ class DeleteTagAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -167,7 +167,7 @@ class DeleteTagAcceptanceSpec :
         }
 
         should("delete all tags then successfully delete the version") {
-            val candidate = "java"
+            val candidate = "jpx"
             val version = "27.0.2"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
@@ -180,7 +180,7 @@ class DeleteTagAcceptanceSpec :
                             candidate = candidate,
                             version = version,
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
@@ -293,7 +293,7 @@ class DeleteTagAcceptanceSpec :
                             contentType(ContentType.Application.Json)
                             setBody(
                                 UniqueTag(
-                                    candidate = "java",
+                                    candidate = "jpx",
                                     tag = "nonexistent",
                                     distribution = Distribution.TEMURIN.some(),
                                     platform = Platform.LINUX_X64,
@@ -336,7 +336,7 @@ class DeleteTagAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","tag":"","distribution":"TEMURIN","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(JwtTestSupport.adminToken())
                         }
@@ -355,7 +355,7 @@ class DeleteTagAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","tag":"latest","distribution":"INVALID_DISTRO","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"latest","distribution":"INVALID_DISTRO","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(JwtTestSupport.adminToken())
                         }
@@ -372,7 +372,7 @@ class DeleteTagAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","tag":"latest","platform":"INVALID_PLATFORM"}""",
+                                """{"candidate":"jpx","tag":"latest","platform":"INVALID_PLATFORM"}""",
                             )
                             bearerAuth(JwtTestSupport.adminToken())
                         }
@@ -416,7 +416,7 @@ class DeleteTagAcceptanceSpec :
                             contentType(ContentType.Application.Json)
                             setBody(
                                 UniqueTag(
-                                    candidate = "java",
+                                    candidate = "jpx",
                                     tag = "latest",
                                     distribution = Distribution.TEMURIN.some(),
                                     platform = Platform.LINUX_X64,
@@ -435,7 +435,7 @@ class DeleteTagAcceptanceSpec :
                     val response =
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
-                            setBody("""{"candidate":"java","tag":}""")
+                            setBody("""{"candidate":"jpx","tag":}""")
                             bearerAuth(JwtTestSupport.adminToken())
                         }
 
@@ -447,7 +447,7 @@ class DeleteTagAcceptanceSpec :
         // Audit test
 
         should("create audit record when tag is deleted") {
-            val candidate = "java"
+            val candidate = "jpx"
             val distribution = Distribution.TEMURIN
             val platform = Platform.LINUX_X64
 
@@ -459,7 +459,7 @@ class DeleteTagAcceptanceSpec :
                             candidate = candidate,
                             version = "27.0.2",
                             platform = platform,
-                            url = "https://java-27.0.2-tem",
+                            url = "https://jpx-27.0.2-tem",
                             visible = true.some(),
                             distribution = distribution.some(),
                         ),
