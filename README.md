@@ -60,7 +60,6 @@ http POST localhost:8080/versions/java \
     version=21.0.2.0 \
     platform=LINUX_X64 \
     url=https://download.oracle.com/java/21/archive/jdk-21.0.1_linux-x64_bin.tar.gz \
-    visible:=true \
     --auth testuser:password123
 ```
 
