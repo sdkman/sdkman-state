@@ -645,6 +645,40 @@ class VersionRequestValidatorSpec :
             }
         }
 
+        context("Unhappy path tests - java on the generic route") {
+
+            val javaJson =
+                """
+                {
+                    "candidate": "java",
+                    "version": "25.0.5.0+3",
+                    "platform": "LINUX_X64",
+                    "url": "https://example.com/java-25.0.5.0+3.tar.gz"
+                }
+                """.trimIndent()
+
+            should("refuse a registered java candidate with a JavaRouteError naming POST /versions/java") {
+                // given: a validator whose registry holds java
+                // when: validating an otherwise valid java request
+                val errors = validator.validateRequest(javaJson).shouldBeLeft()
+
+                // then: the only error identifies candidate and points at the java route
+                errors.map { it.field to it.message } shouldBe
+                    listOf("candidate" to "candidate 'java' is not accepted here; use POST /versions/java")
+            }
+
+            should("refuse java with a JavaRouteError rather than InvalidCandidateError when java is unregistered") {
+                // given: a validator whose registry does not hold java
+                val validatorWithoutJava = VersionRequestValidator(allowList("gradle"))
+
+                // when: validating an otherwise valid java request
+                val errors = validatorWithoutJava.validateRequest(javaJson).shouldBeLeft()
+
+                // then: the java route error answers before the registry check
+                errors.toList() shouldBe listOf(JavaRouteError("POST /versions/java"))
+            }
+        }
+
         context("Unhappy path tests - multiple errors") {
 
             should("accumulate multiple required field errors") {

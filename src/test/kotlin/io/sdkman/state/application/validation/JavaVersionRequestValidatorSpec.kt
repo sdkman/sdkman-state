@@ -280,7 +280,7 @@ class JavaVersionRequestValidatorSpec :
         context("the generic routes' java error") {
 
             should("identify candidate and name java and the java route") {
-                // given: the error the generic delete will answer for java
+                // given: the error the generic delete answers for java
                 val error = JavaRouteError("DELETE /versions/java")
 
                 // when: reading its field and message
