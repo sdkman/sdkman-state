@@ -25,7 +25,7 @@ paths:
                 $ref: "#/components/schemas/HealthCheckResponse"
   /versions:
     delete:
-      description: "Delete one version of any registered candidate but java. A version that still holds tags cannot be deleted and answers 409; remove or reassign its tags first. Java is rejected with 400 for every caller, naming DELETE /versions/java, the only route that deletes a java version."
+      description: "Delete a version by its unique coordinates (candidate, version, distribution, platform)"
       security:
         - bearerAuth: []
       requestBody:
