@@ -9,11 +9,10 @@ import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.ListedCandidate
 import io.sdkman.state.domain.repository.CandidateRepository
 import io.sdkman.state.domain.service.CandidateService
-
-private const val JAVA_CANDIDATE = "java"
 
 class CandidateServiceImpl(
     private val candidateRepository: CandidateRepository,
