@@ -203,6 +203,7 @@ class JavaVersionServiceUnitSpec :
                 // then: the head keeps its visibility and its tags
                 coVerify { versionsRepo.hideJavaVersions(Distribution.TEMURIN.some(), Platform.LINUX_X64, emptyList()) }
                 coVerify(exactly = 0) { tagService.assignTagToVersion(any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { tagService.replaceTags(any(), any(), any(), any(), any()) }
             }
 
             should("refuse a post that cannot be ordered against the head, naming the head") {
