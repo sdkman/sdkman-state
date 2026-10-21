@@ -11,6 +11,7 @@ import io.mockk.Called
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.error.DomainError
@@ -44,6 +45,7 @@ class VersionServiceUnitSpec :
             coEvery {
                 versionsRepo.retireOtherVersionsInSeries(any(), any())
             } returns Either.Right(emptyList())
+            coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
         }
 
         context("findByCandidate") {
@@ -542,8 +544,8 @@ class VersionServiceUnitSpec :
                 result.shouldBeRight()
                 coVerify(ordering = io.mockk.Ordering.ORDERED) {
                     versionsRepo.findUnique(JAVA_CANDIDATE, "25.0.4.1+1", Platform.LINUX_X64, Distribution.TEMURIN.some())
-                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, row)
                     versionsRepo.delete(temurinRow)
+                    auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, row)
                 }
                 coVerify(exactly = 0) { versionsRepo.findVersionId(any()) }
                 coVerify(exactly = 0) { tagService.findTagNamesByVersionId(any()) }
@@ -604,7 +606,7 @@ class VersionServiceUnitSpec :
 
             should("return VersionNotFound when delete returns zero rows") {
                 // given: delete affected zero rows (race condition)
-                givenDeletableRow(temurinRow)
+                givenStoredRow(temurinRow)
                 coEvery { versionsRepo.delete(temurinRow) } returns Either.Right(0)
 
                 // when: deleting a version that disappears between check and delete
@@ -612,6 +614,84 @@ class VersionServiceUnitSpec :
 
                 // then: returns VersionNotFound
                 result shouldBeLeft DomainError.VersionNotFound(JAVA_CANDIDATE, "25.0.4.1+1")
+            }
+
+            should("take the java write lock of the row's scope before reading the row") {
+                // given: an untagged TEMURIN java row
+                givenDeletableRow(temurinRow)
+
+                // when: deleting it
+                service.delete(temurinRow, NIL_UUID, "admin")
+
+                // then: the java scope is locked before the row is read
+                coVerifyOrder {
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.findUnique(JAVA_CANDIDATE, "25.0.4.1+1", Platform.LINUX_X64, Distribution.TEMURIN.some())
+                }
+            }
+
+            should("never take the java write lock to delete a scala row") {
+                // given: an untagged scala row
+                val scalaRow =
+                    UniqueVersion(
+                        candidate = "scala",
+                        version = "3.7.3",
+                        distribution = none(),
+                        platform = Platform.UNIVERSAL,
+                    )
+                givenDeletableRow(scalaRow)
+
+                // when: deleting it
+                service.delete(scalaRow, NIL_UUID, "admin")
+
+                // then: no java scope is locked
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+            }
+
+            should("answer DatabaseError and read nothing when the java write lock fails") {
+                // given: taking the java write lock fails
+                val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
+                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+
+                // when: deleting a java row
+                val result = service.delete(temurinRow, NIL_UUID, "admin")
+
+                // then: the failure surfaces before the row is read
+                result shouldBeLeft DomainError.DatabaseError(lockFailure)
+                coVerify(exactly = 0) { versionsRepo.findUnique(any(), any(), any(), any()) }
+            }
+
+            should("make every repository call inside the transaction") {
+                // given: a transaction that never runs its block and answers a database failure
+                val txFailure = DomainError.DatabaseError(DatabaseFailure.QueryExecutionFailure("tx failed", RuntimeException("x")))
+                val transactional = mockk<Transactional>()
+                coEvery { transactional.inTransaction<DomainError, Version>(any()) } returns Either.Left(txFailure)
+                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+
+                // when: deleting a java row
+                val result = txService.delete(temurinRow, NIL_UUID, "admin")
+
+                // then: the failure surfaces and no repository was touched outside the block
+                result shouldBeLeft txFailure
+                coVerify { versionsRepo wasNot Called }
+            }
+
+            should("write the DELETE audit after the transaction ends") {
+                // given: a transaction that checks, as its block returns, that no audit was written yet
+                givenDeletableRow(temurinRow)
+                val transactional = mockk<Transactional>()
+                coEvery { transactional.inTransaction<DomainError, Version>(any()) } coAnswers {
+                    firstArg<suspend () -> Either<DomainError, Version>>()().also {
+                        coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+                    }
+                }
+                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+
+                // when: deleting a java row
+                txService.delete(temurinRow, NIL_UUID, "admin")
+
+                // then: the DELETE audit is written once the transaction is over
+                coVerify(exactly = 1) { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, any()) }
             }
         }
 
