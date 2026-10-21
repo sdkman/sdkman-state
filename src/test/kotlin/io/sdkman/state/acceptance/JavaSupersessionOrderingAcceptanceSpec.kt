@@ -6,6 +6,7 @@ import com.auth0.jwt.JWT
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainAll
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -78,6 +79,26 @@ class JavaSupersessionOrderingAcceptanceSpec :
                 tagsOf(olderBuild).shouldBeEmpty()
                 visibilityOf(head) shouldBe true.some()
                 tagsOf(head) shouldContainAll listOf("lts", "25")
+            }
+        }
+
+        should("keep the tags a hidden row already held when it is re-posted below the head") {
+            val head = javaVersion(Distribution.TEMURIN, "25.0.4.1+1")
+            val hiddenBuild = javaVersion(Distribution.TEMURIN, "25.0.4.0+9")
+
+            withCleanDatabase {
+                // given: the head is visible and an older build is stored hidden, tagged nightly
+                insertVersions(head)
+                insertTaggedVersion(hiddenBuild.copy(visible = false.some()), "nightly")
+
+                // when: DISCO re-posts the hidden build
+                withTestApplication {
+                    registerCandidates("java")
+                    postJavaVersion(hiddenBuild, javaVendorToken()).status shouldBe HttpStatusCode.NoContent
+                }
+
+                // then: the re-posted build still holds nightly
+                tagsOf(hiddenBuild) shouldContain "nightly"
             }
         }
 
