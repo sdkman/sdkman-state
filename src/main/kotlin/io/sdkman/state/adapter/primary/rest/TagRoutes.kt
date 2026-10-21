@@ -4,7 +4,6 @@ import arrow.core.raise.either
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.TagAssignmentDto
 import io.sdkman.state.adapter.primary.rest.dto.UniqueTagDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
@@ -32,10 +31,7 @@ private fun Route.assignTagRoute(tagService: TagService) {
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
             if (!call.mayWriteCandidate(assignment.candidate)) {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ErrorResponse("Forbidden", "Not authorized for candidate: ${assignment.candidate}"),
-                )
+                call.respondForbiddenFor(assignment.candidate)
                 return@post
             }
             tagService.assignTag(assignment, vendorId, email).bind()
@@ -59,10 +55,7 @@ private fun Route.deleteTagRoute(tagService: TagService) {
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
             if (!call.mayWriteCandidate(uniqueTag.candidate)) {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ErrorResponse("Forbidden", "Not authorized for candidate: ${uniqueTag.candidate}"),
-                )
+                call.respondForbiddenFor(uniqueTag.candidate)
                 return@delete
             }
             tagService.deleteTag(uniqueTag, vendorId, email).bind()
