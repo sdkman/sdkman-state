@@ -18,7 +18,7 @@ class UniqueVersionValidatorSpec :
             should("accept unique version with valid fields") {
                 val uniqueVersion =
                     UniqueVersion(
-                        candidate = "java",
+                        candidate = "gradle",
                         version = "17.0.1",
                         distribution = Distribution.TEMURIN.some(),
                         platform = Platform.LINUX_X64,
@@ -67,7 +67,7 @@ class UniqueVersionValidatorSpec :
             should("reject when version is blank") {
                 val uniqueVersion =
                     UniqueVersion(
-                        candidate = "java",
+                        candidate = "gradle",
                         version = "",
                         distribution = Distribution.TEMURIN.some(),
                         platform = Platform.LINUX_X64,
