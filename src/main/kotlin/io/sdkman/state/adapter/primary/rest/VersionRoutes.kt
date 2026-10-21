@@ -10,7 +10,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.date.*
-import io.sdkman.state.adapter.primary.rest.dto.ErrorResponse
 import io.sdkman.state.adapter.primary.rest.dto.UniqueVersionDto
 import io.sdkman.state.adapter.primary.rest.dto.toDomain
 import io.sdkman.state.adapter.primary.rest.dto.toDto
@@ -152,10 +151,7 @@ private fun Route.versionCreateRoute(
             ifLeft = { rejection -> call.respondRejectedBody(rejection) },
             ifRight = { validVersion ->
                 if (!call.mayWriteCandidate(validVersion.candidate)) {
-                    call.respond(
-                        HttpStatusCode.Forbidden,
-                        ErrorResponse("Forbidden", "Not authorized for candidate: ${validVersion.candidate}"),
-                    )
+                    call.respondForbiddenFor(validVersion.candidate)
                     return@post
                 }
                 versionService.createOrUpdate(validVersion, vendorId, email).fold(
@@ -180,10 +176,7 @@ private fun Route.versionDeleteRoute(versionService: VersionService) {
                     .mapLeft { DomainError.ValidationFailed(it.message) }
                     .bind()
             if (!call.mayWriteCandidate(validUniqueVersion.candidate)) {
-                call.respond(
-                    HttpStatusCode.Forbidden,
-                    ErrorResponse("Forbidden", "Not authorized for candidate: ${validUniqueVersion.candidate}"),
-                )
+                call.respondForbiddenFor(validUniqueVersion.candidate)
                 return@delete
             }
             versionService.delete(validUniqueVersion, vendorId, email).bind()
