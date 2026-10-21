@@ -8,7 +8,6 @@ import arrow.core.left
 import arrow.core.nel
 import arrow.core.raise.either
 import arrow.core.right
-import arrow.core.toNonEmptyListOrNone
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Version
@@ -27,50 +26,31 @@ class VersionRequestValidator(
             validate(request).bind()
         }
 
-    fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> {
-        val candidateResult = validateCandidate(request.candidate)
-        val versionResult = VersionFieldRules.validateVersion(request.version)
-        val platformResult = VersionFieldRules.validatePlatform(request.platform)
-        val urlResult = VersionFieldRules.validateUrl(request.url)
-        val distributionResult = VersionFieldRules.validateDistribution(request.distribution)
-        val md5sumResult = VersionFieldRules.validateMd5sum(request.md5sum)
-        val sha256sumResult = VersionFieldRules.validateSha256sum(request.sha256sum)
-        val sha512sumResult = VersionFieldRules.validateSha512sum(request.sha512sum)
-        val tagsResult = VersionFieldRules.validateTags(request.tags)
-
-        val errors =
-            listOf<Either<NonEmptyList<ValidationError>, *>>(
-                candidateResult,
-                versionResult,
-                platformResult,
-                urlResult,
-                distributionResult,
-                md5sumResult,
-                sha256sumResult,
-                sha512sumResult,
-                tagsResult,
-            ).flatMap { it.fold({ errs -> errs }, { emptyList() }) }
-
-        return errors.toNonEmptyListOrNone().fold(
-            {
-                either {
-                    Version(
-                        candidate = candidateResult.bind(),
-                        version = versionResult.bind(),
-                        platform = platformResult.bind(),
-                        url = urlResult.bind(),
-                        visible = request.visible,
-                        distribution = distributionResult.bind(),
-                        md5sum = md5sumResult.bind(),
-                        sha256sum = sha256sumResult.bind(),
-                        sha512sum = sha512sumResult.bind(),
-                        tags = tagsResult.bind(),
-                    )
-                }
-            },
-            { errorList -> errorList.left() },
-        )
-    }
+    fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> =
+        Either.zipOrAccumulate(
+            validateCandidate(request.candidate),
+            VersionFieldRules.validateVersion(request.version),
+            VersionFieldRules.validatePlatform(request.platform),
+            VersionFieldRules.validateUrl(request.url),
+            VersionFieldRules.validateDistribution(request.distribution),
+            VersionFieldRules.validateMd5sum(request.md5sum),
+            VersionFieldRules.validateSha256sum(request.sha256sum),
+            VersionFieldRules.validateSha512sum(request.sha512sum),
+            VersionFieldRules.validateTags(request.tags),
+        ) { candidate, version, platform, url, distribution, md5sum, sha256sum, sha512sum, tags ->
+            Version(
+                candidate = candidate,
+                version = version,
+                platform = platform,
+                url = url,
+                visible = request.visible,
+                distribution = distribution,
+                md5sum = md5sum,
+                sha256sum = sha256sum,
+                sha512sum = sha512sum,
+                tags = tags,
+            )
+        }
 
     private fun validateCandidate(candidate: Option<String>): Either<NonEmptyList<ValidationError>, String> =
         candidate.fold(
