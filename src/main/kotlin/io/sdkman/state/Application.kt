@@ -58,7 +58,7 @@ fun Application.module() {
     val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
     scheduleCandidateRefresh(candidateAllowList, appConfig.candidateRefreshIntervalMs)
 
-    val versionRequestValidator = VersionRequestValidator(appConfig.semverishEnabled, candidateAllowList)
+    val versionRequestValidator = VersionRequestValidator(candidateAllowList)
     val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(

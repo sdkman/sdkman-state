@@ -45,9 +45,8 @@ class WriteValidationUnitSpec :
             }
             """.trimIndent()
 
-        val validator = VersionRequestValidator(semverishEnabled = false, candidateAllowList = allowList("jpx"))
-        val unreadyValidator =
-            VersionRequestValidator(semverishEnabled = false, candidateAllowList = unreadyAllowList())
+        val validator = VersionRequestValidator(allowList("jpx"))
+        val unreadyValidator = VersionRequestValidator(unreadyAllowList())
         val javaValidator = JavaVersionRequestValidator(allowList(JAVA_CANDIDATE))
         val unreadyJavaValidator = JavaVersionRequestValidator(unreadyAllowList())
 

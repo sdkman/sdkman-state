@@ -15,11 +15,7 @@ import io.sdkman.state.support.shouldBeRight
 class VersionRequestValidatorSpec :
     ShouldSpec({
 
-        val validator =
-            VersionRequestValidator(
-                semverishEnabled = false,
-                candidateAllowList = allowList("java", "gradle", "kotlin", "maven", "scala"),
-            )
+        val validator = VersionRequestValidator(allowList("java", "gradle", "kotlin", "maven", "scala"))
 
         context("Happy path tests") {
 
@@ -416,11 +412,7 @@ class VersionRequestValidatorSpec :
 
             should("enumerate the registered candidates sorted ascending") {
                 // given: a validator whose registry is held in a deliberately unsorted order
-                val unsortedValidator =
-                    VersionRequestValidator(
-                        semverishEnabled = false,
-                        candidateAllowList = allowList("scala", "ant", "gradle"),
-                    )
+                val unsortedValidator = VersionRequestValidator(allowList("scala", "ant", "gradle"))
                 val json =
                     """
                     {

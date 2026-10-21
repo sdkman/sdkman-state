@@ -121,8 +121,7 @@ fun Application.configureTestApplication(
 
     val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
 
-    val versionRequestValidator =
-        VersionRequestValidator(appConfig.semverishEnabled, candidateAllowList)
+    val versionRequestValidator = VersionRequestValidator(candidateAllowList)
     val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(

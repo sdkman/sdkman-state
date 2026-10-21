@@ -14,13 +14,8 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.service.CandidateAllowList
 
 class VersionRequestValidator(
-    private val semverishEnabled: Boolean,
     private val candidateAllowList: CandidateAllowList,
 ) {
-    companion object {
-        private const val SEMVERISH_CANDIDATE = "java"
-    }
-
     // A registry that has never loaded is not a validation failure: reporting it as one would
     // surface a transient database fault to a publisher as "candidate is not valid".
     fun allowListLoaded(): Boolean = candidateAllowList.registered().isSome()
@@ -42,8 +37,6 @@ class VersionRequestValidator(
         val sha512sumResult = VersionFieldRules.validateHash("sha512sum", request.sha512sum, 128, VersionFieldRules.HEX_PATTERN_128)
         val tagsResult = VersionFieldRules.validateTags(request.tags)
 
-        val semverishResult = validateSemverish(candidateResult, versionResult)
-
         val errors =
             listOf<Either<NonEmptyList<ValidationError>, *>>(
                 candidateResult,
@@ -55,7 +48,6 @@ class VersionRequestValidator(
                 sha256sumResult,
                 sha512sumResult,
                 tagsResult,
-                semverishResult,
             ).flatMap { it.fold({ errs -> errs }, { emptyList() }) }
 
         return errors.toNonEmptyListOrNone().fold(
@@ -94,26 +86,6 @@ class VersionRequestValidator(
                             .left()
 
                     else -> value.right()
-                }
-            },
-        )
-
-    // Returns Right(Unit) when upstream validation already failed, to avoid
-    // double-reporting errors that are already in the accumulated error list.
-    private fun validateSemverish(
-        candidateResult: Either<NonEmptyList<ValidationError>, String>,
-        versionResult: Either<NonEmptyList<ValidationError>, String>,
-    ): Either<NonEmptyList<ValidationError>, Unit> =
-        candidateResult.fold(
-            { Unit.right() },
-            { candidate ->
-                when {
-                    !semverishEnabled || candidate != SEMVERISH_CANDIDATE -> Unit.right()
-                    else ->
-                        versionResult.fold(
-                            { Unit.right() },
-                            { version -> SemverishValidator.validate(version).map { }.mapLeft { it.nel() } },
-                        )
                 }
             },
         )
