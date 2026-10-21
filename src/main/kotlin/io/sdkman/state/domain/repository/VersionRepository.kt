@@ -5,7 +5,6 @@ import arrow.core.Option
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
-import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 
@@ -36,11 +35,6 @@ interface VersionRepository {
     ): Either<DatabaseFailure, Option<Version>>
 
     suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
-
-    suspend fun retireOtherVersionsInSeries(
-        key: SeriesKey,
-        postedVersion: String,
-    ): Either<DatabaseFailure, List<Version>>
 
     suspend fun lockJavaWrites(
         distribution: Option<Distribution>,

@@ -10,13 +10,11 @@ import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
-import io.sdkman.state.domain.model.SeriesKey
 import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.VersionRepository
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.core.vendors.ForUpdateOption
 import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
@@ -233,68 +231,6 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    // R15a: a locking select cannot see a concurrent transaction's uncommitted insert under
-    // read-committed, so two posts into one series would interleave and both stay visible.
-    // The advisory lock, not the `FOR UPDATE` beneath it, is what serializes them.
-    override suspend fun retireOtherVersionsInSeries(
-        key: SeriesKey,
-        postedVersion: String,
-    ): Either<DatabaseFailure, List<Version>> =
-        Either
-            .catch {
-                dbQuery {
-                    lockSeries(key)
-
-                    // Major and variant are not columns, so the pattern narrows the rows the
-                    // `FOR UPDATE` holds and `SeriesKey.of` decides membership over them.
-                    val retiring =
-                        VersionsTable
-                            .selectAll()
-                            .where {
-                                (VersionsTable.candidate eq key.candidate) and
-                                    distributionEq(key.distribution) and
-                                    (VersionsTable.platform eq key.platform.name) and
-                                    (VersionsTable.visible eq true) and
-                                    (VersionsTable.version regexp key.versionPattern())
-                            }.forUpdate(ForUpdateOption.ForUpdate)
-                            .map { it[VersionsTable.id].value to it.toVersion() }
-                            .filter { (_, row) -> row.version != postedVersion && row.inSeries(key) }
-
-                    if (retiring.isNotEmpty()) {
-                        VersionsTable.update({ VersionsTable.id inList retiring.map { (id, _) -> id } }) {
-                            it[visible] = false
-                        }
-                    }
-
-                    retiring.map { (_, row) -> row.copy(visible = false.some()) }
-                }
-            }.mapLeft { error ->
-                DatabaseFailure.QueryExecutionFailure(
-                    message = "Failed to retire versions in series: ${error.message}",
-                    cause = error,
-                )
-            }
-
-    private fun lockSeries(key: SeriesKey) =
-        takeTransactionLock(
-            listOf(
-                key.candidate,
-                key.distribution.map { it.name }.getOrElse { "" },
-                key.platform.name,
-                key.major.toString(),
-                key.variant.getOrElse { "" },
-            ),
-        )
-
-    private fun takeTransactionLock(keyParts: List<String>) {
-        TransactionManager.current().exec(
-            "SELECT pg_advisory_xact_lock(hashtext(?))",
-            listOf(TextColumnType() to keyParts.joinToString("|")),
-        )
-    }
-
-    private fun Version.inSeries(key: SeriesKey): Boolean = SeriesKey.of(candidate, distribution, platform, version) == key.some()
-
     override suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int> =
         Either
             .catch {
@@ -330,6 +266,13 @@ class PostgresVersionRepository : VersionRepository {
                     cause = error,
                 )
             }
+
+    private fun takeTransactionLock(keyParts: List<String>) {
+        TransactionManager.current().exec(
+            "SELECT pg_advisory_xact_lock(hashtext(?))",
+            listOf(TextColumnType() to keyParts.joinToString("|")),
+        )
+    }
 
     override suspend fun findJavaRows(
         distribution: Option<Distribution>,
