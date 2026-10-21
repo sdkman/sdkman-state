@@ -121,7 +121,7 @@ class VersionServiceImpl(
 
     private suspend fun deleteUntagged(uniqueVersion: UniqueVersion): Either<DomainError, Version> =
         either {
-            lockJavaScope(uniqueVersion).bind()
+            versionsRepo.lockWritesIfJava(uniqueVersion.candidate, uniqueVersion.distribution, uniqueVersion.platform).bind()
             val versionToDelete =
                 versionsRepo
                     .findUnique(
@@ -145,14 +145,5 @@ class VersionServiceImpl(
                 raise(DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version))
             }
             versionToDelete
-        }
-
-    private suspend fun lockJavaScope(uniqueVersion: UniqueVersion): Either<DomainError, Unit> =
-        if (uniqueVersion.candidate == JAVA_CANDIDATE) {
-            versionsRepo
-                .lockJavaWrites(uniqueVersion.distribution, uniqueVersion.platform)
-                .mapLeft { DomainError.DatabaseError(it) }
-        } else {
-            Unit.right()
         }
 }
