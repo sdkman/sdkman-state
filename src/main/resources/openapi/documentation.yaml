@@ -61,7 +61,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate but java; a vendor token only its own candidates; any other role is refused. Java answers 400 before this check."
           content:
             'application/json':
               schema:
@@ -129,7 +129,7 @@ paths:
         "401":
           description: "Unauthorized - Missing or invalid token"
         "403":
-          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate; a vendor token only its own candidates; any other role is refused."
+          description: "Forbidden - Vendor not authorized for this candidate, or a role not admitted. Admin and community tokens may write any candidate but java; a vendor token only its own candidates; any other role is refused. Java answers 400 before this check."
           content:
             'application/json':
               schema:
