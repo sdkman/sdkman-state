@@ -22,10 +22,6 @@ enum class JavaPoster { ADMIN, VENDOR }
 class JavaVersionRequestValidator(
     private val candidateAllowList: CandidateAllowList,
 ) {
-    companion object {
-        private const val JAVA_POST_ROUTE = "POST /versions/java"
-    }
-
     fun allowListLoaded(): Boolean = candidateAllowList.registered().isSome()
 
     fun validateRequest(
