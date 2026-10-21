@@ -21,6 +21,8 @@ fun ApplicationCall.mayWriteCandidate(candidate: String): Boolean =
                 (role == Role.VENDOR && candidate in authenticatedCandidates())
         }.getOrElse { false }
 
+fun ApplicationCall.mayWriteTag(candidate: String): Boolean = if (candidate == JAVA_CANDIDATE) isAdmin() else mayWriteCandidate(candidate)
+
 fun ApplicationCall.javaPoster(): Option<JavaPoster> =
     Role
         .fromClaim(authenticatedRole())
@@ -38,7 +40,9 @@ fun ApplicationCall.mayManageCandidates(): Boolean =
         .map { role -> role == Role.ADMIN || role == Role.COMMUNITY }
         .getOrElse { false }
 
-fun ApplicationCall.mayManageVendors(): Boolean =
+fun ApplicationCall.mayManageVendors(): Boolean = isAdmin()
+
+private fun ApplicationCall.isAdmin(): Boolean =
     Role
         .fromClaim(authenticatedRole())
         .map { role -> role == Role.ADMIN }

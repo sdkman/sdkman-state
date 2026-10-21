@@ -30,7 +30,7 @@ private fun Route.assignTagRoute(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            if (!call.mayWriteCandidate(assignment.candidate)) {
+            if (!call.mayWriteTag(assignment.candidate)) {
                 call.respondForbiddenFor(assignment.candidate)
                 return@post
             }
@@ -54,7 +54,7 @@ private fun Route.deleteTagRoute(tagService: TagService) {
                 .mapLeft { errors ->
                     DomainError.ValidationFailures(errors.map { FieldError(it.field, it.message) })
                 }.bind()
-            if (!call.mayWriteCandidate(uniqueTag.candidate)) {
+            if (!call.mayWriteTag(uniqueTag.candidate)) {
                 call.respondForbiddenFor(uniqueTag.candidate)
                 return@delete
             }
