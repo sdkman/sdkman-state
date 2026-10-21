@@ -114,8 +114,8 @@ fun Application.configureTestApplication(
     val tagsRepo = PostgresTagRepository()
     val auditRepo = PostgresAuditRepository()
     val vendorRepo = PostgresVendorRepository()
-    val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
     val transactional = ExposedTransactional()
+    val tagService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactional)
     val rateLimiter = RateLimiter(appConfig.rateLimitEnabled)
     val authService = AuthServiceImpl(vendorRepo, appConfig, rateLimiter)
 

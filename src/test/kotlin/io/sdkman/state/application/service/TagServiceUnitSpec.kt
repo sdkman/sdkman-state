@@ -6,9 +6,11 @@ import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.Called
 import io.mockk.clearAllMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.error.DomainError
@@ -21,6 +23,8 @@ import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
 import io.sdkman.state.domain.repository.VersionRepository
+import io.sdkman.state.domain.service.Transactional
+import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
 import java.util.UUID
@@ -33,9 +37,26 @@ class TagServiceUnitSpec :
         val tagsRepo = mockk<TagRepository>()
         val auditRepo = mockk<AuditRepository>()
         val versionsRepo = mockk<VersionRepository>()
-        val service = TagServiceImpl(tagsRepo, auditRepo, versionsRepo)
+        val service = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, passthroughTransactional())
 
-        beforeEach { clearAllMocks() }
+        beforeEach {
+            clearAllMocks()
+            coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
+        }
+
+        fun transactionalCheckingNoAuditYet(): Transactional =
+            mockk<Transactional>().also { transactional ->
+                coEvery { transactional.inTransaction<DomainError, Unit>(any()) } coAnswers {
+                    firstArg<suspend () -> Either<DomainError, Unit>>()().also {
+                        coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+                    }
+                }
+            }
+
+        fun transactionalFailingWithoutRunning(txFailure: DomainError): Transactional =
+            mockk<Transactional>().also { transactional ->
+                coEvery { transactional.inTransaction<DomainError, Unit>(any()) } returns Either.Left(txFailure)
+            }
 
         context("replaceTags") {
 
@@ -157,6 +178,18 @@ class TagServiceUnitSpec :
         }
 
         context("deleteTag") {
+            val temurinLts =
+                UniqueTag(
+                    candidate = "java",
+                    tag = "lts",
+                    distribution = Distribution.TEMURIN.some(),
+                    platform = Platform.LINUX_X64,
+                )
+
+            fun givenDeletableTag(uniqueTag: UniqueTag) {
+                coEvery { tagsRepo.deleteTag(uniqueTag) } returns Either.Right(1)
+                coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Right(Unit)
+            }
 
             should("delete tag and record audit when tag exists") {
                 // given: tag exists and delete succeeds
@@ -282,9 +315,171 @@ class TagServiceUnitSpec :
                     auditRepo.recordAudit(VENDOR_UUID, "vendor@example.com", AuditOperation.DELETE, uniqueTag)
                 }
             }
+
+            should("take the java write lock of the tag's scope before deleting a java tag") {
+                // given: a TEMURIN java tag that exists
+                givenDeletableTag(temurinLts)
+
+                // when: deleting it
+                service.deleteTag(temurinLts, NIL_UUID, "admin")
+
+                // then: the java scope is locked before the tag is deleted
+                coVerifyOrder {
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    tagsRepo.deleteTag(temurinLts)
+                }
+            }
+
+            should("never take the java write lock to delete a gradle tag") {
+                // given: a gradle tag that exists
+                val gradleLatest =
+                    UniqueTag(
+                        candidate = "gradle",
+                        tag = "latest",
+                        distribution = none(),
+                        platform = Platform.UNIVERSAL,
+                    )
+                givenDeletableTag(gradleLatest)
+
+                // when: deleting it
+                service.deleteTag(gradleLatest, NIL_UUID, "admin")
+
+                // then: no java scope is locked
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+            }
+
+            should("answer DatabaseError and delete nothing when the java write lock fails") {
+                // given: taking the java write lock fails
+                val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
+                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+
+                // when: deleting a java tag
+                val result = service.deleteTag(temurinLts, NIL_UUID, "admin")
+
+                // then: the failure surfaces before any tag is deleted
+                result shouldBeLeft DomainError.DatabaseError(lockFailure)
+                coVerify(exactly = 0) { tagsRepo.deleteTag(any()) }
+            }
+
+            should("make every repository call inside the transaction") {
+                // given: a transaction that never runs its block and answers a database failure
+                val txFailure = DomainError.DatabaseError(DatabaseFailure.QueryExecutionFailure("tx failed", RuntimeException("x")))
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalFailingWithoutRunning(txFailure))
+
+                // when: deleting a java tag
+                val result = txService.deleteTag(temurinLts, NIL_UUID, "admin")
+
+                // then: the failure surfaces and no repository was touched outside the block
+                result shouldBeLeft txFailure
+                coVerify { listOf(versionsRepo, tagsRepo) wasNot Called }
+            }
+
+            should("write the DELETE audit after the transaction ends") {
+                // given: a transaction that checks, as its block returns, that no audit was written yet
+                givenDeletableTag(temurinLts)
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet())
+
+                // when: deleting a java tag
+                txService.deleteTag(temurinLts, NIL_UUID, "admin")
+
+                // then: the DELETE audit is written once the transaction is over
+                coVerify(exactly = 1) { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.DELETE, temurinLts) }
+            }
         }
 
         context("assignTag") {
+            val temurinLatest =
+                TagAssignment(
+                    candidate = "java",
+                    version = "27.0.2",
+                    distribution = Distribution.TEMURIN.some(),
+                    platform = Platform.LINUX_X64,
+                    tag = "latest",
+                )
+
+            fun givenAssignableVersion(assignment: TagAssignment) {
+                val uniqueVersion =
+                    UniqueVersion(
+                        candidate = assignment.candidate,
+                        version = assignment.version,
+                        distribution = assignment.distribution,
+                        platform = assignment.platform,
+                    )
+                coEvery { versionsRepo.findVersionId(uniqueVersion) } returns Either.Right(42.some())
+                coEvery { tagsRepo.assignTag(42, any(), any(), any(), any()) } returns Either.Right(Unit)
+                coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Right(Unit)
+            }
+
+            should("take the java write lock of the tag's scope before looking up a java version") {
+                // given: a TEMURIN java version that exists
+                givenAssignableVersion(temurinLatest)
+
+                // when: assigning a tag to it
+                service.assignTag(temurinLatest, NIL_UUID, "admin")
+
+                // then: the java scope is locked before the version is looked up
+                coVerifyOrder {
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.findVersionId(any())
+                }
+            }
+
+            should("never take the java write lock to assign a gradle tag") {
+                // given: a gradle version that exists
+                val gradleLatest =
+                    TagAssignment(
+                        candidate = "gradle",
+                        version = "8.14",
+                        distribution = none(),
+                        platform = Platform.UNIVERSAL,
+                        tag = "latest",
+                    )
+                givenAssignableVersion(gradleLatest)
+
+                // when: assigning a tag to it
+                service.assignTag(gradleLatest, NIL_UUID, "admin")
+
+                // then: no java scope is locked
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+            }
+
+            should("answer DatabaseError and look up nothing when the java write lock fails") {
+                // given: taking the java write lock fails
+                val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
+                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+
+                // when: assigning a tag to a java version
+                val result = service.assignTag(temurinLatest, NIL_UUID, "admin")
+
+                // then: the failure surfaces before the version is looked up
+                result shouldBeLeft DomainError.DatabaseError(lockFailure)
+                coVerify(exactly = 0) { versionsRepo.findVersionId(any()) }
+            }
+
+            should("make every repository call inside the transaction") {
+                // given: a transaction that never runs its block and answers a database failure
+                val txFailure = DomainError.DatabaseError(DatabaseFailure.QueryExecutionFailure("tx failed", RuntimeException("x")))
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalFailingWithoutRunning(txFailure))
+
+                // when: assigning a tag to a java version
+                val result = txService.assignTag(temurinLatest, NIL_UUID, "admin")
+
+                // then: the failure surfaces and no repository was touched outside the block
+                result shouldBeLeft txFailure
+                coVerify { listOf(versionsRepo, tagsRepo) wasNot Called }
+            }
+
+            should("write the TAG audit after the transaction ends") {
+                // given: a transaction that checks, as its block returns, that no audit was written yet
+                givenAssignableVersion(temurinLatest)
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet())
+
+                // when: assigning a tag to a java version
+                txService.assignTag(temurinLatest, NIL_UUID, "admin")
+
+                // then: the TAG audit is written once the transaction is over
+                coVerify(exactly = 1) { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.TAG, temurinLatest) }
+            }
 
             should("assign the tag, delegating to the repository and recording a TAG audit") {
                 // given: the target version exists and the tag write + audit both succeed
