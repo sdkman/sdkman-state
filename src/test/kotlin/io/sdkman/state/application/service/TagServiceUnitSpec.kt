@@ -23,10 +23,11 @@ import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.TagRepository
 import io.sdkman.state.domain.repository.VersionRepository
-import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.transactionalCheckingNoAuditYet
+import io.sdkman.state.support.transactionalFailingWithoutRunning
 import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
@@ -43,20 +44,6 @@ class TagServiceUnitSpec :
             clearAllMocks()
             coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
         }
-
-        fun transactionalCheckingNoAuditYet(): Transactional =
-            mockk<Transactional>().also { transactional ->
-                coEvery { transactional.inTransaction<DomainError, Unit>(any()) } coAnswers {
-                    firstArg<suspend () -> Either<DomainError, Unit>>()().also {
-                        coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
-                    }
-                }
-            }
-
-        fun transactionalFailingWithoutRunning(txFailure: DomainError): Transactional =
-            mockk<Transactional>().also { transactional ->
-                coEvery { transactional.inTransaction<DomainError, Unit>(any()) } returns Either.Left(txFailure)
-            }
 
         context("replaceTags") {
 
@@ -377,7 +364,7 @@ class TagServiceUnitSpec :
             should("write the DELETE audit after the transaction ends") {
                 // given: a transaction that checks, as its block returns, that no audit was written yet
                 givenDeletableTag(temurinLts)
-                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet())
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet(auditRepo))
 
                 // when: deleting a java tag
                 txService.deleteTag(temurinLts, NIL_UUID, "admin")
@@ -472,7 +459,7 @@ class TagServiceUnitSpec :
             should("write the TAG audit after the transaction ends") {
                 // given: a transaction that checks, as its block returns, that no audit was written yet
                 givenAssignableVersion(temurinLatest)
-                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet())
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalCheckingNoAuditYet(auditRepo))
 
                 // when: assigning a tag to a java version
                 txService.assignTag(temurinLatest, NIL_UUID, "admin")

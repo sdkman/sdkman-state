@@ -21,10 +21,10 @@ import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.TagService
-import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.transactionalFailingWithoutRunning
 import java.util.UUID
 
 private val VENDOR_UUID: UUID = UUID.fromString("22222222-2222-2222-2222-222222222222")
@@ -64,13 +64,13 @@ class JavaVersionServiceUnitSpec :
 
         val databaseFailure = DatabaseFailure.QueryExecutionFailure("write failed", RuntimeException("deadlock"))
 
-        fun serviceWithUnrunTransaction(): JavaVersionServiceImpl {
-            val transactional = mockk<Transactional>()
-            coEvery {
-                transactional.inTransaction<DomainError, Any>(any())
-            } returns Either.Left(DomainError.DatabaseError(databaseFailure))
-            return JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
-        }
+        fun serviceWithUnrunTransaction(): JavaVersionServiceImpl =
+            JavaVersionServiceImpl(
+                versionsRepo,
+                tagService,
+                auditRepo,
+                transactionalFailingWithoutRunning(DomainError.DatabaseError(databaseFailure)),
+            )
 
         beforeEach {
             clearAllMocks()

@@ -28,6 +28,8 @@ import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.transactionalCheckingNoAuditYet
+import io.sdkman.state.support.transactionalFailingWithoutRunning
 import java.util.UUID
 
 private val NIL_UUID: UUID = UUID(0L, 0L)
@@ -495,9 +497,7 @@ class VersionServiceUnitSpec :
             should("make every repository call inside the transaction") {
                 // given: a transaction that never runs its block and answers a database failure
                 val txFailure = DomainError.DatabaseError(DatabaseFailure.QueryExecutionFailure("tx failed", RuntimeException("x")))
-                val transactional = mockk<Transactional>()
-                coEvery { transactional.inTransaction<DomainError, Version>(any()) } returns Either.Left(txFailure)
-                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactionalFailingWithoutRunning(txFailure))
 
                 // when: deleting a java row
                 val result = txService.delete(temurinRow, NIL_UUID, "admin")
@@ -510,13 +510,7 @@ class VersionServiceUnitSpec :
             should("write the DELETE audit after the transaction ends") {
                 // given: a transaction that checks, as its block returns, that no audit was written yet
                 givenDeletableRow(temurinRow)
-                val transactional = mockk<Transactional>()
-                coEvery { transactional.inTransaction<DomainError, Version>(any()) } coAnswers {
-                    firstArg<suspend () -> Either<DomainError, Version>>()().also {
-                        coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
-                    }
-                }
-                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
+                val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactionalCheckingNoAuditYet(auditRepo))
 
                 // when: deleting a java row
                 txService.delete(temurinRow, NIL_UUID, "admin")
