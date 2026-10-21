@@ -22,31 +22,31 @@ class UnknownRoleAuthorizationAcceptanceSpec :
     ShouldSpec({
         val taggedVersion =
             Version(
-                candidate = "java",
+                candidate = "jpx",
                 version = "17.0.1.0",
                 platform = Platform.LINUX_X64,
-                url = "https://java-17.0.1.0-tem",
+                url = "https://jpx-17.0.1.0-tem",
                 visible = true.some(),
                 distribution = Distribution.TEMURIN.some(),
                 tags = listOf("lts").some(),
             )
-        val uniqueVersionBody = """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}"""
-        val uniqueTagBody = """{"candidate":"java","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}"""
+        val uniqueVersionBody = """{"candidate":"jpx","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}"""
+        val uniqueTagBody = """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}"""
         val tagAssignmentBody =
             TagAssignment(
-                candidate = "java",
+                candidate = "jpx",
                 version = "17.0.1.0",
                 distribution = Distribution.TEMURIN.some(),
                 platform = Platform.LINUX_X64,
                 tag = "latest",
             ).toJsonString()
-        val observerToken = JwtTestSupport.tokenWithClaims(role = "observer", candidates = listOf("java"))
+        val observerToken = JwtTestSupport.tokenWithClaims(role = "observer", candidates = listOf("jpx"))
 
         suspend fun withTaggedVersion(block: suspend ApplicationTestBuilder.() -> Unit) =
             withCleanDatabase {
                 withTestApplication {
                     // given: a registered candidate with a tagged version an admin may write
-                    registerCandidates("java")
+                    registerCandidates("jpx")
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(taggedVersion.toJsonString())

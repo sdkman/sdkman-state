@@ -21,10 +21,10 @@ class VendorAuthorizationAcceptanceSpec :
     ShouldSpec({
         val authorizedVersion =
             Version(
-                candidate = "java",
+                candidate = "jpx",
                 version = "17.0.1.0",
                 platform = Platform.LINUX_X64,
-                url = "https://java-17.0.1.0",
+                url = "https://jpx-17.0.1.0",
                 visible = true.some(),
                 distribution = Distribution.TEMURIN.some(),
             )
@@ -32,9 +32,9 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to POST version for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
-                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
+                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("jpx"))
                     val response =
                         client.post("/versions") {
                             contentType(ContentType.Application.Json)
@@ -50,15 +50,15 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to DELETE version for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     insertVersions(authorizedVersion)
-                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
+                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("jpx"))
                     val response =
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
+                                """{"candidate":"jpx","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
                             )
                             bearerAuth(vendorToken)
                         }
@@ -71,11 +71,11 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow vendor to DELETE tag for authorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     // given: create version with tags
                     val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
-                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("java"))
+                    val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("jpx"))
 
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
@@ -88,7 +88,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(vendorToken)
                         }
@@ -102,7 +102,7 @@ class VendorAuthorizationAcceptanceSpec :
         should("allow admin to POST version for any candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val response =
                         client.post("/versions") {
@@ -119,7 +119,7 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor POSTs version for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("kotlin"))
                     val response =
@@ -137,7 +137,7 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor DELETEs version for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     insertVersions(authorizedVersion)
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("kotlin"))
@@ -145,7 +145,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
+                                """{"candidate":"jpx","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}""",
                             )
                             bearerAuth(vendorToken)
                         }
@@ -158,7 +158,7 @@ class VendorAuthorizationAcceptanceSpec :
         should("return 403 when vendor DELETEs tag for unauthorized candidate") {
             withCleanDatabase {
                 withTestApplication {
-                    registerCandidates("java")
+                    registerCandidates("jpx")
 
                     // given: create version with tags using admin
                     val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
@@ -174,7 +174,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"java","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(vendorToken)
                         }
