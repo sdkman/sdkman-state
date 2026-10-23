@@ -351,6 +351,14 @@ to the community role.
 - **The admin's legacy post is recorded as a decision.** [`docs/decisions/0011`](../../../docs/decisions/0011-admin-edits-legacy-java.md)
   supersedes 0004, which had legacy rows edited by direct SQL. The route also gives F3 of the [archived observation window](../../../archive/java-list-supersession/README.md)
   a remedy: a legacy `.rN` twin stays unreadable, so no vendor post hides it, but the admin can.
+- **Legacy heads and missing tag holders are fixed in the data, not here.** Two defects found on
+  2026-10-22 need a legacy row to be a series' head or a scope to lack a readable `latest` holder.
+  A migrated `X.Y.Z+P.B` row such as `21.0.12+1.1` is really `21.0.12.1+1`, but reads as
+  `21.0.12.0+1.1`, so an older build outranks it ([#171](https://github.com/sdkman/sdkman-state/issues/171)).
+  With no holder, or an unreadable one, `<FEATURE>` and `latest` go to the post even when a higher
+  head is visible ([#172](https://github.com/sdkman/sdkman-state/issues/172)). Re-posting each
+  scope's current builds in four-component spelling makes them the heads and gives every tag a
+  readable holder. From then on vendor posts keep the scope in order, and the rules stay as written.
 
 ## Consumers
 
