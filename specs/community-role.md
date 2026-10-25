@@ -21,7 +21,7 @@ Adding a third role exposes a defect: the version and tag routes treat any role 
 
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
-[`sdkman-contrib`](../../../community/sdkman-contrib/specs/community-contributions.md).
+[`sdkman-contrib`](../../../community/sdkman-contrib/specs/001-community-contributions.md).
 Settled in a grilling session on 2026-10-07. Builds on [`jwt-authentication.md`](jwt-authentication.md).*
 
 ## Behaviour

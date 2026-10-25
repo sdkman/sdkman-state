@@ -12,7 +12,7 @@ twin of one write route, taking the same body and running the same validation.
 
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
-[`sdkman-contrib`](../../../community/sdkman-contrib/specs/community-contributions.md)'s PR
+[`sdkman-contrib`](../../../community/sdkman-contrib/specs/001-community-contributions.md)'s PR
 check. Settled in grilling sessions on 2026-10-07 and 2026-10-08.*
 
 ## Behaviour

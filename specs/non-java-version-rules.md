@@ -15,7 +15,7 @@ exactly as the write does. It also retires the legacy `lts` tag for non-java can
 
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
-[`sdkman-contrib`](../../../community/sdkman-contrib/specs/community-contributions.md).
+[`sdkman-contrib`](../../../community/sdkman-contrib/specs/001-community-contributions.md).
 Settled in a review of that spec on 2026-10-24. Builds on
 [`default-tag-cascade.md`](default-tag-cascade.md),
 [`assign-tag-to-version.md`](assign-tag-to-version.md) and
