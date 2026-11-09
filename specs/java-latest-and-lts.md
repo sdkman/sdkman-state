@@ -28,7 +28,7 @@ Where the two conflict, this one wins.*
 
 State is configured with one number, the **LTS feature**: the FEATURE of the newest java LTS
 release, `25` today, `29` from September 2027. It is the only input the rules take beyond the
-stored rows. It decides where `lts` goes, and `latest` only ever sits above it.
+stored rows. It decides where `lts` goes, and `latest` never sits below it.
 
 ```hocon
 java {
@@ -53,7 +53,8 @@ platform, `lts` sits on the highest plain head with FEATURE equal to the LTS fea
 lines included. For most distributions that is the feature line. GraalVM ships stable interim
 releases on top of its LTS feature, so its `lts` is on the interim line: `25.4.4.1+1`, not
 `25.0.5.0+3`. The `<FEATURE>` tag already goes there under
-[`java-supersession.md`](java-supersession.md) rule 18, so `25` and `lts` share that row.
+[`java-supersession.md`](java-supersession.md) rule 18, so `25`, `lts` and `latest` share that
+row.
 
 **A platform without the LTS feature keeps what it has.** If a platform has no plain head of the
 LTS feature, `lts` is not placed on it afresh, and an `lts` it already holds stays in
@@ -68,11 +69,14 @@ early access included. On each platform that has a plain head of the top feature
 the highest of them, interim lines included. A platform without the top feature has no `latest`:
 it never falls back to an older feature, however long ago that platform's last release was.
 
-**`latest` is always above `lts`.** If a distribution's top feature is not above the LTS feature,
-the distribution has no `latest` at all. A distribution that ships only LTS releases (Microsoft,
-JetBrains, Mandrel today) has a stable choice and no bleeding edge, so it carries `lts` and never
-`latest`. GraalVM is one of them: its interim releases build on the LTS feature, so they take `lts`,
-not `latest`. `lts` and `latest` therefore never share a row.
+**`latest` is never below `lts`.** If a distribution's top feature is below the LTS feature, the
+distribution has no `latest` at all.
+
+**`lts` and `latest` share a row when nothing is newer.** A distribution whose top feature is the
+LTS feature has no newer release to offer, so its `latest` is its `lts`. That covers distributions
+that ship only LTS releases (Microsoft, JetBrains, Mandrel, GraalVM today), and every distribution
+without early access in the months after an LTS release: from 25's GA in September 2025 until 26's
+in March 2026, Corretto's `latest` would have been its `lts`.
 
 **Each tag is on exactly the rows the rules name, and nowhere else.** Placing a tag on a platform
 takes it off every other row of that platform, hidden and unreadable rows included. A platform the
@@ -167,7 +171,7 @@ Authenticated, admin only. No body.
 5. **On the top feature, where a platform has it.** On each platform with a plain head of the top
    feature, `latest` is on the highest such head, interim lines included.
 6. **No fallback.** A platform without a plain head of the top feature has no `latest`.
-7. **Above `lts`.** A distribution whose top feature is not above the LTS feature has no
+7. **Never below `lts`.** A distribution whose top feature is below the LTS feature has no
    `latest`.
 
 ### Both
@@ -176,7 +180,8 @@ Authenticated, admin only. No body.
    `latest` after placement.
 9. **Exactly where the rules say.** Placing a tag on a platform removes it from every other row of
    that platform; a platform the rules give no tag loses the one it holds, except under rule 3.
-10. **Never on one row.** Rules 2, 3 and 7 keep `latest` on a higher feature than any `lts`.
+10. **One row may carry both.** When a platform's highest head is its LTS head, it carries `lts`
+    and `latest`.
 11. **Undecidable means untouched.** When the candidate heads for a tag cannot be ordered, the tag
     stays on whichever of them holds it, or is not placed.
 12. **`<FEATURE>` is unchanged.** It moves as [`java-supersession.md`](java-supersession.md) states.
@@ -197,7 +202,7 @@ Authenticated, admin only. No body.
 
 Modelled on 2026-11-09 against every java row on `state.sdkman.io` (9,915 rows, 16 distributions),
 with the LTS feature at 25. The first vendor write to each distribution, or the rollout's retag,
-makes 89 changes. The java default does not move: Temurin `LINUX_X64` keeps `lts` on `25.0.5.0+8`.
+makes 61 changes. The java default does not move: Temurin `LINUX_X64` keeps `lts` on `25.0.5.0+8`.
 
 - **Six stray `latest` go**, each on a platform without its distribution's top feature: Zulu
   `LINUX_X32` (`17.0.21.0+9`), Corretto `LINUX_X32` (`11.0.33.0+9`), Liberica `LINUX_X32`
@@ -208,17 +213,13 @@ makes 89 changes. The java default does not move: Temurin `LINUX_X64` keeps `lts
 - **51 `lts` arrive** on 25. Eleven distributions never had one: Microsoft, Oracle, Semeru,
   OpenJDK, Kona, Liberica NIK, GraalVM and GraalCE gain it on all five main platforms, SAP Machine
   and Mandrel on four and Bisheng on two. Liberica gains it on `LINUX_ARM32HF`. GraalVM's lands on
-  `25.4.4.1+1` and GraalCE's on `25.5.5.0+3`, beside their `25` tag. The admin tag calls queued for
-  Microsoft today become unnecessary.
-- **32 more `latest` go** from the seven distributions that ship nothing above 25: GraalCE,
-  GraalVM, JetBrains, Kona, Liberica NIK, Mandrel and Microsoft. Bisheng, the eighth, has none
-  today. Each keeps `lts` and its `25` tag on the same row.
-- **An LTS release opens a gap in `latest`.** While the LTS feature is also the newest GA feature,
-  a distribution has `latest` only if it publishes early access of the next one, as OpenJDK does.
-  Under these rules Temurin would have had no `latest` from 25's GA in September 2025 until 26's in
-  March 2026. That is intended: in that window there is nothing beyond the stable choice.
+  `25.4.4.1+1` and GraalCE's on `25.5.5.0+3`, joining the `25` and `latest` they already hold. The
+  admin tag calls queued for Microsoft today become unnecessary.
+- **Four `latest` arrive**: Bisheng on both its platforms, and GraalVM and GraalCE on `MAC_X64`.
+- **Eight distributions ship nothing above 25** (Bisheng, GraalCE, GraalVM, JetBrains, Kona,
+  Liberica NIK, Mandrel, Microsoft). Each carries `lts` and `latest` on one row per platform.
 - **Stale visible rows still attract tags.** GraalVM and GraalCE still show `25.0.1` on `MAC_X64`,
-  which the vendor stopped building, so it takes `lts` there. Semeru shows
+  which the vendor stopped building, so it takes `lts` and `latest` there. Semeru shows
   `25.0.1.0` on `MAC_ARM64` against `25.0.4.1+1` on Linux. These are visibility gaps from DISCO's
   push-once behaviour, not tag faults, and stay out of scope.
 - **The admin tag scripts stop being routine.** Since 2026-10-22 the admin has run a tag script
@@ -237,7 +238,7 @@ retag, each distribution converges on its next vendor write.
 **Moving the LTS feature.** In September 2027, once Temurin 29 is on `LINUX_X64` and the default
 should move, set `JAVA_LTS_FEATURE=29`, redeploy and retag. `lts`, and the java default with it,
 moves to 29 on every platform that has it; platforms without 29 keep their 25 `lts` until they do
-(rule 3). Distributions whose top feature is not above 29 lose `latest` until they publish 30
+(rule 3). Distributions whose top feature is still below 29 lose `latest` until they publish 29
 (rule 7).
 
 **Rollback.** Redeploy the previous release. Tags stay where this release put them, and the old
@@ -289,11 +290,11 @@ Feature: Java latest and lts placement
     When DISCO posts KONA 21.0.10.0+1 for LINUX_X64
     Then no KONA row on any platform is tagged "latest"
 
-  Scenario: A distribution whose newest feature is the LTS feature has no latest
-    Given MICROSOFT 25.0.4.0+5 is visible on LINUX_X64 and tagged "latest" and "lts"
-    When DISCO posts MICROSOFT 25.0.5.0+2 for LINUX_X64
-    Then MICROSOFT 25.0.5.0+2 is tagged "lts"
-      And no MICROSOFT row on LINUX_X64 is tagged "latest"
+  Scenario: Without anything newer, latest sits with lts
+    Given CORRETTO 21.0.13.0+10 and 25.0.4.0+9 are visible on LINUX_X64
+      And no CORRETTO row is above 25
+    When DISCO posts CORRETTO 25.0.5.0+9 for LINUX_X64
+    Then CORRETTO 25.0.5.0+9 is tagged "lts" and "latest"
 
   # --- lts ---
 
@@ -307,10 +308,9 @@ Feature: Java latest and lts placement
     Given GRAALVM 25.0.5.0+3 and 25.4.4.1+1 are visible on LINUX_X64
       And GRAALVM 25.4.4.1+1 is tagged "25" and "latest"
     When DISCO posts GRAALVM 25.5.0.0+1 for LINUX_X64
-    Then GRAALVM 25.5.0.0+1 is tagged "25" and "lts"
+    Then GRAALVM 25.5.0.0+1 is tagged "25", "lts" and "latest"
       And GRAALVM 25.4.4.1+1 is hidden and untagged
       And GRAALVM 25.0.5.0+3 is visible and untagged
-      And no GRAALVM row on LINUX_X64 is tagged "latest"
 
   Scenario: lts never lands afresh on an older feature
     Given LIBERICA 21.0.13.0+11 is the highest LIBERICA row on LINUX_X32 and untagged
@@ -359,9 +359,9 @@ Feature: Java latest and lts placement
 
   Scenario: Heads that cannot be ordered keep the tag where it is
     Given KONA 25.0.5.0+r17 and 25.0.5.0+1 are both visible on LINUX_X64, as the admin left them
-      And KONA 25.0.5.0+r17 is tagged "lts"
+      And KONA 25.0.5.0+r17 is tagged "lts" and "latest"
     When DISCO posts KONA 21.0.10.0+1 for LINUX_X64
-    Then KONA 25.0.5.0+r17 is still tagged "lts"
+    Then KONA 25.0.5.0+r17 is still tagged "lts" and "latest"
       And KONA 25.0.5.0+1 is untagged
 
   Scenario: A refused post places nothing
