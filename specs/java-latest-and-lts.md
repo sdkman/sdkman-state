@@ -13,8 +13,8 @@ moves `lts` within the series that already holds it, and nothing ever put it the
 This change makes both tags a function of the data and one setting. State knows the current LTS
 feature from configuration. After every java vendor write it places `lts` and `latest` across the
 whole distribution, so a tag is always where the rules say, and a stray one heals on the next post.
-An admin route applies the same placement on demand, for the rollout and after the LTS feature
-moves on.
+The data already on live is corrected once, at rollout, by an admin script of ordinary tag calls.
+No new route is added.
 
 *Reference: replaces the `lts` and `latest` rules of [`java-supersession.md`](java-supersession.md)
 (§Tags bullets two and three, rules 19 and 20, and its out-of-scope entry on choosing the LTS
@@ -107,7 +107,7 @@ in core and so always order. None is unordered on live today.)*
 **The top feature trusts the data.** One visible head on a feature far above the rest, from a
 mistaken admin post for instance, becomes the top feature and takes `latest` off every platform
 without it. No bound is applied: a real next feature looks the same. The remedy is the admin hiding
-or deleting the row, then a retag.
+or deleting the row; the distribution's next vendor write then places `latest` again.
 
 ### When placement runs
 
@@ -117,14 +117,10 @@ post's whole distribution, in the same transaction as the write. A refused write
 So a vendor post on one platform can move a tag on another: the first post of a new top feature
 takes `latest` off every platform that does not have it yet.
 
-**On demand, by the admin.** `POST /versions/java/retag` places `lts` and `latest` across every
-java distribution. It is the same placement, run without a write. It is idempotent: a second call
-changes nothing.
-
 **Not after an admin write.** An admin `POST /versions/java` keeps its literal tags, and the admin's
 `POST /versions/tags` and `DELETE /versions/tags` still move any java tag, `lts` and `latest`
-included. Those placements hold until the distribution's next vendor write, or the next retag,
-which put `lts` and `latest` back where the rules say, on any platform of that distribution. This
+included. Those placements hold until the distribution's next vendor write, which puts `lts` and
+`latest` back where the rules say, on any platform of that distribution. This
 is deliberate: State owns `lts` and `latest`, the LTS feature is how the admin chooses where `lts`
 goes, and visibility is how the admin holds back a bad build. To pull a bad release, the admin
 re-posts the previous build visible, which hides the bad one; placement then follows the head.
@@ -132,14 +128,9 @@ re-posts the previous build visible, which hides the bad one; placement then fol
 ### Writes
 
 Every java write for one distribution takes its turn, whoever sends it: vendor and admin
-`POST /versions/java` and `DELETE /versions/java`, the admin's java tag calls, and the retag for
-that distribution. The turn was distribution and platform; placement spans platforms, so it is now
+`POST /versions/java` and `DELETE /versions/java`, and the admin's java tag calls. The turn was distribution and platform; placement spans platforms, so it is now
 the distribution. A write's upsert, hides, `<FEATURE>` move and placement commit together or not at
 all.
-
-The retag takes each distribution's turn in sequence and commits each distribution on its own. A
-failing distribution is rolled back and skipped, and the retag carries on with the rest. If any
-failed, the call answers `500` naming every failed distribution; the others stay placed.
 
 *(Assumption, drafting 2026-11-09: the turn stays a transaction-scoped Postgres advisory lock, now
 keyed on `java` and the distribution only.)*
@@ -149,24 +140,13 @@ the post committed.
 
 ## API Contract
 
-### `POST /versions/java/retag`
-
-Authenticated, admin only. No body.
-
-| Status | Body | When |
-|---|---|---|
-| `204 No Content` | empty | Every java distribution is placed |
-| `401 Unauthorized` | empty | Missing or invalid token |
-| `403 Forbidden` | `ErrorResponse` | Any role but the admin |
-| `500 Internal Server Error` | `ErrorResponse` | One or more distributions failed; the message names each. The rest are placed |
-
-### Other routes
+No new routes, request fields or statuses.
 
 | Route | Change |
 |---|---|
 | `POST /versions/java` (vendor) | After a stored post, `lts` and `latest` are placed across the post's distribution. Statuses unchanged |
 | `DELETE /versions/java` (vendor) | After a delete, `lts` and `latest` are placed across the row's distribution. Statuses unchanged |
-| `POST /versions/java` (admin), `POST /versions/tags`, `DELETE /versions/tags` | Unchanged. Their `lts` and `latest` hold until the next vendor write or retag |
+| `POST /versions/java` (admin), `POST /versions/tags`, `DELETE /versions/tags` | Unchanged. Their `lts` and `latest` hold until the distribution's next vendor write |
 | Read routes | Unchanged |
 
 ## Business Rules
@@ -213,17 +193,16 @@ Authenticated, admin only. No body.
 13. **After every vendor write that changes State.** A stored vendor post or a vendor delete places
     both tags across its whole distribution, in the write's transaction.
 14. **Refusals place nothing.** A `400`, `403`, `404` or `409` changes no tag.
-15. **Retag on demand.** `POST /versions/java/retag` places both tags across every distribution.
-    Admin only; idempotent.
-16. **Admin writes are literal and temporary.** An admin post or tag call places `lts` and `latest`
-    as sent, until the distribution's next vendor write or retag.
-17. **One distribution at a time.** Every java write takes the distribution's turn, so a concurrent
+15. **Admin writes are literal, and kept only if they agree.** An admin post or tag call places
+    `lts` and `latest` as sent. The distribution's next vendor write keeps them only where they
+    agree with rules 2 to 11.
+16. **One distribution at a time.** Every java write takes the distribution's turn, so a concurrent
     write never sees a half-placed distribution.
 
 ## Findings
 
 Modelled on 2026-11-09 against every java row on `state.sdkman.io` (9,915 rows, 16 distributions),
-with the LTS feature at 25. The first vendor write to each distribution, or the rollout's retag,
+with the LTS feature at 25. The first vendor write to each distribution, or the rollout script,
 makes 61 changes. The java default does not move: Temurin `LINUX_X64` keeps `lts` on `25.0.5.0+8`.
 
 - **Six stray `latest` go**, each on a platform without its distribution's top feature: Zulu
@@ -251,16 +230,22 @@ makes 61 changes. The java default does not move: Temurin `LINUX_X64` keeps `lts
 
 ## Rollout
 
-**One release, then one retag.** Deploy with `java.lts.feature = 25`, then call
-`POST /versions/java/retag` once as the admin and check the tags through the read routes. Until the
-retag, each distribution converges on its next vendor write.
+**One release, then one correction script.** Deploy with `java.lts.feature = 25`. Then the admin
+runs a script, generated from a cache-busted read of every java distribution just before it runs,
+that makes each change the rules call for through the existing tag routes: `POST /versions/tags`
+to place `lts` or `latest`, `DELETE /versions/tags` to remove a stray one. The script checks every
+HTTP code, stops reporting any failure, and ends with a fresh read compared against the expected
+placement. Because every call agrees with the rules, no later vendor write undoes it. Without the
+script, each distribution would still converge on its next vendor write; the script covers the
+distributions DISCO rarely posts to.
 
 **DISCO changes nothing.** It already sends no tags.
 
 **Moving the LTS feature.** In September 2027, once Temurin 29 GA is on `LINUX_X64` and the
-default should move, set `JAVA_LTS_FEATURE=29`, redeploy and retag. `lts`, and the java default
-with it, moves to 29 on every platform that has a 29 GA; platforms with only 29 early access, or
-none, keep their 25 `lts` until they do (rule 3). Those platforms keep a `latest` on 26, 27 or 28
+default should move, set `JAVA_LTS_FEATURE=29` and redeploy. `lts` moves to 29 on each platform
+that has a 29 GA at that distribution's next vendor write; for the java default to move at once,
+the admin tags Temurin's 29 head `lts` on `LINUX_X64`, which the rules then keep. Platforms with
+only 29 early access, or none, keep their 25 `lts` until they have a 29 GA (rule 3). Those platforms keep a `latest` on 26, 27 or 28
 meanwhile, because their `lts` floor is still 25 (rule 7). A platform that holds no `lts` gets
 `latest` only once the distribution publishes 29.
 
@@ -353,7 +338,7 @@ Feature: Java latest and lts placement
       And TEMURIN 29.0.0.0+35 is visible on LINUX_X64
       And TEMURIN 25.0.8.0+7 is visible and tagged "lts" on LINUX_X64 and MAC_X64
       And no TEMURIN 29 row exists on MAC_X64
-    When the admin retags
+    When DISCO posts TEMURIN 21.0.16.0+3 for LINUX_X64
     Then TEMURIN 29.0.0.0+35 is tagged "lts" on LINUX_X64
       And TEMURIN 25.0.8.0+7 is still tagged "lts" on MAC_X64
 
@@ -361,9 +346,9 @@ Feature: Java latest and lts placement
     Given the LTS feature is 29
       And TEMURIN 25.0.8.0+7 is visible on LINUX_X64 and tagged "lts"
       And TEMURIN 29.0.0.0+ea.30 is visible on LINUX_X64
-    When the admin retags
+    When DISCO posts TEMURIN 29.0.0.0+ea.31 for LINUX_X64
     Then TEMURIN 25.0.8.0+7 is still tagged "lts"
-      And TEMURIN 29.0.0.0+ea.30 is tagged "latest" and not "lts"
+      And TEMURIN 29.0.0.0+ea.31 is tagged "latest" and not "lts"
 
   Scenario: A kept lts follows its series
     Given the LTS feature is 29
@@ -378,7 +363,7 @@ Feature: Java latest and lts placement
       And no TEMURIN 29 row exists on MAC_X64
       And TEMURIN 25.0.8.0+7 is hidden on MAC_X64 and tagged "lts"
       And no TEMURIN 25 row is visible on MAC_X64
-    When the admin retags
+    When DISCO posts TEMURIN 21.0.16.0+3 for MAC_X64
     Then no TEMURIN row on MAC_X64 is tagged "lts"
 
   # --- heals ---
@@ -436,35 +421,13 @@ Feature: Java latest and lts placement
     Then TEMURIN 25.0.5.0+8 is tagged "lts"
       And TEMURIN 21.0.13.0+9 is not tagged "lts"
 
-  Scenario: The admin retags every distribution
-    Given ZULU 17.0.21.0+9 is visible on LINUX_X32 and tagged "latest"
-      And MICROSOFT 25.0.5.0+2 is visible on LINUX_X64 and not tagged "lts"
-    When the admin sends POST /versions/java/retag
-    Then the response status is 204
-      And no ZULU row on LINUX_X32 is tagged "latest"
-      And MICROSOFT 25.0.5.0+2 is tagged "lts"
-
-  Scenario: Retag is idempotent
-    Given the admin has retagged
-    When the admin sends POST /versions/java/retag
-    Then the response status is 204
-      And no tag has moved
-
-  Scenario: Only the admin may retag
-    When DISCO sends POST /versions/java/retag
-    Then the response status is 403
-
-  Scenario: Retag needs a token
-    When POST /versions/java/retag is sent without a token
-    Then the response status is 401
-
-  Scenario: A failing distribution does not stop the retag
-    Given placement fails for ZULU
-      And MICROSOFT 25.0.5.0+2 is visible on LINUX_X64 and not tagged "lts"
-    When the admin sends POST /versions/java/retag
-    Then the response status is 500
-      And the error names ZULU
-      And MICROSOFT 25.0.5.0+2 is tagged "lts"
+  Scenario: An admin tag call that agrees with the rules is kept
+    Given the LTS feature is 29
+      And TEMURIN 25.0.8.0+7 is visible on LINUX_X64 and tagged "lts"
+      And TEMURIN 29.0.0.0+35 is visible on LINUX_X64
+    When the admin assigns the tag "lts" to TEMURIN 29.0.0.0+35 on LINUX_X64
+      And DISCO posts TEMURIN 21.0.16.0+3 for LINUX_X64
+    Then TEMURIN 29.0.0.0+35 is still tagged "lts"
 ```
 
 ## Out of Scope
@@ -489,14 +452,13 @@ Feature: Java latest and lts placement
 - [ ] After every stored vendor `POST /versions/java` and every vendor `DELETE /versions/java`, the
       write's distribution satisfies rules 2 to 11 on every platform
 - [ ] A refused java write moves no tag
-- [ ] `POST /versions/java/retag` answers each status in its table, places every distribution,
-      skips and names any distribution that fails, and changes nothing on a second call
 - [ ] An admin `POST /versions/java` and the admin's java tag calls behave as before
 - [ ] Concurrent java writes to one distribution, on any platforms, leave it satisfying rules 2 to 11
 - [ ] A failure in a write's placement leaves nothing of the write committed
-- [ ] Deployment check: after the rollout retag on live, Temurin `LINUX_X64` `lts` has not moved,
-      and every distribution satisfies rules 2 to 11
-- [ ] `src/main/resources/openapi/documentation.yaml` documents `POST /versions/java/retag`, the
-      placement that follows a vendor post or delete on the java routes, and that an admin's `lts`
-      or `latest` holds only until the distribution's next vendor write or retag
+- [ ] Deployment check: after the rollout correction script on live, Temurin `LINUX_X64` `lts` has
+      not moved, and every distribution satisfies rules 2 to 11
+- [ ] `src/main/resources/openapi/documentation.yaml` documents the placement that follows a vendor
+      post or delete on the java routes, and that an admin's `lts` or `latest` holds only until the
+      distribution's next vendor write
+- [ ] No new route is added
 - [ ] All quality gates pass (`./gradlew check`: build, detekt, ktlint, tests)
