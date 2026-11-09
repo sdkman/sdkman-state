@@ -18,9 +18,11 @@ moves on.
 
 *Reference: replaces the `lts` and `latest` rules of [`java-supersession.md`](java-supersession.md)
 (§Tags bullets two and three, rules 19 and 20, and its out-of-scope entry on choosing the LTS
-series), and widens its write turn (rule 26) from distribution and platform to distribution. The
-`<FEATURE>` tag, series, precedence, visibility and the admin override stand as written there.
-Where the two conflict, this one wins.*
+series), and widens its write turn (rule 26) from distribution and platform to distribution. It
+also amends rule 13, so a post stored hidden still triggers placement, and rule 17, so `lts` and
+`latest` move across the distribution rather than one platform. The `<FEATURE>` tag, series,
+precedence, visibility and the admin override stand as written there. Where the two conflict, this
+one wins.*
 
 ## Behaviour
 
@@ -39,29 +41,37 @@ java {
 }
 ```
 
-It is read once at startup. A missing or non-numeric value fails the start.
+It is read once at startup. A missing value, or one that is not an integer of at least 11, fails
+the start.
 
 ### Placement
 
 The rules work on a **distribution**: every java row sharing a distribution, across all its
 platforms. An absent distribution counts as a value of its own. Only **plain heads** count, the
 visible heads of plain series as [`java-supersession.md`](java-supersession.md) defines them;
-`fx` and `crac` rows, hidden rows and unreadable rows never receive `lts` or `latest`.
+`fx` and `crac` rows, hidden rows and unreadable rows never receive `lts` or `latest`. An
+unreadable row is never a head, so it never takes part. A **GA** head is one whose build metadata
+is not `+ea.N`.
 
-**`lts` goes to the newest release of the LTS feature, on every platform that has it.** On each
-platform, `lts` sits on the highest plain head with FEATURE equal to the LTS feature, interim
-lines included. For most distributions that is the feature line. GraalVM ships stable interim
+A tag has at most one holder per distribution and platform, as the tag table's unique key already
+enforces, so "the row holding `lts`" on a platform is always one row or none.
+
+**`lts` goes to the newest GA release of the LTS feature, on every platform that has it.** On each
+platform, `lts` sits on the highest GA plain head with FEATURE equal to the LTS feature, interim
+lines included. Early access never takes `lts`: it is the stable choice, and on Temurin
+`LINUX_X64` it is the java default. For most distributions that is the feature line. GraalVM ships stable interim
 releases on top of its LTS feature, so its `lts` is on the interim line: `25.4.4.1+1`, not
 `25.0.5.0+3`. The `<FEATURE>` tag already goes there under
 [`java-supersession.md`](java-supersession.md) rule 18, so `25`, `lts` and `latest` share that
 row.
 
-**A platform without the LTS feature keeps what it has.** If a platform has no plain head of the
-LTS feature, `lts` is not placed on it afresh, and an `lts` it already holds stays in
-its series: it moves to that series' plain head when the series has one, and otherwise is left
-where it is. This is the hand-over. When the LTS feature moves from 25 to 29, each platform keeps
-its 25 `lts`, and the java default with it, until that platform has a 29 to take it. A platform
-that never had `lts` never gains one on an older feature.
+**A platform without the LTS feature keeps what it has.** If a platform has no GA plain head of
+the LTS feature, `lts` is not placed on it afresh, and an `lts` it already holds stays in its
+series: it moves to that series' GA plain head. If that series has none, because the admin hid it
+or the holder is unreadable, the `lts` is removed. This is the hand-over. When the LTS feature
+moves from 25 to 29, each platform keeps its 25 `lts`, and the java default with it, until that
+platform has a 29 GA to take it; 29 early access does not. A platform that never had `lts` never
+gains one on an older feature.
 
 **`latest` goes to the distribution's newest feature, and only on platforms that have it.** The
 distribution's **top feature** is the highest FEATURE among its plain heads on every platform,
@@ -69,8 +79,11 @@ early access included. On each platform that has a plain head of the top feature
 the highest of them, interim lines included. A platform without the top feature has no `latest`:
 it never falls back to an older feature, however long ago that platform's last release was.
 
-**`latest` is never below `lts`.** If a distribution's top feature is below the LTS feature, the
-distribution has no `latest` at all.
+**`latest` is never below `lts`.** On each platform, `latest` is placed only if the top feature is
+at least the platform's **`lts` floor**: the FEATURE of the row holding `lts` there once `lts` is
+placed, or the LTS feature if the platform holds none. So a distribution whose top feature is below
+the LTS feature has no `latest` on a platform without `lts`. During a hand-over, a platform still
+serving a 25 `lts` keeps a `latest` on 28 while the distribution has not published 29.
 
 **`lts` and `latest` share a row when nothing is newer.** A distribution whose top feature is the
 LTS feature has no newer release to offer, so its `latest` is its `lts`. That covers distributions
@@ -87,9 +100,14 @@ a platform cannot be ordered against each other, `lts` or `latest` stays on whic
 it, and otherwise is not placed. Nothing else on that platform changes.
 
 *(Assumption, drafting 2026-11-09: candidate heads that cannot be ordered arise only within one
-series, from unknown build metadata at equal core, such as `25.0.5.0+r17` beside `25.0.5.0+1`.
-Heads of different series always differ in core and so always order. None is unordered on live
-today.)*
+series, from unknown build metadata at equal core, such as `25.0.5.0+r17` beside `25.0.5.0+1`
+([`java-supersession.md`](java-supersession.md) rule 10). Heads of different series always differ
+in core and so always order. None is unordered on live today.)*
+
+**The top feature trusts the data.** One visible head on a feature far above the rest, from a
+mistaken admin post for instance, becomes the top feature and takes `latest` off every platform
+without it. No bound is applied: a real next feature looks the same. The remedy is the admin hiding
+or deleting the row, then a retag.
 
 ### When placement runs
 
@@ -106,8 +124,10 @@ changes nothing.
 **Not after an admin write.** An admin `POST /versions/java` keeps its literal tags, and the admin's
 `POST /versions/tags` and `DELETE /versions/tags` still move any java tag, `lts` and `latest`
 included. Those placements hold until the distribution's next vendor write, or the next retag,
-which put `lts` and `latest` back where the rules say. The LTS feature, not a tag call, is how the
-admin chooses where `lts` goes.
+which put `lts` and `latest` back where the rules say, on any platform of that distribution. This
+is deliberate: State owns `lts` and `latest`, the LTS feature is how the admin chooses where `lts`
+goes, and visibility is how the admin holds back a bad build. To pull a bad release, the admin
+re-posts the previous build visible, which hides the bad one; placement then follows the head.
 
 ### Writes
 
@@ -118,8 +138,8 @@ the distribution. A write's upsert, hides, `<FEATURE>` move and placement commit
 all.
 
 The retag takes each distribution's turn in sequence and commits each distribution on its own. A
-failure leaves earlier distributions placed and later ones untouched, and the call answers `500`;
-calling it again finishes the job.
+failing distribution is rolled back and skipped, and the retag carries on with the rest. If any
+failed, the call answers `500` naming every failed distribution; the others stay placed.
 
 *(Assumption, drafting 2026-11-09: the turn stays a transaction-scoped Postgres advisory lock, now
 keyed on `java` and the distribution only.)*
@@ -138,7 +158,7 @@ Authenticated, admin only. No body.
 | `204 No Content` | empty | Every java distribution is placed |
 | `401 Unauthorized` | empty | Missing or invalid token |
 | `403 Forbidden` | `ErrorResponse` | Any role but the admin |
-| `500 Internal Server Error` | `ErrorResponse` | Database failure; distributions placed before it stay placed |
+| `500 Internal Server Error` | `ErrorResponse` | One or more distributions failed; the message names each. The rest are placed |
 
 ### Other routes
 
@@ -154,15 +174,16 @@ Authenticated, admin only. No body.
 ### Configuration
 
 1. **One setting.** `java.lts.feature` is the FEATURE of the newest LTS release. It is required,
-   read at startup, and overridable with `JAVA_LTS_FEATURE`.
+   an integer of at least 11, read at startup, and overridable with `JAVA_LTS_FEATURE`.
 
 ### `lts`
 
-2. **On the newest release of the LTS feature.** On each platform with a plain head of FEATURE
-   equal to the LTS feature, `lts` is on the highest such head, interim lines included.
+2. **On the newest GA release of the LTS feature.** On each platform with a GA plain head of
+   FEATURE equal to the LTS feature, `lts` is on the highest such head, interim lines included.
+   Early access never carries `lts`.
 3. **Kept, never placed afresh, without it.** On a platform with no such head, an `lts` already
-   held moves to its own series' plain head, or stays where it is if that series has none. A
-   platform without `lts` gains none.
+   held moves to its own series' GA plain head, or is removed if that series has none. A platform
+   without `lts` gains none.
 
 ### `latest`
 
@@ -171,15 +192,16 @@ Authenticated, admin only. No body.
 5. **On the top feature, where a platform has it.** On each platform with a plain head of the top
    feature, `latest` is on the highest such head, interim lines included.
 6. **No fallback.** A platform without a plain head of the top feature has no `latest`.
-7. **Never below `lts`.** A distribution whose top feature is below the LTS feature has no
-   `latest`.
+7. **Never below `lts`.** A platform gets `latest` only if the top feature is at least its `lts`
+   floor: the FEATURE of its `lts` holder after rules 2 and 3, or the LTS feature if it has none.
 
 ### Both
 
 8. **Plain heads only.** `fx` and `crac` rows, hidden rows and unreadable rows never carry `lts` or
    `latest` after placement.
 9. **Exactly where the rules say.** Placing a tag on a platform removes it from every other row of
-   that platform; a platform the rules give no tag loses the one it holds, except under rule 3.
+   that platform; a platform the rules give no tag loses the one it holds, except an `lts` kept
+   under rule 3.
 10. **One row may carry both.** When a platform's highest head is its LTS head, it carries `lts`
     and `latest`.
 11. **Undecidable means untouched.** When the candidate heads for a tag cannot be ordered, the tag
@@ -235,11 +257,12 @@ retag, each distribution converges on its next vendor write.
 
 **DISCO changes nothing.** It already sends no tags.
 
-**Moving the LTS feature.** In September 2027, once Temurin 29 is on `LINUX_X64` and the default
-should move, set `JAVA_LTS_FEATURE=29`, redeploy and retag. `lts`, and the java default with it,
-moves to 29 on every platform that has it; platforms without 29 keep their 25 `lts` until they do
-(rule 3). Distributions whose top feature is still below 29 lose `latest` until they publish 29
-(rule 7).
+**Moving the LTS feature.** In September 2027, once Temurin 29 GA is on `LINUX_X64` and the
+default should move, set `JAVA_LTS_FEATURE=29`, redeploy and retag. `lts`, and the java default
+with it, moves to 29 on every platform that has a 29 GA; platforms with only 29 early access, or
+none, keep their 25 `lts` until they do (rule 3). Those platforms keep a `latest` on 26, 27 or 28
+meanwhile, because their `lts` floor is still 25 (rule 7). A platform that holds no `lts` gets
+`latest` only once the distribution publishes 29.
 
 **Rollback.** Redeploy the previous release. Tags stay where this release put them, and the old
 rules move them one post at a time from there. No data needs undoing.
@@ -290,6 +313,14 @@ Feature: Java latest and lts placement
     When DISCO posts KONA 21.0.10.0+1 for LINUX_X64
     Then no KONA row on any platform is tagged "latest"
 
+  Scenario: A platform still serving the old lts keeps a newer latest
+    Given the LTS feature is 29
+      And KONA 25.0.8.0+1 is visible on LINUX_X64 and tagged "lts"
+      And KONA 28.0.1.0+1 is the highest KONA row on every platform, visible and tagged "latest"
+    When DISCO posts KONA 28.0.2.0+1 for LINUX_X64
+    Then KONA 28.0.2.0+1 is tagged "latest"
+      And KONA 25.0.8.0+1 is still tagged "lts"
+
   Scenario: Without anything newer, latest sits with lts
     Given CORRETTO 21.0.13.0+10 and 25.0.4.0+9 are visible on LINUX_X64
       And no CORRETTO row is above 25
@@ -326,6 +357,14 @@ Feature: Java latest and lts placement
     Then TEMURIN 29.0.0.0+35 is tagged "lts" on LINUX_X64
       And TEMURIN 25.0.8.0+7 is still tagged "lts" on MAC_X64
 
+  Scenario: Early access of the LTS feature never takes lts
+    Given the LTS feature is 29
+      And TEMURIN 25.0.8.0+7 is visible on LINUX_X64 and tagged "lts"
+      And TEMURIN 29.0.0.0+ea.30 is visible on LINUX_X64
+    When the admin retags
+    Then TEMURIN 25.0.8.0+7 is still tagged "lts"
+      And TEMURIN 29.0.0.0+ea.30 is tagged "latest" and not "lts"
+
   Scenario: A kept lts follows its series
     Given the LTS feature is 29
       And TEMURIN 25.0.8.0+7 is visible and tagged "lts" on MAC_X64
@@ -334,7 +373,23 @@ Feature: Java latest and lts placement
     Then TEMURIN 25.0.9.0+5 is tagged "lts"
       And TEMURIN 25.0.8.0+7 is hidden and untagged
 
+  Scenario: A kept lts whose series has no visible head is removed
+    Given the LTS feature is 29
+      And no TEMURIN 29 row exists on MAC_X64
+      And TEMURIN 25.0.8.0+7 is hidden on MAC_X64 and tagged "lts"
+      And no TEMURIN 25 row is visible on MAC_X64
+    When the admin retags
+    Then no TEMURIN row on MAC_X64 is tagged "lts"
+
   # --- heals ---
+
+  Scenario: A vendor delete still heals the distribution
+    Given ZULU 17.0.21.0+9 is visible on LINUX_X32 and tagged "latest"
+      And ZULU 27.0.1.0+9 is visible on LINUX_X64
+      And ZULU 8.0.504+1 is hidden and untagged on LINUX_X64
+    When DISCO sends DELETE /versions/java for ZULU 8.0.504+1 on LINUX_X64
+    Then the response status is 204
+      And no ZULU row on LINUX_X32 is tagged "latest"
 
   Scenario: A hidden post still heals the distribution
     Given TEMURIN 17.0.20.1+1 is visible on MAC_X64 and tagged "latest"
@@ -398,12 +453,25 @@ Feature: Java latest and lts placement
   Scenario: Only the admin may retag
     When DISCO sends POST /versions/java/retag
     Then the response status is 403
+
+  Scenario: Retag needs a token
+    When POST /versions/java/retag is sent without a token
+    Then the response status is 401
+
+  Scenario: A failing distribution does not stop the retag
+    Given placement fails for ZULU
+      And MICROSOFT 25.0.5.0+2 is visible on LINUX_X64 and not tagged "lts"
+    When the admin sends POST /versions/java/retag
+    Then the response status is 500
+      And the error names ZULU
+      And MICROSOFT 25.0.5.0+2 is tagged "lts"
 ```
 
 ## Out of Scope
 
 - **The `<FEATURE>` tag.** It keeps the rules of [`java-supersession.md`](java-supersession.md).
-- **Tags on `fx` and `crac` series.**
+- **Other tags on `fx` and `crac` series.** Rule 8 keeps `lts` and `latest` off them;
+  [`java-supersession.md`](java-supersession.md) already keeps every other tag off them.
 - **Visibility.** Which rows are visible, and the stale rows DISCO never retires, are
   [`java-supersession.md`](java-supersession.md)'s concern.
 - **Deriving the LTS feature from the calendar.** The release train makes it predictable, but the
@@ -416,17 +484,19 @@ Feature: Java latest and lts placement
 
 - [ ] Every scenario in §Examples passes as an acceptance test
 - [ ] `java.lts.feature` is declared in `application.conf` with a `JAVA_LTS_FEATURE` override, read
-      as a required value, and a missing or non-numeric value fails startup
+      as a required value, and a missing value or one that is not an integer of at least 11 fails
+      startup
 - [ ] After every stored vendor `POST /versions/java` and every vendor `DELETE /versions/java`, the
       write's distribution satisfies rules 2 to 11 on every platform
 - [ ] A refused java write moves no tag
-- [ ] `POST /versions/java/retag` answers each status in its table, places every distribution, and
-      changes nothing on a second call
+- [ ] `POST /versions/java/retag` answers each status in its table, places every distribution,
+      skips and names any distribution that fails, and changes nothing on a second call
 - [ ] An admin `POST /versions/java` and the admin's java tag calls behave as before
 - [ ] Concurrent java writes to one distribution, on any platforms, leave it satisfying rules 2 to 11
 - [ ] A failure in a write's placement leaves nothing of the write committed
 - [ ] Deployment check: after the rollout retag on live, Temurin `LINUX_X64` `lts` has not moved,
       and every distribution satisfies rules 2 to 11
-- [ ] `src/main/resources/openapi/documentation.yaml` documents `POST /versions/java/retag`, and the
-      placement that follows a vendor post or delete on the java routes
+- [ ] `src/main/resources/openapi/documentation.yaml` documents `POST /versions/java/retag`, the
+      placement that follows a vendor post or delete on the java routes, and that an admin's `lts`
+      or `latest` holds only until the distribution's next vendor write or retag
 - [ ] All quality gates pass (`./gradlew check`: build, detekt, ktlint, tests)
