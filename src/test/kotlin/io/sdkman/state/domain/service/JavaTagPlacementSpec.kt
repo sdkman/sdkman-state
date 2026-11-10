@@ -111,6 +111,128 @@ class JavaTagPlacementSpec :
             }
         }
 
+        context("the lts a platform without the LTS feature keeps") {
+
+            should("keep lts on its holder until the platform has the LTS feature") {
+                // given: lts on 25 on two platforms, and a GA of feature 29 on one of them
+                val rows =
+                    listOf(
+                        row("29.0.0.0+35", Platform.LINUX_X64),
+                        row("25.0.8.0+7", Platform.LINUX_X64, tags = listOf("lts")),
+                        row("25.0.8.0+7", Platform.MAC_X64, tags = listOf("lts")),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: only the platform with the LTS feature hands lts over
+                moves shouldContainExactly listOf(TagMove.Place(Platform.LINUX_X64, "lts", "29.0.0.0+35"))
+            }
+
+            should("move a kept lts to the new head of its series") {
+                // given: lts on a hidden build of 25, a newer head of 25 and a head of 27
+                val rows =
+                    listOf(
+                        row("25.0.8.0+7", Platform.MAC_X64, visible = false, tags = listOf("lts")),
+                        row("25.0.9.0+5", Platform.MAC_X64),
+                        row("27.0.1.0+9", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: lts follows its own series, not the highest feature
+                moves shouldContainExactly listOf(TagMove.Place(Platform.MAC_X64, "lts", "25.0.9.0+5"))
+            }
+
+            should("place no lts on a platform that holds none") {
+                // given: heads of 25 and 27 without lts
+                val rows = listOf(row("25.0.8.0+7", Platform.MAC_X64), row("27.0.1.0+9", Platform.MAC_X64))
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: lts never lands afresh on an older feature
+                moves.shouldBeEmpty()
+            }
+
+            should("remove lts whose series has no visible head") {
+                // given: lts on a hidden build of 25, and a visible head of 21 only
+                val rows =
+                    listOf(
+                        row("25.0.8.0+7", Platform.MAC_X64, visible = false, tags = listOf("lts")),
+                        row("21.0.16.0+3", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: lts leaves the platform
+                moves shouldContainExactly listOf(TagMove.Remove(Platform.MAC_X64, "lts"))
+            }
+
+            should("remove lts whose series has only an early access head") {
+                // given: lts on a hidden build of 25, superseded by early access of the same series
+                val rows =
+                    listOf(
+                        row("25.0.8.0+7", Platform.MAC_X64, visible = false, tags = listOf("lts")),
+                        row("25.0.9.0+ea.2", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: early access does not keep lts
+                moves shouldContainExactly listOf(TagMove.Remove(Platform.MAC_X64, "lts"))
+            }
+
+            should("remove lts from an unreadable holder") {
+                // given: lts on an unreadable row beside a head of 25
+                val rows =
+                    listOf(
+                        row("25.0.4.r25", Platform.MAC_X64, tags = listOf("lts")),
+                        row("25.0.8.0+7", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: an unreadable holder belongs to no series to keep lts in
+                moves shouldContainExactly listOf(TagMove.Remove(Platform.MAC_X64, "lts"))
+            }
+
+            should("remove lts from an fx holder") {
+                // given: lts on the head of an fx series beside the plain head of 25
+                val rows =
+                    listOf(
+                        row("25.0.8.0-fx+7", Platform.MAC_X64, tags = listOf("lts")),
+                        row("25.0.8.0+7", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: lts never stays on a variant, nor hops to the plain series
+                moves shouldContainExactly listOf(TagMove.Remove(Platform.MAC_X64, "lts"))
+            }
+
+            should("leave a kept lts in place when its series heads cannot be ordered") {
+                // given: lts on a hidden build of 25, and two visible builds of one newer core that cannot be ordered
+                val rows =
+                    listOf(
+                        row("25.0.4.0+1", Platform.MAC_X64, visible = false, tags = listOf("lts")),
+                        row("25.0.5.0+1", Platform.MAC_X64),
+                        row("25.0.5.0+r17", Platform.MAC_X64),
+                    )
+
+                // when: placing lts at LTS feature 29
+                val moves = ltsMovesFor(rows, ltsFeature = 29)
+
+                // then: no row is singled out, so lts is neither moved nor removed
+                moves.shouldBeEmpty()
+            }
+        }
+
         context("lts when the highest heads cannot be ordered") {
 
             should("leave lts on the head that holds it") {
