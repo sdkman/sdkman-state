@@ -266,6 +266,28 @@ class JavaTagPlacementSpec :
                 moves shouldContainExactly listOf(TagMove.Remove(Platform.LINUX_X32, "latest"))
             }
 
+            should("move no latest on a platform without the top feature that holds none") {
+                // given: a head of 27 on LINUX_X64, and an untagged head of 21 on MAC_X64
+                val rows = listOf(row("27.0.1.0+9", Platform.LINUX_X64), row("21.0.13.0+11", Platform.MAC_X64))
+
+                // when: placing latest at LTS feature 25
+                val moves = latestMovesFor(rows)
+
+                // then: only LINUX_X64 takes latest, and MAC_X64 has none to lose
+                moves shouldContainExactly listOf(TagMove.Place(Platform.LINUX_X64, "latest", "27.0.1.0+9"))
+            }
+
+            should("remove latest from a hidden holder on a platform without a visible plain row") {
+                // given: latest on a hidden build of 27, the only row of the distribution
+                val rows = listOf(row("27.0.1.0+9", visible = false, tags = listOf("latest")))
+
+                // when: placing latest at LTS feature 25
+                val moves = latestMovesFor(rows)
+
+                // then: no plain head is left to carry latest, so it goes
+                moves shouldContainExactly listOf(TagMove.Remove(Platform.LINUX_X64, "latest"))
+            }
+
             should("let early access set the top feature") {
                 // given: a GA head of 27 on two platforms, and early access of 28 on one of them
                 val rows =
@@ -428,6 +450,22 @@ class JavaTagPlacementSpec :
                 val moves = ltsMovesFor(rows)
 
                 // then: no row is singled out
+                moves.shouldBeEmpty()
+            }
+
+            should("leave lts on a hidden holder beside heads that cannot be ordered") {
+                // given: lts on a hidden build of 25, and two visible builds of one newer core of 25 that cannot be ordered
+                val rows =
+                    listOf(
+                        row("25.0.4.0+1", visible = false, tags = listOf("lts")),
+                        row("25.0.5.0+1"),
+                        row("25.0.5.0+r17"),
+                    )
+
+                // when: placing lts at LTS feature 25
+                val moves = ltsMovesFor(rows)
+
+                // then: no head is singled out, so lts is neither moved nor removed
                 moves.shouldBeEmpty()
             }
         }
