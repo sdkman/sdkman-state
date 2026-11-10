@@ -275,13 +275,7 @@ class PostgresVersionRepository : VersionRepository {
     ): Either<DatabaseFailure, List<Version>> =
         Either
             .catch {
-                dbQuery {
-                    VersionsTable
-                        .selectAll()
-                        .where { javaScope(distribution, platform) }
-                        .map { it[VersionsTable.id].value to it.toVersion() }
-                        .withBatchFetchedTags()
-                }
+                dbQuery { selectWithTags(javaScope(distribution, platform)) }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to find java rows: ${error.message}",
@@ -312,11 +306,18 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
+    private fun selectWithTags(where: Op<Boolean>): List<Version> =
+        VersionsTable
+            .selectAll()
+            .where { where }
+            .map { it[VersionsTable.id].value to it.toVersion() }
+            .withBatchFetchedTags()
+
     private fun javaScope(
         distribution: Option<Distribution>,
         platform: Platform,
-    ): Op<Boolean> =
-        (VersionsTable.candidate eq JAVA_CANDIDATE) and
-            distributionEq(distribution) and
-            (VersionsTable.platform eq platform.name)
+    ): Op<Boolean> = javaDistributionScope(distribution) and (VersionsTable.platform eq platform.name)
+
+    private fun javaDistributionScope(distribution: Option<Distribution>): Op<Boolean> =
+        (VersionsTable.candidate eq JAVA_CANDIDATE) and distributionEq(distribution)
 }
