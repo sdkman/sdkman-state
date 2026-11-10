@@ -131,6 +131,52 @@ class PostgresVersionRepositoryJavaIntegrationSpec :
             }
         }
 
+        context("findJavaDistributionRows") {
+            should("return the visible and hidden java rows of the distribution on every platform") {
+                withCleanDatabase {
+                    seedScopeAndNeighbours()
+
+                    val rows = repo.findJavaDistributionRows(Distribution.TEMURIN.some()).shouldBeRight()
+
+                    rows.map { it.version to it.platform } shouldContainExactlyInAnyOrder
+                        listOf(
+                            "25.0.1" to Platform.LINUX_X64,
+                            "25.0.0" to Platform.LINUX_X64,
+                            "25.0.1" to Platform.MAC_ARM64,
+                        )
+                }
+            }
+
+            should("return only the java rows without a distribution for an absent distribution") {
+                withCleanDatabase {
+                    seedScopeAndNeighbours()
+
+                    val rows = repo.findJavaDistributionRows(none()).shouldBeRight()
+
+                    rows.map { it.version } shouldBe listOf("25.0.2")
+                }
+            }
+
+            should("carry the tags of each row on every platform") {
+                withCleanDatabase {
+                    val linuxHeadId = insertVersionWithId(javaVersion("25.0.1"))
+                    insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, linuxHeadId)
+                    val macHeadId = insertVersionWithId(javaVersion("27.0.1", platform = Platform.MAC_ARM64))
+                    insertTag("java", "latest", Distribution.TEMURIN.some(), Platform.MAC_ARM64, macHeadId)
+                    insertVersions(javaVersion("21.0.8", platform = Platform.MAC_ARM64))
+
+                    val rows = repo.findJavaDistributionRows(Distribution.TEMURIN.some()).shouldBeRight()
+
+                    rows.associate { (it.version to it.platform) to it.tags.shouldBeSome().toSet() } shouldBe
+                        mapOf(
+                            ("25.0.1" to Platform.LINUX_X64) to setOf("lts"),
+                            ("27.0.1" to Platform.MAC_ARM64) to setOf("latest"),
+                            ("21.0.8" to Platform.MAC_ARM64) to emptySet(),
+                        )
+                }
+            }
+        }
+
         context("hideJavaVersions") {
             should("hide a named row of the distribution and platform") {
                 withCleanDatabase {

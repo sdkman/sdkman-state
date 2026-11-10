@@ -283,6 +283,17 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
+    override suspend fun findJavaDistributionRows(distribution: Option<Distribution>): Either<DatabaseFailure, List<Version>> =
+        Either
+            .catch {
+                dbQuery { selectWithTags(javaDistributionScope(distribution)) }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to find java distribution rows: ${error.message}",
+                    cause = error,
+                )
+            }
+
     override suspend fun hideJavaVersions(
         distribution: Option<Distribution>,
         platform: Platform,

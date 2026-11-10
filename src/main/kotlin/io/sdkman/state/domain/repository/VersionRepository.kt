@@ -43,6 +43,8 @@ interface VersionRepository {
         platform: Platform,
     ): Either<DatabaseFailure, List<Version>>
 
+    suspend fun findJavaDistributionRows(distribution: Option<Distribution>): Either<DatabaseFailure, List<Version>>
+
     suspend fun hideJavaVersions(
         distribution: Option<Distribution>,
         platform: Platform,
