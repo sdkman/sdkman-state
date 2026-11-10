@@ -32,13 +32,14 @@ private const val VENDOR_EMAIL = "disco@sdkman.io"
 private val ADMIN_UUID: UUID = UUID.fromString("11111111-1111-1111-1111-111111111111")
 private const val ADMIN_EMAIL = "admin@sdkman.io"
 private const val VERSION_ID = 42
+private const val LTS_FEATURE = 25
 
 class JavaVersionServiceUnitSpec :
     ShouldSpec({
         val versionsRepo = mockk<VersionRepository>()
         val tagService = mockk<TagService>()
         val auditRepo = mockk<AuditRepository>()
-        val service = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, passthroughTransactional())
+        val service = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, passthroughTransactional(), LTS_FEATURE)
 
         fun post(
             version: String,
@@ -70,6 +71,7 @@ class JavaVersionServiceUnitSpec :
                 tagService,
                 auditRepo,
                 transactionalFailingWithoutRunning(DomainError.DatabaseError(databaseFailure)),
+                LTS_FEATURE,
             )
 
         beforeEach {
@@ -77,9 +79,12 @@ class JavaVersionServiceUnitSpec :
             coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Right(Unit)
             coEvery { versionsRepo.createOrUpdate(any()) } returns Either.Right(VERSION_ID)
             coEvery { versionsRepo.hideJavaVersions(any(), any(), any()) } returns Either.Right(0)
+            coEvery { versionsRepo.findJavaDistributionRows(any()) } returns Either.Right(emptyList())
+            coEvery { versionsRepo.findVersionId(any()) } returns Either.Right(VERSION_ID.some())
             coEvery { tagService.assignTagToVersion(any(), any(), any(), any(), any()) } returns Either.Right(Unit)
             coEvery { tagService.replaceTags(any(), any(), any(), any(), any()) } returns Either.Right(Unit)
             coEvery { tagService.findTagNamesByVersionId(VERSION_ID) } returns Either.Right(emptyList())
+            coEvery { tagService.removeTag(any()) } returns Either.Right(Unit)
             coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Right(Unit)
         }
 
@@ -138,6 +143,34 @@ class JavaVersionServiceUnitSpec :
                         Platform.LINUX_X64,
                         listOf("25.0.4.1+1", "25.0.3.0"),
                     )
+                }
+            }
+
+            should("read the post's whole distribution for placement once the rows it supersedes are hidden") {
+                // given: TEMURIN 25.0.4.1+1 is the head of its series
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the vendor posts TEMURIN 25.0.5.0+3
+                service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the whole distribution is read for placement after the old head is hidden
+                coVerifyOrder {
+                    versionsRepo.hideJavaVersions(Distribution.TEMURIN.some(), Platform.LINUX_X64, listOf("25.0.4.1+1"))
+                    versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some())
+                }
+            }
+
+            should("read the tags of the stored post after placing lts and latest") {
+                // given: TEMURIN 25.0.4.1+1 is the head of its series
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the vendor posts TEMURIN 25.0.5.0+3
+                service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the tags the CREATE entry records are read once placement has run
+                coVerifyOrder {
+                    versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some())
+                    tagService.findTagNamesByVersionId(VERSION_ID)
                 }
             }
 
@@ -206,6 +239,17 @@ class JavaVersionServiceUnitSpec :
                 coVerify(exactly = 0) { tagService.replaceTags(any(), any(), any(), any(), any()) }
             }
 
+            should("read the post's whole distribution for placement after a post stored hidden") {
+                // given: TEMURIN 25.0.4.1+1 is the head of its series
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+
+                // when: the vendor posts the older TEMURIN 25.0.4.0+9
+                service.publish(post("25.0.4.0+9"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the whole distribution is read for placement
+                coVerify(exactly = 1) { versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some()) }
+            }
+
             should("refuse a post that cannot be ordered against the head, naming the head") {
                 // given: KONA 21.0.9.0+r17 is the head
                 givenScopeRows(visibleRow("21.0.9.0+r17", distribution = Distribution.KONA))
@@ -228,6 +272,17 @@ class JavaVersionServiceUnitSpec :
                 coVerify(exactly = 0) { versionsRepo.createOrUpdate(any()) }
                 coVerify(exactly = 0) { versionsRepo.hideJavaVersions(any(), any(), any()) }
                 coVerify(exactly = 0) { tagService.assignTagToVersion(any(), any(), any(), any(), any()) }
+            }
+
+            should("never read the distribution for placement after a refused post") {
+                // given: KONA 21.0.9.0+r17 is the head
+                givenScopeRows(visibleRow("21.0.9.0+r17", distribution = Distribution.KONA))
+
+                // when: the vendor posts KONA 21.0.9.0+1
+                service.publish(post("21.0.9.0+1", Distribution.KONA), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the distribution is never read for placement
+                coVerify(exactly = 0) { versionsRepo.findJavaDistributionRows(any()) }
             }
 
             should("audit a refused post with a REFUSE entry naming the head, and nothing else") {
@@ -435,6 +490,17 @@ class JavaVersionServiceUnitSpec :
 
                 // then: no single tag is moved onto the post
                 coVerify(exactly = 0) { tagService.assignTagToVersion(any(), any(), any(), any(), any()) }
+            }
+
+            should("never read the distribution for placement after an override") {
+                // given: TEMURIN 25.0.4.1+1 is the head, tagged "lts" and "25"
+                givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
+
+                // when: the admin posts the newer TEMURIN 25.0.5.0+3 without tags
+                service.overrideAsAdmin(post("25.0.5.0+3"), ADMIN_UUID, ADMIN_EMAIL)
+
+                // then: the distribution is never read for placement
+                coVerify(exactly = 0) { versionsRepo.findJavaDistributionRows(any()) }
             }
 
             should("audit an override with the visibility and tags it was stored with") {

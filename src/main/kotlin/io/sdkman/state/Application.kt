@@ -73,7 +73,7 @@ fun Application.module() {
     configureCandidateRouting(candidateService, candidateAllowList)
     configureJavaRouting(
         versionService = versionService,
-        javaVersionService = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional),
+        javaVersionService = JavaVersionServiceImpl(versionsRepo, tagService, auditRepo, transactional, appConfig.javaLtsFeature),
         javaVersionRequestValidator = JavaVersionRequestValidator(candidateAllowList),
     )
 }

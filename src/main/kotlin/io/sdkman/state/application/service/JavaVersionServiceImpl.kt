@@ -1,6 +1,7 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.Option
 import arrow.core.Some
 import arrow.core.flatMap
 import arrow.core.getOrElse
@@ -10,13 +11,19 @@ import arrow.core.some
 import io.sdkman.state.application.validation.InvalidVersionFormatError
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
+import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.JavaRefusal
 import io.sdkman.state.domain.model.JavaVersion
+import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
 import io.sdkman.state.domain.service.JavaSupersession
+import io.sdkman.state.domain.service.JavaTagPlacement
 import io.sdkman.state.domain.service.JavaVersionService
+import io.sdkman.state.domain.service.TagMove
 import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.Transactional
 import io.sdkman.state.domain.service.VendorDecision
@@ -27,6 +34,7 @@ class JavaVersionServiceImpl(
     private val tagService: TagService,
     private val auditRepo: AuditRepository,
     private val transactional: Transactional,
+    private val ltsFeature: Int,
 ) : JavaVersionService {
     override suspend fun publish(
         version: Version,
@@ -66,10 +74,14 @@ class JavaVersionServiceImpl(
             val stored = version.copy(visible = decision.visible.some())
             val versionId = upsert(stored).bind()
             hideInScope(version, decision.hidden).bind()
-            val storedTags = moveTagsOnto(versionId, version, decision.tagsToMove).bind()
+            moveTagsOnto(versionId, version, decision.tagsToMove).bind()
+            val placements = placeLtsAndLatest(version.distribution).bind()
+            val storedTags = tagService.findTagNamesByVersionId(versionId).bind()
+            val tagsTakenOffHiddenRows =
+                decision.tagsToMove + placements.filter { move -> move.platform == version.platform }.map(TagMove::tag)
             Publication(
                 stored = stored.copy(tags = storedTags.some()),
-                hidden = decision.hidden.map { row -> row.hiddenWithout(decision.tagsToMove) },
+                hidden = decision.hidden.map { row -> row.hiddenWithout(tagsTakenOffHiddenRows) },
             )
         }
 
@@ -77,12 +89,44 @@ class JavaVersionServiceImpl(
         versionId: Int,
         version: Version,
         tags: List<String>,
-    ): Either<DomainError, List<String>> =
+    ): Either<DomainError, Unit> =
         either {
             tags.forEach { tag ->
                 tagService.assignTagToVersion(versionId, version.candidate, version.distribution, version.platform, tag).bind()
             }
-            tagService.findTagNamesByVersionId(versionId).bind()
+        }
+
+    private suspend fun placeLtsAndLatest(distribution: Option<Distribution>): Either<DomainError, List<TagMove>> =
+        either {
+            val rows =
+                versionsRepo
+                    .findJavaDistributionRows(distribution)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+            JavaTagPlacement.movesFor(rows, ltsFeature).onEach { move -> applyTagMove(move, distribution).bind() }
+        }
+
+    private suspend fun applyTagMove(
+        move: TagMove,
+        distribution: Option<Distribution>,
+    ): Either<DomainError, Unit> =
+        when (move) {
+            is TagMove.Place -> placeTag(move, distribution)
+            is TagMove.Remove -> tagService.removeTag(UniqueTag(JAVA_CANDIDATE, move.tag, distribution, move.platform))
+        }
+
+    private suspend fun placeTag(
+        move: TagMove.Place,
+        distribution: Option<Distribution>,
+    ): Either<DomainError, Unit> =
+        either {
+            val versionId =
+                versionsRepo
+                    .findVersionId(UniqueVersion(JAVA_CANDIDATE, move.version, distribution, move.platform))
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+                    .getOrElse { raise(DomainError.VersionNotFound(JAVA_CANDIDATE, move.version)) }
+            tagService.assignTagToVersion(versionId, JAVA_CANDIDATE, distribution, move.platform, move.tag).bind()
         }
 
     private suspend fun decideInLockedScope(
