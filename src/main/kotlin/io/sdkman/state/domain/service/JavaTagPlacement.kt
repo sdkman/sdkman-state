@@ -28,6 +28,20 @@ sealed interface TagMove {
     ) : TagMove
 }
 
+private data class PlatformRows(
+    val platform: Platform,
+    val rows: List<Version>,
+) {
+    val plainHeads: List<SeriesMember> =
+        rows
+            .map { row -> JavaVersion.read(row.version) }
+            .filterOption()
+            .map { reading -> reading.series }
+            .filter(JavaSeries::isPlain)
+            .distinct()
+            .flatMap { series -> JavaSupersession.heads(JavaSupersession.members(series, rows)) }
+}
+
 object JavaTagPlacement {
     private const val LTS_TAG = "lts"
 
@@ -37,42 +51,25 @@ object JavaTagPlacement {
     ): List<TagMove> =
         rows
             .groupBy(Version::platform)
-            .flatMap { (platform, platformRows) -> ltsMoves(platform, platformRows, ltsFeature.toBigInteger()) }
-
-    private fun plainHeads(rows: List<Version>): List<SeriesMember> =
-        rows
-            .map { row -> JavaVersion.read(row.version) }
-            .filterOption()
-            .map { reading -> reading.series }
-            .filter(JavaSeries::isPlain)
-            .distinct()
-            .flatMap { series -> JavaSupersession.heads(JavaSupersession.members(series, rows)) }
+            .flatMap { (platform, platformRows) -> ltsMoves(PlatformRows(platform, platformRows), ltsFeature.toBigInteger()) }
 
     private fun ltsMoves(
-        platform: Platform,
-        rows: List<Version>,
+        platform: PlatformRows,
         ltsFeature: BigInteger,
     ): List<TagMove> {
-        val plainHeads = plainHeads(rows)
-        val ltsFeatureHeads = plainHeads.filter { head -> head.reading.series.feature == ltsFeature && head.isGenerallyAvailable }
+        val ltsFeatureHeads = platform.plainHeads.filter { head -> head.feature == ltsFeature && head.isGenerallyAvailable }
         return if (ltsFeatureHeads.isEmpty()) {
-            keptLtsMoves(platform, rows, plainHeads)
+            keptLtsMoves(platform)
         } else {
-            placeOnSoleHighest(platform, LTS_TAG, ltsFeatureHeads)
+            placeOnSoleHighest(platform.platform, LTS_TAG, ltsFeatureHeads)
         }
     }
 
-    private fun keptLtsMoves(
-        platform: Platform,
-        rows: List<Version>,
-        plainHeads: List<SeriesMember>,
-    ): List<TagMove> =
-        rows
+    private fun keptLtsMoves(platform: PlatformRows): List<TagMove> =
+        platform.rows
             .firstOrNone { row -> row.holds(LTS_TAG) }
-            .map { holder -> generallyAvailableHeadsInSeriesOf(holder, plainHeads) }
-            .map { candidates ->
-                if (candidates.isEmpty()) listOf(TagMove.Remove(platform, LTS_TAG)) else placeOnSoleHighest(platform, LTS_TAG, candidates)
-            }.getOrElse { emptyList() }
+            .map { holder -> placeOrRemove(platform, LTS_TAG, generallyAvailableHeadsInSeriesOf(holder, platform.plainHeads)) }
+            .getOrElse { emptyList() }
 
     private fun generallyAvailableHeadsInSeriesOf(
         holder: Version,
@@ -82,6 +79,17 @@ object JavaTagPlacement {
             .read(holder.version)
             .map { reading -> plainHeads.filter { head -> head.reading.series == reading.series && head.isGenerallyAvailable } }
             .getOrElse { emptyList() }
+
+    private fun placeOrRemove(
+        platform: PlatformRows,
+        tag: String,
+        candidates: List<SeriesMember>,
+    ): List<TagMove> =
+        when {
+            candidates.isNotEmpty() -> placeOnSoleHighest(platform.platform, tag, candidates)
+            platform.rows.any { row -> row.holds(tag) } -> listOf(TagMove.Remove(platform.platform, tag))
+            else -> emptyList()
+        }
 
     private fun placeOnSoleHighest(
         platform: Platform,
@@ -95,7 +103,9 @@ object JavaTagPlacement {
             .map { head -> TagMove.Place(platform, tag, head.row.version) }
             .toList()
 
-    private val SeriesMember.isGenerallyAvailable: Boolean get() = reading.build !is BuildMetadata.EarlyAccess
+    private val SeriesMember.feature: BigInteger get() = reading.series.feature
 
-    private fun Version.holds(tag: String): Boolean = tags.isSome { tags -> tag in tags }
+    private val SeriesMember.isGenerallyAvailable: Boolean get() = reading.build !is BuildMetadata.EarlyAccess
 }
+
+private fun Version.holds(tag: String): Boolean = tags.isSome { tags -> tag in tags }
