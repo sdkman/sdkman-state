@@ -91,14 +91,33 @@ fun withTestApplication(
     candidateAllowList: CandidateAllowList = RefreshingCandidateAllowList(PostgresCandidateRepository()),
     fn: suspend (ApplicationTestBuilder.() -> Unit),
 ) {
+    withTestApplicationConfiguredBy(testApplicationConfig(), candidateAllowList, fn)
+}
+
+fun withTestApplicationAtLtsFeature(
+    ltsFeature: Int,
+    fn: suspend (ApplicationTestBuilder.() -> Unit),
+) {
+    withTestApplicationConfiguredBy(
+        testApplicationConfig().apply { put("java.lts.feature", ltsFeature.toString()) },
+        RefreshingCandidateAllowList(PostgresCandidateRepository()),
+        fn,
+    )
+}
+
+private fun withTestApplicationConfiguredBy(
+    config: MapApplicationConfig,
+    candidateAllowList: CandidateAllowList,
+    fn: suspend (ApplicationTestBuilder.() -> Unit),
+) {
     sharedTestDatabase
     testApplication {
         environment {
-            config = testApplicationConfig()
+            this.config = config
         }
         application {
             runBlocking { candidateAllowList.refresh() }
-            configureTestApplication(candidateAllowList)
+            configureTestApplication(DefaultAppConfig(config), candidateAllowList)
         }
         fn(this)
     }

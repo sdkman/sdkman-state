@@ -131,6 +131,31 @@ fun selectTagNamesOf(
             .map { it[VersionTagsTable.tag] }
     }
 
+fun selectTagHolder(
+    candidate: String,
+    tag: String,
+    distribution: Option<Distribution>,
+    platform: Platform,
+): Option<String> =
+    dbQuery {
+        VersionTagsTable
+            .join(
+                VersionsTable,
+                JoinType.INNER,
+                additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
+            ).select(VersionsTable.version)
+            .where {
+                (VersionTagsTable.candidate eq candidate) and
+                    (VersionTagsTable.tag eq tag) and
+                    distribution.fold(
+                        { VersionTagsTable.distribution.isNull() },
+                        { VersionTagsTable.distribution eq it.name },
+                    ) and
+                    (VersionTagsTable.platform eq platform.name)
+            }.map { it[VersionsTable.version] }
+            .firstOrNone()
+    }
+
 fun selectAllTags(): List<Pair<Int, String>> =
     dbQuery {
         VersionTagsTable
