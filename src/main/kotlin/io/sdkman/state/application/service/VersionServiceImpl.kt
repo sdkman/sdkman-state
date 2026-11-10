@@ -2,7 +2,6 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.Option
-import arrow.core.getOrElse
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
@@ -89,35 +88,7 @@ class VersionServiceImpl(
         email: String,
     ): Either<DomainError, Unit> =
         transactional
-            .inTransaction { deleteUntagged(uniqueVersion) }
+            .inTransaction { versionsRepo.deleteUntagged(uniqueVersion) }
             .onRight { deleted -> auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, deleted) }
             .map { }
-
-    private suspend fun deleteUntagged(uniqueVersion: UniqueVersion): Either<DomainError, Version> =
-        either {
-            versionsRepo.lockWritesIfJava(uniqueVersion.candidate, uniqueVersion.distribution).bind()
-            val versionToDelete =
-                versionsRepo
-                    .findUnique(
-                        candidate = uniqueVersion.candidate,
-                        version = uniqueVersion.version,
-                        platform = uniqueVersion.platform,
-                        distribution = uniqueVersion.distribution,
-                    ).mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
-                    .toEither {
-                        DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version)
-                    }.bind()
-            val tagNames = versionToDelete.tags.getOrElse { emptyList() }
-            if (tagNames.isNotEmpty()) raise(DomainError.TagConflict(tagNames))
-            val deleted =
-                versionsRepo
-                    .delete(uniqueVersion)
-                    .mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
-            if (deleted == 0) {
-                raise(DomainError.VersionNotFound(uniqueVersion.candidate, uniqueVersion.version))
-            }
-            versionToDelete
-        }
 }
