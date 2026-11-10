@@ -246,18 +246,17 @@ class JavaVersionServiceUnitSpec :
                 result shouldBeLeft DomainError.VersionNotFound(JAVA_CANDIDATE, "27.0.1.0+9")
             }
 
-            should("move the feature, latest and lts tags onto a new head") {
-                // given: TEMURIN 25.0.4.1+1 is the head, tagged "lts" and "25", and no row holds "latest"
+            should("move only the feature tag onto a new head when placement moves nothing") {
+                // given: TEMURIN 25.0.4.1+1 is the head, tagged "lts" and "25", and placement finds no rows
                 givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
 
                 // when: the vendor posts TEMURIN 25.0.5.0+3
                 service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
 
-                // then: each tag is assigned to the stored post within the scope
-                listOf("25", "latest", "lts").forEach { tag ->
-                    coVerify {
-                        tagService.assignTagToVersion(VERSION_ID, JAVA_CANDIDATE, Distribution.TEMURIN.some(), Platform.LINUX_X64, tag)
-                    }
+                // then: "25" is the only tag assigned
+                coVerify(exactly = 1) { tagService.assignTagToVersion(any(), any(), any(), any(), any()) }
+                coVerify {
+                    tagService.assignTagToVersion(VERSION_ID, JAVA_CANDIDATE, Distribution.TEMURIN.some(), Platform.LINUX_X64, "25")
                 }
             }
 
@@ -275,8 +274,9 @@ class JavaVersionServiceUnitSpec :
             }
 
             should("audit each hidden row as retired, keeping only the tags it did not give up") {
-                // given: the head TEMURIN 25.0.4.1+1 holds "lts", "25" and the admin's "ga"
+                // given: the head TEMURIN 25.0.4.1+1 holds "lts", "25" and the admin's "ga", and placement moves "lts" off it
                 givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25", "ga"))
+                givenDistributionRows(visibleRow("25.0.5.0+3", "25"), visibleRow("25.0.4.1+1", "lts", "ga").copy(visible = false.some()))
 
                 // when: the vendor posts TEMURIN 25.0.5.0+3
                 service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)

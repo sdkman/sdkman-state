@@ -32,9 +32,6 @@ data class Refusal(
 )
 
 object JavaSupersession {
-    private const val LATEST_TAG = "latest"
-    private const val LTS_TAG = "lts"
-
     private val STORED_HIDDEN = VendorDecision(visible = false, hidden = emptyList(), tagsToMove = emptyList())
 
     fun members(
@@ -95,9 +92,7 @@ object JavaSupersession {
     private fun tagsToMove(
         post: JavaVersion,
         rows: List<Version>,
-    ): List<String> =
-        listOf(post.series.feature.toString(), LATEST_TAG).filter { tag -> movesToHighestHead(post, holderOf(tag, rows)) } +
-            listOf(LTS_TAG).filter { tag -> movesWithinSeries(post, holderOf(tag, rows)) }
+    ): List<String> = listOf(post.series.feature.toString()).filter { featureTag -> movesToHighestHead(post, holderOf(featureTag, rows)) }
 
     private fun holderOf(
         tag: String,
@@ -112,13 +107,4 @@ object JavaSupersession {
             .flatMap { row -> JavaVersion.read(row.version) }
             .map { reading -> post.beats(reading) }
             .getOrElse { true }
-
-    private fun movesWithinSeries(
-        post: JavaVersion,
-        holder: Option<Version>,
-    ): Boolean =
-        holder
-            .filter { row -> row.version != post.spelling }
-            .flatMap { row -> JavaVersion.read(row.version) }
-            .isSome { reading -> reading.series == post.series }
 }

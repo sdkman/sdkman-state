@@ -5,6 +5,7 @@ import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.shouldBe
@@ -589,107 +590,15 @@ class JavaSupersessionSpec :
                 tags shouldNotContain "21"
             }
 
-            should("move lts from a hidden row of the series") {
-                // given: lts left on a hidden row of the series
-                val rows = listOf(hiddenRow("25.0.4.1+1").taggedWith("lts"), visibleRow("25.0.3.0").taggedWith("25"))
-
-                // when: a vendor posts the next head of that series
-                val tags = tagsMovedBy("25.0.5.0+1", rows)
-
-                // then: lts heals onto the new head
-                tags shouldContain "lts"
-            }
-
-            should("keep lts out of a post into another series") {
-                // given: lts on the head of the feature 25 series
-                val rows = listOf(visibleRow("25.0.4.1+1").taggedWith("lts", "25"))
-
-                // when: a vendor posts into a new feature series
-                val tags = tagsMovedBy("29.0.0.0+ea.1", rows)
-
-                // then: lts stays in its series
-                tags shouldNotContain "lts"
-            }
-
-            should("keep lts on the feature line when an interim head arrives") {
-                // given: lts on the feature line head
-                val rows = listOf(visibleRow("21.0.0.0.1").taggedWith("lts", "21"))
-
-                // when: a vendor posts the first interim release
-                val tags = tagsMovedBy("21.5.0.0.1", rows)
-
-                // then: the interim line is another series, so lts stays
-                tags shouldNotContain "lts"
-            }
-
-            should("move no lts when no row holds it") {
-                // given: an untagged head
-                val rows = listOf(visibleRow("21.0.12+1.1"))
-
-                // when: a vendor posts a newer build
-                val tags = tagsMovedBy("21.0.13.0+1", rows)
-
-                // then: a vendor post never creates lts
-                tags shouldNotContain "lts"
-            }
-
-            should("move latest to a higher series, early access included") {
-                // given: the GA head of feature 27 holds latest
-                val rows = listOf(visibleRow("27.0.0.0+35").taggedWith("27", "latest"))
-
-                // when: a vendor posts an early-access build of feature 28
-                val tags = tagsMovedBy("28.0.0.0+ea.5", rows)
-
-                // then: latest tracks the highest plain head
-                tags shouldContain "latest"
-            }
-
-            should("move latest when no row holds it") {
-                // given: an untagged head
-                val rows = listOf(visibleRow("25.0.4.1+1"))
+            should("move only the feature tag from a beaten head that also holds lts and latest") {
+                // given: the head holds lts, its feature tag and latest
+                val rows = listOf(visibleRow("25.0.4.1+1").taggedWith("lts", "25", "latest"))
 
                 // when: a vendor posts a newer build
                 val tags = tagsMovedBy("25.0.5.0+1", rows)
 
-                // then: latest reaches the new head
-                tags shouldContain "latest"
-            }
-
-            should("move latest off an unreadable holder") {
-                // given: an unreadable row holds latest
-                val rows = listOf(visibleRow("25.0.4.r25").taggedWith("latest"))
-
-                // when: a vendor posts a readable build
-                val tags = tagsMovedBy("25.0.5.0+1", rows)
-
-                // then: latest moves to the new head
-                tags shouldContain "latest"
-            }
-
-            should("leave latest on a higher holder") {
-                // given: an early-access head of feature 28 holds latest
-                val rows =
-                    listOf(
-                        visibleRow("28.0.0.0+ea.20").taggedWith("28", "latest"),
-                        visibleRow("27.0.0+35").taggedWith("27"),
-                    )
-
-                // when: a vendor posts a newer feature 27 build
-                val tags = tagsMovedBy("27.0.1.0+3", rows)
-
-                // then: latest stays on the higher series
-                tags shouldNotContain "latest"
-            }
-
-            should("leave latest on a holder the head cannot be ordered against") {
-                // given: a hidden row with unknown build metadata holds latest
-                val rows = listOf(hiddenRow("22.1.0.1+r17").taggedWith("latest"), visibleRow("22.1.0.0"))
-
-                // when: a vendor posts a numeric build of the same core
-                val tags = tagsMovedBy("22.1.0.1+1", rows)
-
-                // then: latest stays where it is
-                tags shouldNotContain "latest"
+                // then: lts and latest are left to placement
+                tags shouldContainExactly listOf("25")
             }
 
             should("move no tag from a post below the head") {
