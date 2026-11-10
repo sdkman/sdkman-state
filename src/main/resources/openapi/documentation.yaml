@@ -153,7 +153,7 @@ paths:
                     message: "Candidate registry unavailable"
   /versions/tags:
     delete:
-      description: "Remove a tag by its unique scope (candidate, tag, distribution, platform)"
+      description: "Remove a tag by its unique scope (candidate, tag, distribution, platform). A java lts or latest removed here stays removed only until the distribution's next vendor write, which places both tags by State's rules."
       security:
         - bearerAuth: []
       requestBody:
@@ -216,7 +216,7 @@ paths:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
     post:
-      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field."
+      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. A java lts or latest assigned here holds only until the distribution's next vendor write, which keeps it only where it agrees with State's placement."
       security:
         - bearerAuth: []
       requestBody:
@@ -286,7 +286,7 @@ paths:
                     message: "Failed to assign tag: connection refused"
   /versions/java:
     post:
-      description: "Create or update a java version. A vendor publishes and State decides its visibility and tags; the admin sets them as posted"
+      description: "Create or update a java version. A vendor publishes and State decides its visibility and tags; the admin sets them as posted. After a stored vendor post, as the head or hidden, State places lts and latest across the distribution, on every platform and in the post's transaction. lts goes to the newest GA head of the configured LTS feature; a platform without one gains no lts, and an lts it holds moves to the GA head of its own series, or is removed if that series has none. latest goes to the highest head of the distribution's top feature, early access included, on each platform that has it and never below that platform's lts. Only visible heads of plain series take either; fx and crac rows never do. A refused post places nothing. An admin post places nothing, so the admin's lts or latest holds only until the distribution's next vendor write."
       security:
         - bearerAuth: []
       requestBody:
@@ -423,7 +423,7 @@ paths:
         required: true
       responses:
         "204":
-          description: "No Content - The row is deleted"
+          description: "No Content - The row is deleted. After a vendor delete, State places lts and latest across the distribution, as after a vendor post, in the delete's transaction. An admin delete places nothing."
           headers:
             Cache-Control:
               $ref: "#/components/headers/NoStoreWrite"
