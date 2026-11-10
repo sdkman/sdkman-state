@@ -625,4 +625,116 @@ class JavaVersionServiceUnitSpec :
                 result.shouldBeRight()
             }
         }
+
+        context("withdraw") {
+            val withdrawn = UniqueVersion(JAVA_CANDIDATE, "17.0.20.0+8", Distribution.TEMURIN.some(), Platform.LINUX_X64)
+
+            fun givenStoredRow(vararg tags: String): Version =
+                visibleRow("17.0.20.0+8", *tags).also { row ->
+                    coEvery {
+                        versionsRepo.findUnique(JAVA_CANDIDATE, "17.0.20.0+8", Platform.LINUX_X64, Distribution.TEMURIN.some())
+                    } returns Either.Right(row.some())
+                    coEvery { versionsRepo.delete(withdrawn) } returns Either.Right(1)
+                }
+
+            should("delete the row before reading its whole distribution for placement") {
+                // given: TEMURIN 17.0.20.0+8 is stored on LINUX_X64 and untagged
+                givenStoredRow()
+
+                // when: the vendor withdraws it
+                service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the row is deleted before the distribution is read for placement
+                coVerifyOrder {
+                    versionsRepo.delete(withdrawn)
+                    versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some())
+                }
+            }
+
+            should("audit the withdrawn row with one DELETE entry attributed to the vendor") {
+                // given: TEMURIN 17.0.20.0+8 is stored on LINUX_X64 and untagged
+                val row = givenStoredRow()
+
+                // when: the vendor withdraws it
+                val result = service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the only audit entry is the vendor's DELETE of the row
+                result.shouldBeRight()
+                coVerify(exactly = 1) { auditRepo.recordAudit(any(), any(), any(), any()) }
+                coVerify { auditRepo.recordAudit(VENDOR_UUID, VENDOR_EMAIL, AuditOperation.DELETE, row) }
+            }
+
+            should("read the row's whole distribution for placement before its transaction commits") {
+                // given: a transaction that checks, as its block returns, that the distribution was read for placement
+                givenStoredRow()
+                val txService =
+                    JavaVersionServiceImpl(
+                        versionsRepo,
+                        tagService,
+                        auditRepo,
+                        transactionalCheckingBeforeCommit {
+                            coVerify(exactly = 1) { versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some()) }
+                        },
+                        LTS_FEATURE,
+                    )
+
+                // when: the vendor withdraws TEMURIN 17.0.20.0+8
+                val result = txService.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the withdrawal succeeds, so the check found the placement read before the block returned
+                result.shouldBeRight()
+            }
+
+            should("take latest off another platform that lacks the distribution's top feature") {
+                // given: TEMURIN 27.0.1.0+9 is visible on LINUX_X64 and 17.0.20.1+1 on MAC_X64 is tagged "latest"
+                givenStoredRow()
+                givenDistributionRows(visibleRow("27.0.1.0+9"), visibleRow("17.0.20.1+1", "latest").copy(platform = Platform.MAC_X64))
+
+                // when: the vendor withdraws TEMURIN 17.0.20.0+8 on LINUX_X64
+                service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: "latest" is removed on MAC_X64
+                coVerify {
+                    tagService.removeTag(UniqueTag(JAVA_CANDIDATE, "latest", Distribution.TEMURIN.some(), Platform.MAC_X64))
+                }
+            }
+
+            should("return DatabaseError and audit nothing when placement fails to remove a tag") {
+                // given: placement takes "latest" off MAC_X64 and removing it fails
+                givenStoredRow()
+                givenDistributionRows(visibleRow("27.0.1.0+9"), visibleRow("17.0.20.1+1", "latest").copy(platform = Platform.MAC_X64))
+                coEvery { tagService.removeTag(any()) } returns Either.Left(DomainError.DatabaseError(databaseFailure))
+
+                // when: the vendor withdraws TEMURIN 17.0.20.0+8
+                val result = service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the failure surfaces and no audit entry is written
+                result shouldBeLeft DomainError.DatabaseError(databaseFailure)
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("never read the distribution for placement when the row does not exist") {
+                // given: no TEMURIN 17.0.20.0+8 is stored on LINUX_X64
+                coEvery { versionsRepo.findUnique(any(), any(), any(), any()) } returns Either.Right(none())
+
+                // when: the vendor withdraws it
+                val result = service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the missing row is named and the distribution is never read for placement
+                result shouldBeLeft DomainError.VersionNotFound(JAVA_CANDIDATE, "17.0.20.0+8")
+                coVerify(exactly = 0) { versionsRepo.findJavaDistributionRows(any()) }
+            }
+
+            should("never read the distribution for placement when the row holds a tag") {
+                // given: TEMURIN 17.0.20.0+8 is stored on LINUX_X64 and tagged "17"
+                givenStoredRow("17")
+
+                // when: the vendor withdraws it
+                val result = service.withdraw(withdrawn, VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the tag blocks the delete and the distribution is never read for placement
+                result shouldBeLeft DomainError.TagConflict(listOf("17"))
+                coVerify(exactly = 0) { versionsRepo.findJavaDistributionRows(any()) }
+            }
+        }
     })

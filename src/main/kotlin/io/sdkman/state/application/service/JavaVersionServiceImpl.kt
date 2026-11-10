@@ -60,6 +60,16 @@ class JavaVersionServiceImpl(
             .onRight { publication -> recordPublication(publication, vendorId, email) }
             .map { }
 
+    override suspend fun withdraw(
+        uniqueVersion: UniqueVersion,
+        vendorId: UUID,
+        email: String,
+    ): Either<DomainError, Unit> =
+        transactional
+            .inTransaction { deleteAndPlace(uniqueVersion) }
+            .onRight { deleted -> auditRepo.recordAuditBestEffort(vendorId, email, AuditOperation.DELETE, deleted) }
+            .map { }
+
     private fun parsePost(version: Version): Either<DomainError, JavaVersion> =
         JavaVersion
             .parse(version.version)
@@ -83,6 +93,13 @@ class JavaVersionServiceImpl(
                 stored = stored.copy(tags = storedTags.some()),
                 hidden = decision.hidden.map { row -> row.hiddenWithout(tagsTakenOffHiddenRows) },
             )
+        }
+
+    private suspend fun deleteAndPlace(uniqueVersion: UniqueVersion): Either<DomainError, Version> =
+        either {
+            val deleted = versionsRepo.deleteUntagged(uniqueVersion).bind()
+            placeLtsAndLatest(uniqueVersion.distribution).bind()
+            deleted
         }
 
     private suspend fun moveTagsOnto(

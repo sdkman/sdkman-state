@@ -15,6 +15,7 @@ import io.sdkman.state.application.validation.JavaPoster
 import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.service.JavaVersionService
 import io.sdkman.state.domain.service.VersionService
@@ -25,7 +26,7 @@ fun Route.javaVersionWriteRoutes(
     javaVersionRequestValidator: JavaVersionRequestValidator,
 ) {
     javaVersionCreateRoute(javaVersionService, javaVersionRequestValidator)
-    javaVersionDeleteRoute(versionService)
+    javaVersionDeleteRoute(versionService, javaVersionService)
 }
 
 private fun Route.javaVersionCreateRoute(
@@ -61,20 +62,35 @@ private suspend fun ApplicationCall.storeJavaVersion(
         JavaPoster.VENDOR -> javaVersionService.publish(version, authenticatedVendorId(), authenticatedEmail())
     }
 
-private fun Route.javaVersionDeleteRoute(versionService: VersionService) {
+private fun Route.javaVersionDeleteRoute(
+    versionService: VersionService,
+    javaVersionService: JavaVersionService,
+) {
     delete("/versions/java") {
         call.response.header(HttpHeaders.CacheControl, "no-store")
-        if (call.javaPoster().isNone()) {
-            call.respondForbiddenFor(JAVA_CANDIDATE)
-            return@delete
-        }
-        either {
-            val uniqueVersion = call.receiveRequestBody<JavaUniqueVersionDto>().map { it.toDomain() }.bind()
-            ensure(uniqueVersion.version.isNotBlank()) { DomainError.ValidationFailed(EmptyFieldError("version").message) }
-            versionService.delete(uniqueVersion, call.authenticatedVendorId(), call.authenticatedEmail()).bind()
-        }.fold(
-            ifLeft = { error -> call.respondDomainError(error) },
-            ifRight = { call.respond(HttpStatusCode.NoContent) },
+        call.javaPoster().fold(
+            ifEmpty = { call.respondForbiddenFor(JAVA_CANDIDATE) },
+            ifSome = { poster ->
+                either {
+                    val uniqueVersion = call.receiveRequestBody<JavaUniqueVersionDto>().map { it.toDomain() }.bind()
+                    ensure(uniqueVersion.version.isNotBlank()) { DomainError.ValidationFailed(EmptyFieldError("version").message) }
+                    call.deleteJavaVersion(versionService, javaVersionService, uniqueVersion, poster).bind()
+                }.fold(
+                    ifLeft = { error -> call.respondDomainError(error) },
+                    ifRight = { call.respond(HttpStatusCode.NoContent) },
+                )
+            },
         )
     }
 }
+
+private suspend fun ApplicationCall.deleteJavaVersion(
+    versionService: VersionService,
+    javaVersionService: JavaVersionService,
+    uniqueVersion: UniqueVersion,
+    poster: JavaPoster,
+): Either<DomainError, Unit> =
+    when (poster) {
+        JavaPoster.ADMIN -> versionService.delete(uniqueVersion, authenticatedVendorId(), authenticatedEmail())
+        JavaPoster.VENDOR -> javaVersionService.withdraw(uniqueVersion, authenticatedVendorId(), authenticatedEmail())
+    }
