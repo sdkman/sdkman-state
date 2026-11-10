@@ -286,6 +286,26 @@ class JavaVersionServiceUnitSpec :
                 coVerify { auditRepo.recordAudit(VENDOR_UUID, VENDOR_EMAIL, AuditOperation.RETIRE, retired) }
             }
 
+            should("keep latest in the RETIRE entry when placement removes latest only on another platform") {
+                // given: the head TEMURIN 25.0.4.1+1 holds "latest", the 27 heads on LINUX_X64 cannot be ordered,
+                // and 17.0.1.0+1 holds "latest" on MAC_X64, which lacks the top feature
+                givenScopeRows(visibleRow("25.0.4.1+1", "latest"))
+                givenDistributionRows(
+                    visibleRow("25.0.4.1+1", "latest").copy(visible = false.some()),
+                    visibleRow("25.0.5.0+3"),
+                    visibleRow("27.0.1.0+1"),
+                    visibleRow("27.0.1.0+r17"),
+                    visibleRow("17.0.1.0+1", "latest").copy(platform = Platform.MAC_X64),
+                )
+
+                // when: the vendor posts TEMURIN 25.0.5.0+3
+                service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the RETIRE entry records the row hidden and still holding "latest"
+                val retired = visibleRow("25.0.4.1+1", "latest").copy(visible = false.some())
+                coVerify { auditRepo.recordAudit(VENDOR_UUID, VENDOR_EMAIL, AuditOperation.RETIRE, retired) }
+            }
+
             should("store a post below the head as hidden") {
                 // given: TEMURIN 25.0.4.1+1 is the head, tagged "lts" and "25"
                 givenScopeRows(visibleRow("25.0.4.1+1", "lts", "25"))
