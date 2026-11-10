@@ -134,10 +134,13 @@ class PostgresVersionRepositoryJavaIntegrationSpec :
         context("findJavaDistributionRows") {
             should("return the visible and hidden java rows of the distribution on every platform") {
                 withCleanDatabase {
+                    // given: TEMURIN rows on two platforms, one hidden, beside rows of other distributions and candidates
                     seedScopeAndNeighbours()
 
+                    // when: the TEMURIN rows are read
                     val rows = repo.findJavaDistributionRows(Distribution.TEMURIN.some()).shouldBeRight()
 
+                    // then: every TEMURIN row is returned, hidden or not, on both platforms
                     rows.map { it.version to it.platform } shouldContainExactlyInAnyOrder
                         listOf(
                             "25.0.1" to Platform.LINUX_X64,
@@ -149,24 +152,30 @@ class PostgresVersionRepositoryJavaIntegrationSpec :
 
             should("return only the java rows without a distribution for an absent distribution") {
                 withCleanDatabase {
+                    // given: one java row without a distribution beside the TEMURIN and ZULU rows
                     seedScopeAndNeighbours()
 
+                    // when: the rows of an absent distribution are read
                     val rows = repo.findJavaDistributionRows(none()).shouldBeRight()
 
+                    // then: only the java row without a distribution is returned
                     rows.map { it.version } shouldBe listOf("25.0.2")
                 }
             }
 
             should("carry the tags of each row on every platform") {
                 withCleanDatabase {
+                    // given: a linux row tagged "lts", a mac row tagged "latest" and an untagged mac row
                     val linuxHeadId = insertVersionWithId(javaVersion("25.0.1"))
                     insertTag("java", "lts", Distribution.TEMURIN.some(), Platform.LINUX_X64, linuxHeadId)
                     val macHeadId = insertVersionWithId(javaVersion("27.0.1", platform = Platform.MAC_ARM64))
                     insertTag("java", "latest", Distribution.TEMURIN.some(), Platform.MAC_ARM64, macHeadId)
                     insertVersions(javaVersion("21.0.8", platform = Platform.MAC_ARM64))
 
+                    // when: the TEMURIN rows are read
                     val rows = repo.findJavaDistributionRows(Distribution.TEMURIN.some()).shouldBeRight()
 
+                    // then: each row carries its own tags and the untagged row carries none
                     rows.associate { (it.version to it.platform) to it.tags.shouldBeSome().toSet() } shouldBe
                         mapOf(
                             ("25.0.1" to Platform.LINUX_X64) to setOf("lts"),
