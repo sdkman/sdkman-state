@@ -104,6 +104,13 @@ series, from unknown build metadata at equal core, such as `25.0.5.0+r17` beside
 ([`java-supersession.md`](java-supersession.md) rule 10). Heads of different series always differ
 in core and so always order. None is unordered on live today.)*
 
+*(Assumption, planning 2026-11-10: "untouched" holds for one tag on one platform. When more than
+one candidate head ranks highest, because they cannot be ordered or because they read the same,
+placement changes nothing for that tag on that platform, even where a hidden or unreadable row
+holds it: rule 11 wins over rules 8 and 9 there. The other tag still follows its own rules, and
+`latest` takes its floor from the row left holding `lts`, or from the LTS feature when that row is
+unreadable.)*
+
 **The top feature trusts the data.** One visible head on a feature far above the rest, from a
 mistaken admin post for instance, becomes the top feature and takes `latest` off every platform
 without it. No bound is applied: a real next feature looks the same. The remedy is the admin hiding
@@ -137,6 +144,9 @@ keyed on `java` and the distribution only.)*
 
 Tag moves stay unaudited, as today. The `CREATE` entry of a post records the tags its row held when
 the post committed.
+
+*(Assumption, planning 2026-11-10: each `RETIRE` entry of a post likewise records the tags its row
+held when the post committed, after placement.)*
 
 ## API Contract
 
