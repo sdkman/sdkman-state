@@ -42,6 +42,9 @@ fun testApplicationConfig(): MapApplicationConfig =
 
 fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig = MapApplicationConfig(testApplicationConfigEntries)
 
+fun testApplicationConfigMissing(path: String): MapApplicationConfig =
+    MapApplicationConfig(testApplicationConfigEntries.filterNot { (entryPath, _) -> entryPath == path })
+
 private val testApplicationConfigEntries: List<Pair<String, String>> by lazy {
     listOf(
         "database.host" to PostgresTestContainer.host,
@@ -62,6 +65,7 @@ private val testApplicationConfigEntries: List<Pair<String, String>> by lazy {
         "auth.rateLimit.enabled" to "true",
         "auth.bcrypt.cost" to "4",
         "candidates.refresh.intervalMs" to "300000",
+        "java.lts.feature" to "25",
     )
 }
 

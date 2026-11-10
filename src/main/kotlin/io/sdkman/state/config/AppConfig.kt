@@ -25,7 +25,10 @@ interface AppConfig {
     val rateLimitEnabled: Boolean
     val bcryptCost: Int
     val candidateRefreshIntervalMs: Long
+    val javaLtsFeature: Int
 }
+
+private const val MINIMUM_LTS_FEATURE = 11
 
 class DefaultAppConfig(
     private val config: ApplicationConfig,
@@ -61,4 +64,10 @@ class DefaultAppConfig(
     override val bcryptCost: Int = config.property("auth.bcrypt.cost").getString().toInt()
     override val candidateRefreshIntervalMs: Long =
         config.property("candidates.refresh.intervalMs").getString().toLong()
+    override val javaLtsFeature: Int =
+        config.property("java.lts.feature").getString().toInt().also { feature ->
+            require(feature >= MINIMUM_LTS_FEATURE) {
+                "java.lts.feature must be at least $MINIMUM_LTS_FEATURE but was $feature"
+            }
+        }
 }
