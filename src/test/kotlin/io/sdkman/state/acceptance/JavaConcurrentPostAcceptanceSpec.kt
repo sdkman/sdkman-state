@@ -15,6 +15,9 @@ import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
+import io.sdkman.state.support.selectTagHolder
+import io.sdkman.state.support.shouldBeNone
+import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.tagsOf
 import io.sdkman.state.support.visibilityOf
 import io.sdkman.state.support.withCleanDatabase
@@ -74,6 +77,54 @@ class JavaConcurrentPostAcceptanceSpec :
                 }
                 withClue("no tag move may be lost: the head must hold 25 and latest") {
                     tagsOf(highestBuild) shouldContainAll listOf("25", "latest")
+                }
+            }
+        }
+
+        should("place lts and latest across the distribution when its platforms are posted concurrently") {
+            val sharedPlatforms = listOf(Platform.LINUX_X64, Platform.MAC_ARM64)
+            val sharedBuilds = (1..5).map { build -> "25.0.$build.0+1" } + "27.0.1.0+9"
+            val earlyAccessBuilds =
+                (1..5).map { build -> javaVersion(Distribution.TEMURIN, "28.0.0.0+ea.$build", Platform.LINUX_X64) }
+            val posts =
+                sharedPlatforms.flatMap { platform ->
+                    sharedBuilds.map { version -> javaVersion(Distribution.TEMURIN, version, platform) }
+                } + earlyAccessBuilds
+
+            fun tagHolder(
+                tag: String,
+                platform: Platform,
+            ) = selectTagHolder("java", tag, Distribution.TEMURIN.some(), platform)
+
+            withCleanDatabase {
+                // when: DISCO posts 25 and 27 builds on two platforms, and 28 early access on one, all at once
+                withTestApplication {
+                    registerCandidates("java")
+
+                    val disco = javaVendorToken()
+                    val statuses =
+                        coroutineScope {
+                            posts
+                                .map { version -> async { postJavaVersion(version, disco).status } }
+                                .awaitAll()
+                        }
+
+                    withClue("every concurrent POST /versions/java should return 204 NoContent") {
+                        statuses.toSet() shouldBe setOf(HttpStatusCode.NoContent)
+                    }
+                }
+
+                // then: latest follows the top feature 28, which only LINUX_X64 has, and lts sits on the 25 head of both
+                withClue("latest on LINUX_X64 must be the newest 28 early access") {
+                    tagHolder("latest", Platform.LINUX_X64) shouldBeSome "28.0.0.0+ea.5"
+                }
+                withClue("MAC_ARM64 has no 28, so no row there may hold latest") {
+                    tagHolder("latest", Platform.MAC_ARM64).shouldBeNone()
+                }
+                sharedPlatforms.forEach { platform ->
+                    withClue("lts on $platform must be the newest 25 build") {
+                        tagHolder("lts", platform) shouldBeSome "25.0.5.0+1"
+                    }
                 }
             }
         }
