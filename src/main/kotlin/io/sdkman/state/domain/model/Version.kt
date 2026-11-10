@@ -1,6 +1,7 @@
 package io.sdkman.state.domain.model
 
 import arrow.core.Option
+import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.none
 
@@ -17,7 +18,11 @@ data class Version(
     val tags: Option<List<String>> = none(),
 ) : Auditable {
     val isVisible: Boolean get() = visible.getOrElse { true }
+
+    fun holds(tag: String): Boolean = tags.isSome { tags -> tag in tags }
 }
+
+fun List<Version>.holderOf(tag: String): Option<Version> = firstOrNone { row -> row.holds(tag) }
 
 data class UniqueVersion(
     val candidate: String,

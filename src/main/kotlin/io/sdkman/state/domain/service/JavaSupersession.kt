@@ -12,6 +12,7 @@ import io.sdkman.state.domain.model.JavaSeries
 import io.sdkman.state.domain.model.JavaVersion
 import io.sdkman.state.domain.model.Precedence
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.domain.model.holderOf
 import io.sdkman.state.domain.model.series
 
 data class SeriesMember(
@@ -92,12 +93,7 @@ object JavaSupersession {
     private fun tagsToMove(
         post: JavaVersion,
         rows: List<Version>,
-    ): List<String> = listOf(post.series.feature.toString()).filter { featureTag -> movesToHighestHead(post, holderOf(featureTag, rows)) }
-
-    private fun holderOf(
-        tag: String,
-        rows: List<Version>,
-    ): Option<Version> = rows.firstOrNone { row -> row.tags.isSome { tags -> tag in tags } }
+    ): List<String> = listOf(post.series.feature.toString()).filter { featureTag -> movesToHighestHead(post, rows.holderOf(featureTag)) }
 
     private fun movesToHighestHead(
         post: JavaVersion,

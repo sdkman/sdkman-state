@@ -11,6 +11,7 @@ import io.sdkman.state.domain.model.JavaSeries
 import io.sdkman.state.domain.model.JavaVersion
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.domain.model.holderOf
 import io.sdkman.state.domain.model.series
 import java.math.BigInteger
 
@@ -83,7 +84,7 @@ object JavaTagPlacement {
 
     private fun keptLtsMoves(platform: PlatformRows): List<TagMove> =
         platform.rows
-            .firstOrNone { row -> row.holds(LTS_TAG) }
+            .holderOf(LTS_TAG)
             .map { holder -> placeOrRemove(platform, LTS_TAG, generallyAvailableHeadsInSeriesOf(holder, platform.plainHeads)) }
             .getOrElse { emptyList() }
 
@@ -111,7 +112,7 @@ object JavaTagPlacement {
         ltsMoves: List<TagMove>,
     ): Option<String> =
         if (ltsMoves.isEmpty()) {
-            platform.rows.firstOrNone { row -> row.holds(LTS_TAG) }.map(Version::version)
+            platform.rows.holderOf(LTS_TAG).map(Version::version)
         } else {
             ltsMoves.filterIsInstance<TagMove.Place>().firstOrNone().map(TagMove.Place::version)
         }
@@ -154,5 +155,3 @@ object JavaTagPlacement {
 
     private val SeriesMember.isGenerallyAvailable: Boolean get() = reading.build !is BuildMetadata.EarlyAccess
 }
-
-private fun Version.holds(tag: String): Boolean = tags.isSome { tags -> tag in tags }
