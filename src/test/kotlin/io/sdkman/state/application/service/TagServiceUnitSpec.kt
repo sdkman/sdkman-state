@@ -348,7 +348,7 @@ class TagServiceUnitSpec :
                 // when: deleting it
                 service.deleteTag(temurinLts, NIL_UUID, "admin")
 
-                // then: the java scope is locked before the tag is deleted
+                // then: the distribution is locked before the tag is deleted
                 coVerifyOrder {
                     versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     tagsRepo.deleteTag(temurinLts)
@@ -369,7 +369,7 @@ class TagServiceUnitSpec :
                 // when: deleting it
                 service.deleteTag(gradleLatest, NIL_UUID, "admin")
 
-                // then: no java scope is locked
+                // then: no distribution is locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 
@@ -442,7 +442,7 @@ class TagServiceUnitSpec :
                 // when: assigning a tag to it
                 service.assignTag(temurinLatest, NIL_UUID, "admin")
 
-                // then: the java scope is locked before the version is looked up
+                // then: the distribution is locked before the version is looked up
                 coVerifyOrder {
                     versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findVersionId(any())
@@ -464,7 +464,7 @@ class TagServiceUnitSpec :
                 // when: assigning a tag to it
                 service.assignTag(gradleLatest, NIL_UUID, "admin")
 
-                // then: no java scope is locked
+                // then: no distribution is locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 

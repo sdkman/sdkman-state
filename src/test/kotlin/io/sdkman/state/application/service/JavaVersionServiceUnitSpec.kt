@@ -105,7 +105,7 @@ class JavaVersionServiceUnitSpec :
                 // when: the vendor posts TEMURIN 25.0.5.0+3
                 service.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
 
-                // then: the scope is locked before it is read
+                // then: the distribution is locked before it is read
                 coVerifyOrder {
                     versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findJavaRows(Distribution.TEMURIN.some(), Platform.LINUX_X64)
@@ -427,7 +427,7 @@ class JavaVersionServiceUnitSpec :
                 // when: the vendor posts the three-component TEMURIN 25.0.5
                 service.publish(post("25.0.5"), VENDOR_UUID, VENDOR_EMAIL)
 
-                // then: the java scope is never locked
+                // then: no distribution is locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
         }
@@ -441,7 +441,7 @@ class JavaVersionServiceUnitSpec :
                 // when: the admin posts TEMURIN 25.0.4.0+9
                 service.overrideAsAdmin(post("25.0.4.0+9"), ADMIN_UUID, ADMIN_EMAIL)
 
-                // then: the scope is locked before the post is stored
+                // then: the distribution is locked before the post is stored
                 coVerifyOrder {
                     versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.createOrUpdate(any())

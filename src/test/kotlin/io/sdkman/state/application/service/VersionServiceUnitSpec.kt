@@ -456,7 +456,7 @@ class VersionServiceUnitSpec :
                 // when: deleting it
                 service.delete(temurinRow, NIL_UUID, "admin")
 
-                // then: the java scope is locked before the row is read
+                // then: the distribution is locked before the row is read
                 coVerifyOrder {
                     versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findUnique(JAVA_CANDIDATE, "25.0.4.1+1", Platform.LINUX_X64, Distribution.TEMURIN.some())
@@ -477,7 +477,7 @@ class VersionServiceUnitSpec :
                 // when: deleting it
                 service.delete(scalaRow, NIL_UUID, "admin")
 
-                // then: no java scope is locked
+                // then: no distribution is locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 
