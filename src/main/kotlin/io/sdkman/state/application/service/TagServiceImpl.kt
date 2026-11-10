@@ -2,7 +2,6 @@ package io.sdkman.state.application.service
 
 import arrow.core.Either
 import arrow.core.Option
-import arrow.core.getOrElse
 import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
@@ -91,16 +90,14 @@ class TagServiceImpl(
             versionsRepo.lockWritesIfJava(assignment.candidate, assignment.distribution).bind()
             val versionId =
                 versionsRepo
-                    .findVersionId(
+                    .findExistingVersionId(
                         UniqueVersion(
                             candidate = assignment.candidate,
                             version = assignment.version,
                             distribution = assignment.distribution,
                             platform = assignment.platform,
                         ),
-                    ).mapLeft { DomainError.DatabaseError(it) }
-                    .bind()
-                    .getOrElse { raise(DomainError.VersionNotFound(assignment.candidate, assignment.version)) }
+                    ).bind()
             assignTagToVersion(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
                 .bind()
         }

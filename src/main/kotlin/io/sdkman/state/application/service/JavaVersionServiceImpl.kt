@@ -139,10 +139,8 @@ class JavaVersionServiceImpl(
         either {
             val versionId =
                 versionsRepo
-                    .findVersionId(UniqueVersion(JAVA_CANDIDATE, move.version, distribution, move.platform))
-                    .mapLeft { DomainError.DatabaseError(it) }
+                    .findExistingVersionId(UniqueVersion(JAVA_CANDIDATE, move.version, distribution, move.platform))
                     .bind()
-                    .getOrElse { raise(DomainError.VersionNotFound(JAVA_CANDIDATE, move.version)) }
             tagService.assignTagToVersion(versionId, JAVA_CANDIDATE, distribution, move.platform, move.tag).bind()
         }
 
