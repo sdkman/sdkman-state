@@ -1,6 +1,5 @@
 package io.sdkman.state.acceptance
 
-import arrow.core.some
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContain
@@ -22,11 +21,11 @@ import io.sdkman.state.support.JwtTestSupport
 import io.sdkman.state.support.deleteJavaVersion
 import io.sdkman.state.support.insertTaggedVersion
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.javaTagHolder
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
-import io.sdkman.state.support.selectTagHolder
 import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.tagsOf
 import io.sdkman.state.support.toJsonString
@@ -37,11 +36,6 @@ import io.sdkman.state.support.withTestApplicationAtLtsFeature
 @Tags("acceptance")
 class JavaPlacementAdminAcceptanceSpec :
     ShouldSpec({
-
-        fun latestHolder(
-            distribution: Distribution,
-            platform: Platform,
-        ) = selectTagHolder("java", "latest", distribution.some(), platform)
 
         suspend fun ApplicationTestBuilder.assignLtsAsAdmin(version: Version): HttpStatusCode =
             client
@@ -129,7 +123,7 @@ class JavaPlacementAdminAcceptanceSpec :
                 }
 
                 // then: the 17 still holds latest on LINUX_X32
-                latestHolder(Distribution.ZULU, Platform.LINUX_X32) shouldBeSome "17.0.21.0+9"
+                javaTagHolder("latest", Distribution.ZULU, Platform.LINUX_X32) shouldBeSome "17.0.21.0+9"
             }
         }
 
@@ -147,7 +141,7 @@ class JavaPlacementAdminAcceptanceSpec :
                 }
 
                 // then: the 17 still holds latest on LINUX_X32
-                latestHolder(Distribution.ZULU, Platform.LINUX_X32) shouldBeSome "17.0.21.0+9"
+                javaTagHolder("latest", Distribution.ZULU, Platform.LINUX_X32) shouldBeSome "17.0.21.0+9"
             }
         }
     })

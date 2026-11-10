@@ -12,11 +12,11 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.support.insertTaggedVersion
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.javaTagHolder
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
-import io.sdkman.state.support.selectTagHolder
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.tagsOf
@@ -28,11 +28,6 @@ import io.sdkman.state.support.withTestApplicationAtLtsFeature
 @Tags("acceptance")
 class JavaLatestPlacementAcceptanceSpec :
     ShouldSpec({
-
-        fun latestHolder(
-            distribution: Distribution,
-            platform: Platform,
-        ) = selectTagHolder("java", "latest", distribution.some(), platform)
 
         should("take latest off a platform without the top feature") {
             val topFeatureHolder = javaVersion(Distribution.ZULU, "27.0.1.0+9", Platform.LINUX_X64)
@@ -53,8 +48,8 @@ class JavaLatestPlacementAcceptanceSpec :
                 // then: the post is visible without latest, LINUX_X32 holds no latest, LINUX_X64 keeps it on 27
                 visibilityOf(newerBuild) shouldBe true.some()
                 tagsOf(newerBuild) shouldNotContain "latest"
-                latestHolder(Distribution.ZULU, Platform.LINUX_X32).shouldBeNone()
-                latestHolder(Distribution.ZULU, Platform.LINUX_X64) shouldBeSome "27.0.1.0+9"
+                javaTagHolder("latest", Distribution.ZULU, Platform.LINUX_X32).shouldBeNone()
+                javaTagHolder("latest", Distribution.ZULU, Platform.LINUX_X64) shouldBeSome "27.0.1.0+9"
             }
         }
 
@@ -77,8 +72,8 @@ class JavaLatestPlacementAcceptanceSpec :
                     ).status shouldBe HttpStatusCode.NoContent
 
                     // then: 28 takes latest on the first platform, and the second platform holds none
-                    latestHolder(Distribution.TEMURIN, firstPlatform) shouldBeSome "28.0.0.0+ea.5"
-                    latestHolder(Distribution.TEMURIN, secondPlatform).shouldBeNone()
+                    javaTagHolder("latest", Distribution.TEMURIN, firstPlatform) shouldBeSome "28.0.0.0+ea.5"
+                    javaTagHolder("latest", Distribution.TEMURIN, secondPlatform).shouldBeNone()
 
                     // when: DISCO posts 28 early access for the second platform
                     postJavaVersion(
@@ -88,7 +83,7 @@ class JavaLatestPlacementAcceptanceSpec :
                 }
 
                 // then: 28 takes latest on the second platform too
-                latestHolder(Distribution.TEMURIN, secondPlatform) shouldBeSome "28.0.0.0+ea.5"
+                javaTagHolder("latest", Distribution.TEMURIN, secondPlatform) shouldBeSome "28.0.0.0+ea.5"
             }
         }
 
@@ -132,7 +127,7 @@ class JavaLatestPlacementAcceptanceSpec :
                 }
 
                 // then: no platform holds latest
-                platforms.forEach { platform -> latestHolder(Distribution.KONA, platform).shouldBeNone() }
+                platforms.forEach { platform -> javaTagHolder("latest", Distribution.KONA, platform).shouldBeNone() }
             }
         }
 
@@ -156,7 +151,7 @@ class JavaLatestPlacementAcceptanceSpec :
                 // then: the newer 28 build holds latest and 25 keeps lts, while MAC_ARM64, holding no lts, loses latest
                 tagsOf(newerBuild) shouldContain "latest"
                 tagsOf(oldLtsHolder) shouldContain "lts"
-                latestHolder(Distribution.KONA, Platform.MAC_ARM64).shouldBeNone()
+                javaTagHolder("latest", Distribution.KONA, Platform.MAC_ARM64).shouldBeNone()
             }
         }
 

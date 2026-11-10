@@ -13,11 +13,11 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.support.insertTaggedVersion
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.javaTagHolder
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
-import io.sdkman.state.support.selectTagHolder
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.tagsOf
 import io.sdkman.state.support.visibilityOf
@@ -28,11 +28,6 @@ import io.sdkman.state.support.withTestApplicationAtLtsFeature
 @Tags("acceptance")
 class JavaLtsPlacementAcceptanceSpec :
     ShouldSpec({
-
-        fun ltsHolder(
-            distribution: Distribution,
-            platform: Platform,
-        ) = selectTagHolder("java", "lts", distribution.some(), platform)
 
         should("place lts on a distribution that never had it") {
             val ltsFeatureHead = javaVersion(Distribution.MICROSOFT, "25.0.5.0+2")
@@ -95,7 +90,7 @@ class JavaLtsPlacementAcceptanceSpec :
                 }
 
                 // then: LINUX_X32 holds no lts
-                ltsHolder(Distribution.LIBERICA, Platform.LINUX_X32).shouldBeNone()
+                javaTagHolder("lts", Distribution.LIBERICA, Platform.LINUX_X32).shouldBeNone()
             }
         }
 
@@ -190,7 +185,7 @@ class JavaLtsPlacementAcceptanceSpec :
                 }
 
                 // then: MAC_X64 holds no lts, while the 29 GA on LINUX_X64 takes lts
-                ltsHolder(Distribution.TEMURIN, Platform.MAC_X64).shouldBeNone()
+                javaTagHolder("lts", Distribution.TEMURIN, Platform.MAC_X64).shouldBeNone()
                 tagsOf(newLtsFeatureHead) shouldContain "lts"
             }
         }

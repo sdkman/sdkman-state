@@ -13,11 +13,11 @@ import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.support.deleteJavaVersion
 import io.sdkman.state.support.insertTaggedVersion
 import io.sdkman.state.support.insertVersions
+import io.sdkman.state.support.javaTagHolder
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
-import io.sdkman.state.support.selectTagHolder
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.tagsOf
 import io.sdkman.state.support.visibilityOf
@@ -27,11 +27,6 @@ import io.sdkman.state.support.withTestApplication
 @Tags("acceptance")
 class JavaPlacementHealingAcceptanceSpec :
     ShouldSpec({
-
-        fun latestHolder(
-            distribution: Distribution,
-            platform: Platform,
-        ) = selectTagHolder("java", "latest", distribution.some(), platform)
 
         should("heal the distribution after a vendor delete") {
             val hiddenRow = javaVersion(Distribution.ZULU, "8.0.504+1", visible = false)
@@ -47,7 +42,7 @@ class JavaPlacementHealingAcceptanceSpec :
                 }
 
                 // then: LINUX_X32 holds no latest
-                latestHolder(Distribution.ZULU, Platform.LINUX_X32).shouldBeNone()
+                javaTagHolder("latest", Distribution.ZULU, Platform.LINUX_X32).shouldBeNone()
             }
         }
 
@@ -70,7 +65,7 @@ class JavaPlacementHealingAcceptanceSpec :
 
                 // then: the older build is hidden, and MAC_X64 holds no latest
                 visibilityOf(olderBuild) shouldBe false.some()
-                latestHolder(Distribution.TEMURIN, Platform.MAC_X64).shouldBeNone()
+                javaTagHolder("latest", Distribution.TEMURIN, Platform.MAC_X64).shouldBeNone()
             }
         }
 

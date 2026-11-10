@@ -11,11 +11,11 @@ import io.sdkman.state.adapter.secondary.persistence.VersionsTable
 import io.sdkman.state.adapter.secondary.persistence.dbQuery
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.support.javaTagHolder
 import io.sdkman.state.support.javaVendorToken
 import io.sdkman.state.support.javaVersion
 import io.sdkman.state.support.postJavaVersion
 import io.sdkman.state.support.registerCandidates
-import io.sdkman.state.support.selectTagHolder
 import io.sdkman.state.support.shouldBeNone
 import io.sdkman.state.support.shouldBeSome
 import io.sdkman.state.support.tagsOf
@@ -91,11 +91,6 @@ class JavaConcurrentPostAcceptanceSpec :
                     sharedBuilds.map { version -> javaVersion(Distribution.TEMURIN, version, platform) }
                 } + earlyAccessBuilds
 
-            fun tagHolder(
-                tag: String,
-                platform: Platform,
-            ) = selectTagHolder("java", tag, Distribution.TEMURIN.some(), platform)
-
             withCleanDatabase {
                 // when: DISCO posts 25 and 27 builds on two platforms, and 28 early access on one, all at once
                 withTestApplication {
@@ -116,14 +111,14 @@ class JavaConcurrentPostAcceptanceSpec :
 
                 // then: latest follows the top feature 28, which only LINUX_X64 has, and lts sits on the 25 head of both
                 withClue("latest on LINUX_X64 must be the newest 28 early access") {
-                    tagHolder("latest", Platform.LINUX_X64) shouldBeSome "28.0.0.0+ea.5"
+                    javaTagHolder("latest", Distribution.TEMURIN, Platform.LINUX_X64) shouldBeSome "28.0.0.0+ea.5"
                 }
                 withClue("MAC_ARM64 has no 28, so no row there may hold latest") {
-                    tagHolder("latest", Platform.MAC_ARM64).shouldBeNone()
+                    javaTagHolder("latest", Distribution.TEMURIN, Platform.MAC_ARM64).shouldBeNone()
                 }
                 sharedPlatforms.forEach { platform ->
                     withClue("lts on $platform must be the newest 25 build") {
-                        tagHolder("lts", platform) shouldBeSome "25.0.5.0+1"
+                        javaTagHolder("lts", Distribution.TEMURIN, platform) shouldBeSome "25.0.5.0+1"
                     }
                 }
             }

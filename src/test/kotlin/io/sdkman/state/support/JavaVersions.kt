@@ -69,6 +69,12 @@ fun visibilityOf(version: Version): Option<Boolean> =
 
 fun tagsOf(version: Version): List<String> = selectTagNamesOf(version.candidate, version.version, version.distribution, version.platform)
 
+fun javaTagHolder(
+    tag: String,
+    distribution: Distribution,
+    platform: Platform,
+): Option<String> = selectTagHolder("java", tag, distribution.some(), platform)
+
 fun insertTaggedVersion(
     version: Version,
     vararg tags: String,
