@@ -40,8 +40,10 @@ fun testApplicationConfig(): MapApplicationConfig =
         put("community.password", JwtTestSupport.COMMUNITY_PASSWORD)
     }
 
-fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig =
-    MapApplicationConfig(
+fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig = MapApplicationConfig(testApplicationConfigEntries)
+
+private val testApplicationConfigEntries: List<Pair<String, String>> by lazy {
+    listOf(
         "database.host" to PostgresTestContainer.host,
         "database.port" to PostgresTestContainer.port.toString(),
         "database.name" to "sdkman",
@@ -61,6 +63,7 @@ fun testApplicationConfigWithoutCommunityAccount(): MapApplicationConfig =
         "auth.bcrypt.cost" to "4",
         "candidates.refresh.intervalMs" to "300000",
     )
+}
 
 private val sharedTestAppConfig by lazy { DefaultAppConfig(testApplicationConfig()) }
 
