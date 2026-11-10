@@ -1,6 +1,7 @@
 package io.sdkman.state.application.service
 
 import arrow.core.Either
+import arrow.core.none
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.mockk.Called
@@ -17,6 +18,8 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.JavaRefusal
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.domain.repository.AuditRepository
 import io.sdkman.state.domain.repository.VersionRepository
@@ -24,6 +27,7 @@ import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.support.passthroughTransactional
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
+import io.sdkman.state.support.transactionalCheckingBeforeCommit
 import io.sdkman.state.support.transactionalFailingWithoutRunning
 import java.util.UUID
 
@@ -61,6 +65,10 @@ class JavaVersionServiceUnitSpec :
 
         fun givenScopeRows(vararg rows: Version) {
             coEvery { versionsRepo.findJavaRows(any(), Platform.LINUX_X64) } returns Either.Right(rows.toList())
+        }
+
+        fun givenDistributionRows(vararg rows: Version) {
+            coEvery { versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some()) } returns Either.Right(rows.toList())
         }
 
         val databaseFailure = DatabaseFailure.QueryExecutionFailure("write failed", RuntimeException("deadlock"))
@@ -172,6 +180,70 @@ class JavaVersionServiceUnitSpec :
                     versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some())
                     tagService.findTagNamesByVersionId(VERSION_ID)
                 }
+            }
+
+            should("read the post's whole distribution for placement before its transaction commits") {
+                // given: a transaction that checks, as its block returns, that the distribution was read for placement
+                givenScopeRows(visibleRow("25.0.4.1+1"))
+                val txService =
+                    JavaVersionServiceImpl(
+                        versionsRepo,
+                        tagService,
+                        auditRepo,
+                        transactionalCheckingBeforeCommit {
+                            coVerify(exactly = 1) { versionsRepo.findJavaDistributionRows(Distribution.TEMURIN.some()) }
+                        },
+                        LTS_FEATURE,
+                    )
+
+                // when: the vendor posts TEMURIN 25.0.5.0+3
+                val result = txService.publish(post("25.0.5.0+3"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the post succeeds, so the check found the placement read before the block returned
+                result.shouldBeRight()
+            }
+
+            should("take latest off another platform that lacks the distribution's top feature") {
+                // given: TEMURIN 27.0.1.0+9 is visible on LINUX_X64 and 17.0.20.1+1 on MAC_X64 is tagged "latest"
+                givenScopeRows()
+                givenDistributionRows(visibleRow("27.0.1.0+9"), visibleRow("17.0.20.1+1", "latest").copy(platform = Platform.MAC_X64))
+
+                // when: the vendor posts TEMURIN 27.0.1.0+9 for LINUX_X64
+                service.publish(post("27.0.1.0+9"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: "latest" is removed on MAC_X64
+                coVerify {
+                    tagService.removeTag(UniqueTag(JAVA_CANDIDATE, "latest", Distribution.TEMURIN.some(), Platform.MAC_X64))
+                }
+            }
+
+            should("return DatabaseError and audit nothing when placement fails to remove a tag") {
+                // given: placement takes "latest" off MAC_X64 and removing it fails
+                givenScopeRows()
+                givenDistributionRows(visibleRow("27.0.1.0+9"), visibleRow("17.0.20.1+1", "latest").copy(platform = Platform.MAC_X64))
+                coEvery { tagService.removeTag(any()) } returns Either.Left(DomainError.DatabaseError(databaseFailure))
+
+                // when: the vendor posts TEMURIN 27.0.1.0+9 for LINUX_X64
+                val result = service.publish(post("27.0.1.0+9"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the failure surfaces and no audit entry is written
+                result shouldBeLeft DomainError.DatabaseError(databaseFailure)
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("answer VersionNotFound when the row placement tags cannot be found") {
+                // given: placement puts "latest" on TEMURIN 27.0.1.0+9, which the id lookup misses
+                givenScopeRows()
+                givenDistributionRows(visibleRow("27.0.1.0+9"))
+                coEvery {
+                    versionsRepo.findVersionId(UniqueVersion(JAVA_CANDIDATE, "27.0.1.0+9", Distribution.TEMURIN.some(), Platform.LINUX_X64))
+                } returns Either.Right(none())
+
+                // when: the vendor posts TEMURIN 27.0.1.0+9 for LINUX_X64
+                val result = service.publish(post("27.0.1.0+9"), VENDOR_UUID, VENDOR_EMAIL)
+
+                // then: the missing row is named
+                result shouldBeLeft DomainError.VersionNotFound(JAVA_CANDIDATE, "27.0.1.0+9")
             }
 
             should("move the feature, latest and lts tags onto a new head") {
