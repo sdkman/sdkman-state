@@ -1,9 +1,11 @@
 package io.sdkman.state.domain.service
 
+import arrow.core.Option
 import arrow.core.filterOption
 import arrow.core.firstOrNone
 import arrow.core.getOrElse
 import arrow.core.singleOrNone
+import arrow.core.toOption
 import io.sdkman.state.domain.model.BuildMetadata
 import io.sdkman.state.domain.model.JavaSeries
 import io.sdkman.state.domain.model.JavaVersion
@@ -44,14 +46,28 @@ private data class PlatformRows(
 
 object JavaTagPlacement {
     private const val LTS_TAG = "lts"
+    private const val LATEST_TAG = "latest"
 
     fun movesFor(
         rows: List<Version>,
         ltsFeature: Int,
-    ): List<TagMove> =
-        rows
-            .groupBy(Version::platform)
-            .flatMap { (platform, platformRows) -> ltsMoves(PlatformRows(platform, platformRows), ltsFeature.toBigInteger()) }
+    ): List<TagMove> {
+        val platforms =
+            rows
+                .groupBy(Version::platform)
+                .map { (platform, platformRows) -> PlatformRows(platform, platformRows) }
+        val topFeature = platforms.flatMap(PlatformRows::plainHeads).maxOfOrNull { head -> head.feature }.toOption()
+        return platforms.flatMap { platform -> movesOn(platform, topFeature, ltsFeature.toBigInteger()) }
+    }
+
+    private fun movesOn(
+        platform: PlatformRows,
+        topFeature: Option<BigInteger>,
+        ltsFeature: BigInteger,
+    ): List<TagMove> {
+        val ltsMoves = ltsMoves(platform, ltsFeature)
+        return ltsMoves + latestMoves(platform, topFeature, ltsFloor(platform, ltsMoves, ltsFeature))
+    }
 
     private fun ltsMoves(
         platform: PlatformRows,
@@ -79,6 +95,37 @@ object JavaTagPlacement {
             .read(holder.version)
             .map { reading -> plainHeads.filter { head -> head.reading.series == reading.series && head.isGenerallyAvailable } }
             .getOrElse { emptyList() }
+
+    private fun ltsFloor(
+        platform: PlatformRows,
+        ltsMoves: List<TagMove>,
+        ltsFeature: BigInteger,
+    ): BigInteger =
+        ltsHolderAfter(platform, ltsMoves)
+            .flatMap(JavaVersion::read)
+            .map { reading -> reading.series.feature }
+            .getOrElse { ltsFeature }
+
+    private fun ltsHolderAfter(
+        platform: PlatformRows,
+        ltsMoves: List<TagMove>,
+    ): Option<String> =
+        if (ltsMoves.isEmpty()) {
+            platform.rows.firstOrNone { row -> row.holds(LTS_TAG) }.map(Version::version)
+        } else {
+            ltsMoves.filterIsInstance<TagMove.Place>().firstOrNone().map(TagMove.Place::version)
+        }
+
+    private fun latestMoves(
+        platform: PlatformRows,
+        topFeature: Option<BigInteger>,
+        ltsFloor: BigInteger,
+    ): List<TagMove> =
+        topFeature
+            .filter { feature -> feature >= ltsFloor }
+            .map { feature -> platform.plainHeads.filter { head -> head.feature == feature } }
+            .getOrElse { emptyList() }
+            .let { candidates -> placeOrRemove(platform, LATEST_TAG, candidates) }
 
     private fun placeOrRemove(
         platform: PlatformRows,
