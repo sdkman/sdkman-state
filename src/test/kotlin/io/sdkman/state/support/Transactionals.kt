@@ -22,11 +22,14 @@ fun transactionalFailingWithoutRunning(txFailure: DomainError): Transactional =
         coEvery { transactional.inTransaction<DomainError, Any>(any()) } returns Either.Left(txFailure)
     }
 
-fun transactionalCheckingNoAuditYet(auditRepo: AuditRepository): Transactional =
+fun transactionalCheckingBeforeCommit(check: () -> Unit): Transactional =
     mockk<Transactional>().also { transactional ->
         coEvery { transactional.inTransaction<DomainError, Any>(any()) } coAnswers {
-            firstArg<suspend () -> Either<DomainError, Any>>()().also {
-                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
-            }
+            firstArg<suspend () -> Either<DomainError, Any>>()().also { check() }
         }
+    }
+
+fun transactionalCheckingNoAuditYet(auditRepo: AuditRepository): Transactional =
+    transactionalCheckingBeforeCommit {
+        coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
     }
