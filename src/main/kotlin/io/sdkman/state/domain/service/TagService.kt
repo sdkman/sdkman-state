@@ -28,6 +28,8 @@ interface TagService {
 
     suspend fun findTagNamesByVersionId(versionId: Int): Either<DomainError, List<String>>
 
+    suspend fun removeTag(uniqueTag: UniqueTag): Either<DomainError, Unit>
+
     suspend fun deleteTag(
         uniqueTag: UniqueTag,
         vendorId: UUID,

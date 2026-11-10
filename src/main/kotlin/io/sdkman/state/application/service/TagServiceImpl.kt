@@ -51,6 +51,12 @@ class TagServiceImpl(
             .findTagNamesByVersionId(versionId)
             .mapLeft { DomainError.DatabaseError(it) }
 
+    override suspend fun removeTag(uniqueTag: UniqueTag): Either<DomainError, Unit> =
+        tagsRepo
+            .deleteTag(uniqueTag)
+            .map { }
+            .mapLeft { DomainError.DatabaseError(it) }
+
     override suspend fun deleteTag(
         uniqueTag: UniqueTag,
         vendorId: UUID,

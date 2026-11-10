@@ -164,6 +164,44 @@ class TagServiceUnitSpec :
             }
         }
 
+        context("removeTag") {
+            val macLatest =
+                UniqueTag(
+                    candidate = "java",
+                    tag = "latest",
+                    distribution = Distribution.TEMURIN.some(),
+                    platform = Platform.MAC_X64,
+                )
+
+            should("delete the tag once, outside any transaction, without the java write lock or an audit") {
+                // given: the tag deletes, inside a transaction that would fail if the removal opened one
+                coEvery { tagsRepo.deleteTag(macLatest) } returns Either.Right(1)
+                val txFailure = DomainError.DatabaseError(DatabaseFailure.QueryExecutionFailure("tx failed", RuntimeException("x")))
+                val txService = TagServiceImpl(tagsRepo, auditRepo, versionsRepo, transactionalFailingWithoutRunning(txFailure))
+
+                // when: removing the tag
+                val result = txService.removeTag(macLatest)
+
+                // then: the tag is deleted once and nothing is locked or audited
+                result.shouldBeRight()
+                coVerify(exactly = 1) { tagsRepo.deleteTag(macLatest) }
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
+                coVerify(exactly = 0) { auditRepo.recordAudit(any(), any(), any(), any()) }
+            }
+
+            should("return DatabaseError when the tag deletion fails") {
+                // given: the repository fails to delete the tag
+                val dbFailure = DatabaseFailure.QueryExecutionFailure("connection reset", RuntimeException("timeout"))
+                coEvery { tagsRepo.deleteTag(macLatest) } returns Either.Left(dbFailure)
+
+                // when: removing the tag
+                val result = service.removeTag(macLatest)
+
+                // then: the failure surfaces as a DatabaseError
+                result shouldBeLeft DomainError.DatabaseError(dbFailure)
+            }
+        }
+
         context("deleteTag") {
             val temurinLts =
                 UniqueTag(
