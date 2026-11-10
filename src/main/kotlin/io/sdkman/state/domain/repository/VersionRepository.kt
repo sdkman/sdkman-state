@@ -36,10 +36,7 @@ interface VersionRepository {
 
     suspend fun delete(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
 
-    suspend fun lockJavaWrites(
-        distribution: Option<Distribution>,
-        platform: Platform,
-    ): Either<DatabaseFailure, Unit>
+    suspend fun lockJavaWrites(distribution: Option<Distribution>): Either<DatabaseFailure, Unit>
 
     suspend fun findJavaRows(
         distribution: Option<Distribution>,

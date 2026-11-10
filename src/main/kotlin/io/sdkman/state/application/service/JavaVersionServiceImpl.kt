@@ -90,7 +90,7 @@ class JavaVersionServiceImpl(
         post: JavaVersion,
     ): Either<DomainError, VendorDecision> =
         either {
-            versionsRepo.lockWritesIfJava(version.candidate, version.distribution, version.platform).bind()
+            versionsRepo.lockWritesIfJava(version.candidate, version.distribution).bind()
             JavaSupersession
                 .decide(post, findScopeRows(version).bind())
                 .mapLeft { refusal -> DomainError.JavaPostRefused(version.version, refusal.head) }
@@ -99,7 +99,7 @@ class JavaVersionServiceImpl(
 
     private suspend fun storeAdminPost(stored: Version): Either<DomainError, Publication> =
         either {
-            versionsRepo.lockWritesIfJava(stored.candidate, stored.distribution, stored.platform).bind()
+            versionsRepo.lockWritesIfJava(stored.candidate, stored.distribution).bind()
             val versionId = upsert(stored).bind()
             tagService
                 .replaceTags(versionId, stored.candidate, stored.distribution, stored.platform, stored.tags.getOrElse { emptyList() })

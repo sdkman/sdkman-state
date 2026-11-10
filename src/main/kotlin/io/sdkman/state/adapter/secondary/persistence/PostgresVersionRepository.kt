@@ -249,16 +249,11 @@ class PostgresVersionRepository : VersionRepository {
                 )
             }
 
-    override suspend fun lockJavaWrites(
-        distribution: Option<Distribution>,
-        platform: Platform,
-    ): Either<DatabaseFailure, Unit> =
+    override suspend fun lockJavaWrites(distribution: Option<Distribution>): Either<DatabaseFailure, Unit> =
         Either
             .catch {
                 dbQuery {
-                    takeTransactionLock(
-                        listOf(JAVA_CANDIDATE, distribution.map { it.name }.getOrElse { "" }, platform.name),
-                    )
+                    takeTransactionLock(listOf(JAVA_CANDIDATE, distribution.map { it.name }.getOrElse { "" }))
                 }
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(

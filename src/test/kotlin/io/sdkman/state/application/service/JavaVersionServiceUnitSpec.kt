@@ -74,7 +74,7 @@ class JavaVersionServiceUnitSpec :
 
         beforeEach {
             clearAllMocks()
-            coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
+            coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Right(Unit)
             coEvery { versionsRepo.createOrUpdate(any()) } returns Either.Right(VERSION_ID)
             coEvery { versionsRepo.hideJavaVersions(any(), any(), any()) } returns Either.Right(0)
             coEvery { tagService.assignTagToVersion(any(), any(), any(), any(), any()) } returns Either.Right(Unit)
@@ -85,7 +85,7 @@ class JavaVersionServiceUnitSpec :
 
         context("publish") {
 
-            should("take the java write lock of the post's scope before reading its rows") {
+            should("take the java write lock of the post's distribution before reading its rows") {
                 // given: TEMURIN 25.0.4.1+1 is the head of its series
                 givenScopeRows(visibleRow("25.0.4.1+1"))
 
@@ -94,7 +94,7 @@ class JavaVersionServiceUnitSpec :
 
                 // then: the scope is locked before it is read
                 coVerifyOrder {
-                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findJavaRows(Distribution.TEMURIN.some(), Platform.LINUX_X64)
                 }
             }
@@ -281,13 +281,13 @@ class JavaVersionServiceUnitSpec :
                 service.publish(post("25.0.5"), VENDOR_UUID, VENDOR_EMAIL)
 
                 // then: the java scope is never locked
-                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
         }
 
         context("overrideAsAdmin") {
 
-            should("take the java write lock of the post's scope before storing it") {
+            should("take the java write lock of the post's distribution before storing it") {
                 // given: TEMURIN 25.0.4.1+1 is visible
                 givenScopeRows(visibleRow("25.0.4.1+1"))
 
@@ -296,7 +296,7 @@ class JavaVersionServiceUnitSpec :
 
                 // then: the scope is locked before the post is stored
                 coVerifyOrder {
-                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.createOrUpdate(any())
                 }
             }

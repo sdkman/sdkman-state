@@ -192,7 +192,7 @@ class PostgresVersionRepositoryJavaIntegrationSpec :
                         transactional
                             .inTransaction {
                                 either {
-                                    repo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64).bind()
+                                    repo.lockJavaWrites(Distribution.TEMURIN.some()).bind()
                                     advisoryLocksHeldByThisBackend()
                                 }
                             }.shouldBeRight()
@@ -201,22 +201,21 @@ class PostgresVersionRepositoryJavaIntegrationSpec :
                 }
             }
 
-            should("take one lock per distribution and platform") {
+            should("take one lock per distribution") {
                 withCleanDatabase {
                     val locksHeld =
                         transactional
                             .inTransaction {
                                 either {
-                                    repo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64).bind()
-                                    repo.lockJavaWrites(Distribution.ZULU.some(), Platform.LINUX_X64).bind()
-                                    repo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.MAC_ARM64).bind()
-                                    repo.lockJavaWrites(none(), Platform.LINUX_X64).bind()
-                                    repo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64).bind()
+                                    repo.lockJavaWrites(Distribution.TEMURIN.some()).bind()
+                                    repo.lockJavaWrites(Distribution.ZULU.some()).bind()
+                                    repo.lockJavaWrites(none()).bind()
+                                    repo.lockJavaWrites(Distribution.TEMURIN.some()).bind()
                                     advisoryLocksHeldByThisBackend()
                                 }
                             }.shouldBeRight()
 
-                    locksHeld shouldBe 4L
+                    locksHeld shouldBe 3L
                 }
             }
         }

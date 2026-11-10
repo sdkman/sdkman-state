@@ -62,7 +62,7 @@ class TagServiceImpl(
 
     private suspend fun deleteExistingTag(uniqueTag: UniqueTag): Either<DomainError, Unit> =
         either {
-            versionsRepo.lockWritesIfJava(uniqueTag.candidate, uniqueTag.distribution, uniqueTag.platform).bind()
+            versionsRepo.lockWritesIfJava(uniqueTag.candidate, uniqueTag.distribution).bind()
             val deletedCount =
                 tagsRepo
                     .deleteTag(uniqueTag)
@@ -82,7 +82,7 @@ class TagServiceImpl(
 
     private suspend fun assignTagToExistingVersion(assignment: TagAssignment): Either<DomainError, Unit> =
         either {
-            versionsRepo.lockWritesIfJava(assignment.candidate, assignment.distribution, assignment.platform).bind()
+            versionsRepo.lockWritesIfJava(assignment.candidate, assignment.distribution).bind()
             val versionId =
                 versionsRepo
                     .findVersionId(

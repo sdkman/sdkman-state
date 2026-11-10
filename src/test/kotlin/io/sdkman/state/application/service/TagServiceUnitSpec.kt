@@ -42,7 +42,7 @@ class TagServiceUnitSpec :
 
         beforeEach {
             clearAllMocks()
-            coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
+            coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Right(Unit)
         }
 
         context("replaceTags") {
@@ -303,7 +303,7 @@ class TagServiceUnitSpec :
                 }
             }
 
-            should("take the java write lock of the tag's scope before deleting a java tag") {
+            should("take the java write lock of the tag's distribution before deleting a java tag") {
                 // given: a TEMURIN java tag that exists
                 givenDeletableTag(temurinLts)
 
@@ -312,7 +312,7 @@ class TagServiceUnitSpec :
 
                 // then: the java scope is locked before the tag is deleted
                 coVerifyOrder {
-                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     tagsRepo.deleteTag(temurinLts)
                 }
             }
@@ -332,13 +332,13 @@ class TagServiceUnitSpec :
                 service.deleteTag(gradleLatest, NIL_UUID, "admin")
 
                 // then: no java scope is locked
-                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 
             should("answer DatabaseError and delete nothing when the java write lock fails") {
                 // given: taking the java write lock fails
                 val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
-                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+                coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Left(lockFailure)
 
                 // when: deleting a java tag
                 val result = service.deleteTag(temurinLts, NIL_UUID, "admin")
@@ -397,7 +397,7 @@ class TagServiceUnitSpec :
                 coEvery { auditRepo.recordAudit(any(), any(), any(), any()) } returns Either.Right(Unit)
             }
 
-            should("take the java write lock of the tag's scope before looking up a java version") {
+            should("take the java write lock of the tag's distribution before looking up a java version") {
                 // given: a TEMURIN java version that exists
                 givenAssignableVersion(temurinLatest)
 
@@ -406,7 +406,7 @@ class TagServiceUnitSpec :
 
                 // then: the java scope is locked before the version is looked up
                 coVerifyOrder {
-                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findVersionId(any())
                 }
             }
@@ -427,13 +427,13 @@ class TagServiceUnitSpec :
                 service.assignTag(gradleLatest, NIL_UUID, "admin")
 
                 // then: no java scope is locked
-                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 
             should("answer DatabaseError and look up nothing when the java write lock fails") {
                 // given: taking the java write lock fails
                 val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
-                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+                coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Left(lockFailure)
 
                 // when: assigning a tag to a java version
                 val result = service.assignTag(temurinLatest, NIL_UUID, "admin")

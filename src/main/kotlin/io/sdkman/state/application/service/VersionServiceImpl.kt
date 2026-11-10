@@ -95,7 +95,7 @@ class VersionServiceImpl(
 
     private suspend fun deleteUntagged(uniqueVersion: UniqueVersion): Either<DomainError, Version> =
         either {
-            versionsRepo.lockWritesIfJava(uniqueVersion.candidate, uniqueVersion.distribution, uniqueVersion.platform).bind()
+            versionsRepo.lockWritesIfJava(uniqueVersion.candidate, uniqueVersion.distribution).bind()
             val versionToDelete =
                 versionsRepo
                     .findUnique(

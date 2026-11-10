@@ -43,7 +43,7 @@ class VersionServiceUnitSpec :
 
         beforeEach {
             clearAllMocks()
-            coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Right(Unit)
+            coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Right(Unit)
         }
 
         context("findByCandidate") {
@@ -449,7 +449,7 @@ class VersionServiceUnitSpec :
                 result shouldBeLeft DomainError.VersionNotFound(JAVA_CANDIDATE, "25.0.4.1+1")
             }
 
-            should("take the java write lock of the row's scope before reading the row") {
+            should("take the java write lock of the row's distribution before reading the row") {
                 // given: an untagged TEMURIN java row
                 givenDeletableRow(temurinRow)
 
@@ -458,7 +458,7 @@ class VersionServiceUnitSpec :
 
                 // then: the java scope is locked before the row is read
                 coVerifyOrder {
-                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some(), Platform.LINUX_X64)
+                    versionsRepo.lockJavaWrites(Distribution.TEMURIN.some())
                     versionsRepo.findUnique(JAVA_CANDIDATE, "25.0.4.1+1", Platform.LINUX_X64, Distribution.TEMURIN.some())
                 }
             }
@@ -478,13 +478,13 @@ class VersionServiceUnitSpec :
                 service.delete(scalaRow, NIL_UUID, "admin")
 
                 // then: no java scope is locked
-                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any(), any()) }
+                coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
             }
 
             should("answer DatabaseError and read nothing when the java write lock fails") {
                 // given: taking the java write lock fails
                 val lockFailure = DatabaseFailure.QueryExecutionFailure("lock failed", RuntimeException("timeout"))
-                coEvery { versionsRepo.lockJavaWrites(any(), any()) } returns Either.Left(lockFailure)
+                coEvery { versionsRepo.lockJavaWrites(any()) } returns Either.Left(lockFailure)
 
                 // when: deleting a java row
                 val result = service.delete(temurinRow, NIL_UUID, "admin")
