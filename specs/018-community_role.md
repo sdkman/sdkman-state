@@ -1,6 +1,6 @@
 # Community Role
 
-*Amended for java by [`021-java-supersession.md`](021-java-supersession.md): the community role is refused
+*Amended for java by [`021-java_supersession.md`](021-java_supersession.md): the community role is refused
 every java write, on `POST /versions/java`, `DELETE /versions/java` and the tag routes. The rows of
 §API Contract, the §Behaviour sentence leaving java to `sdkman-contrib`, and the out-of-scope entry on
 refusing java to the community role no longer hold for java.*
@@ -22,7 +22,7 @@ Adding a third role exposes a defect: the version and tag routes treat any role 
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §14
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
 [`sdkman-contrib`](../../../community/sdkman-contrib/specs/001-community-contributions.md).
-Settled in a grilling session on 2026-10-07. Builds on [`001-jwt-authentication.md`](001-jwt-authentication.md).*
+Settled in a grilling session on 2026-10-07. Builds on [`001-jwt_authentication.md`](001-jwt_authentication.md).*
 
 ## Behaviour
 
@@ -167,7 +167,7 @@ Feature: Community role
 
 ## Out of Scope
 
-- Validating a request without writing it: [`017-public-validation.md`](017-public-validation.md).
+- Validating a request without writing it: [`017-public_validation.md`](017-public_validation.md).
 - More than one community account, or a community scope narrower than every candidate.
 - Refusing java to the community role. `sdkman-contrib`'s check refuses it instead.
 - Changing what admin or vendor tokens may do.

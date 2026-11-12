@@ -1,16 +1,16 @@
 # Semverish Open-Ended Core
 
-*Amended by [`021-java-supersession.md`](021-java-supersession.md): the grammar below stands, but it is the
+*Amended by [`021-java_supersession.md`](021-java_supersession.md): the grammar below stands, but it is the
 grammar of `POST /versions/java` for a vendor post. The feature flag of §Java Only is removed, and
 `POST /versions` applies no version-shape validation to any candidate.*
 
-[`016-semverish-four-component-core.md`](016-semverish-four-component-core.md) fixed the semverish core at exactly four numeric components and sent anything beyond the fourth into build metadata (`21.0.5.11.1` → `21.0.5.11+1`). That was stricter than Java's own scheme: [JEP 322](https://openjdk.org/jeps/322) assigns meaning to the first four elements, `$FEATURE.$INTERIM.$UPDATE.$PATCH`, and allows the sequence to be of arbitrary length.
+[`016-semverish_four_component_core.md`](016-semverish_four_component_core.md) fixed the semverish core at exactly four numeric components and sent anything beyond the fourth into build metadata (`21.0.5.11.1` → `21.0.5.11+1`). That was stricter than Java's own scheme: [JEP 322](https://openjdk.org/jeps/322) assigns meaning to the first four elements, `$FEATURE.$INTERIM.$UPDATE.$PATCH`, and allows the sequence to be of arbitrary length.
 
 This change keeps four components as the **minimum** and lifts the maximum. `25.0.0.1.1.2` becomes valid; `25.0.1` stays invalid. The core components take their JEP 322 names. Semverish also becomes **java's rule**, switched by one enabled/disabled feature flag rather than an opt-in candidate list.
 
 The change only widens what is accepted. Every version that validates today still validates, so DISCO's current posts are unaffected.
 
-*Reference: amends the grammar of [`016-semverish-four-component-core.md`](016-semverish-four-component-core.md) and the opt-in mechanism of [`006-semverish-version-validation.md`](006-semverish-version-validation.md). Both remain as historic records; where they conflict with this spec, this spec wins. Covers step 13 ("semverish java-only") of [`../../../docs/specs/application-execution-plan.md`](../../../docs/specs/application-execution-plan.md).*
+*Reference: amends the grammar of [`016-semverish_four_component_core.md`](016-semverish_four_component_core.md) and the opt-in mechanism of [`006-semverish_version_validation.md`](006-semverish_version_validation.md). Both remain as historic records; where they conflict with this spec, this spec wins. Covers step 13 ("semverish java-only") of [`../../../docs/specs/application-execution-plan.md`](../../../docs/specs/application-execution-plan.md).*
 
 ## Behaviour
 
@@ -155,7 +155,7 @@ Feature: Open-ended semverish core on POST /versions
 ## Acceptance Criteria
 
 - [ ] `SemverishValidator` accepts every version in the *Valid* list and rejects every version in the *Invalid* list
-- [ ] Every version listed as valid in [`016-semverish-four-component-core.md`](016-semverish-four-component-core.md) is still accepted
+- [ ] Every version listed as valid in [`016-semverish_four_component_core.md`](016-semverish_four_component_core.md) is still accepted
 - [ ] `POST /versions` for any candidate other than `java` accepts versions that fail the grammar
 - [ ] `validation.semverish.candidates` is gone from `application.conf` and `SEMVERISH_CANDIDATES` is no longer read
 - [ ] `validation.semverish.enabled` defaults to `true` in `application.conf` and is overridden by `SEMVERISH_VALIDATION_ENABLED`
