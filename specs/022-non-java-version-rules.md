@@ -17,9 +17,9 @@ exactly as the write does. It also retires the legacy `lts` tag for non-java can
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)). The consumer is
 [`sdkman-contrib`](../../../community/sdkman-contrib/specs/001-community-contributions.md).
 Settled in a review of that spec on 2026-10-24. Builds on
-[`default-tag-cascade.md`](default-tag-cascade.md),
-[`assign-tag-to-version.md`](assign-tag-to-version.md) and
-[`public-validation.md`](public-validation.md). Where earlier specs conflict, this one wins.*
+[`019-default-tag-cascade.md`](019-default-tag-cascade.md),
+[`011-assign-tag-to-version.md`](011-assign-tag-to-version.md) and
+[`017-public-validation.md`](017-public-validation.md). Where earlier specs conflict, this one wins.*
 
 ## Behaviour
 
@@ -27,7 +27,7 @@ Settled in a review of that spec on 2026-10-24. Builds on
 A write that breaks a rule is refused with `400`, whoever sends it.
 
 **java is unchanged.** java keeps its own grammar and tagging, owned by
-[`java-supersession.md`](java-supersession.md). Nothing here applies to a java row.
+[`021-java-supersession.md`](021-java-supersession.md). Nothing here applies to a java row.
 
 **A version must look like a version.** A non-java version is refused unless it matches
 `^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$`: it starts with a letter or digit, holds only letters,

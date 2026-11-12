@@ -1,7 +1,7 @@
 # Resolve Version by Tag — Fixes
 
 **Status:** Post-review fixes for PR #41
-**Depends on:** `specs/resolve-version-by-tag.md`
+**Depends on:** `specs/004-resolve-version-by-tag.md`
 **Service:** sdkman-state (Kotlin/Ktor)
 
 Addresses four issues raised during code review of the `GET /versions/{candidate}/tags/{tag}` endpoint plus one stylistic preference around idiomatic Arrow usage.
@@ -90,7 +90,7 @@ Update the adapter implementation, the service implementation, the route call-si
 
 - [X] Cover the blank-guard branch of `resolveVersionByTagRoute` with acceptance tests
 
-**Prompt**: `specs/resolve-version-by-tag.md` specifies that the endpoint returns `400 Bad Request` when either the `candidate` or `tag` path segment is missing or blank. The route handler implements this via `option { ... }.getOrElse { call.respond(HttpStatusCode.BadRequest) }`, filtering on `isNotBlank()`. No acceptance test currently exercises this branch — every existing test uses a populated, non-blank value.
+**Prompt**: `specs/004-resolve-version-by-tag.md` specifies that the endpoint returns `400 Bad Request` when either the `candidate` or `tag` path segment is missing or blank. The route handler implements this via `option { ... }.getOrElse { call.respond(HttpStatusCode.BadRequest) }`, filtering on `isNotBlank()`. No acceptance test currently exercises this branch — every existing test uses a populated, non-blank value.
 
 Add two acceptance tests to `ResolveVersionByTagAcceptanceSpec`:
 

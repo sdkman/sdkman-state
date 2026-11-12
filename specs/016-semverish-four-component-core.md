@@ -1,14 +1,14 @@
 # Semverish Four-Component Core
 
-*Amended by [`java-supersession.md`](java-supersession.md): the eligibility grammar and series key of
+*Amended by [`021-java-supersession.md`](021-java-supersession.md): the eligibility grammar and series key of
 §Impact on Java Version Supersession are replaced by its §Reading stored rows and §Series. The
-four-component grammar itself is amended by [`semverish-open-ended-core.md`](semverish-open-ended-core.md).*
+four-component grammar itself is amended by [`020-semverish-open-ended-core.md`](020-semverish-open-ended-core.md).*
 
-The semverish grammar introduced in [`semverish-version-validation.md`](semverish-version-validation.md) has a three-part numeric core, `M.N.P`. Java's own versioning scheme has four: [JEP 322 — Time-Based Release Versioning](https://openjdk.org/jeps/322) defines `$FEATURE.$INTERIM.$UPDATE.$PATCH`. Squeezing that fourth element into a three-part core forced producers to relocate it into build metadata (`25.0.2.1` → `25.0.2+1`), conflating JEP 322's patch counter with rebuild counters and runtime targets.
+The semverish grammar introduced in [`006-semverish-version-validation.md`](006-semverish-version-validation.md) has a three-part numeric core, `M.N.P`. Java's own versioning scheme has four: [JEP 322 — Time-Based Release Versioning](https://openjdk.org/jeps/322) defines `$FEATURE.$INTERIM.$UPDATE.$PATCH`. Squeezing that fourth element into a three-part core forced producers to relocate it into build metadata (`25.0.2.1` → `25.0.2+1`), conflating JEP 322's patch counter with rebuild counters and runtime targets.
 
 This change extends the semverish core to **four mandatory numeric components**, `M.N.P.Q`, loosely aligned with JEP 322. A three-part version is no longer semverish: `29.0.0.0+ea.10` is valid, `29.0.0+ea.10` is not.
 
-*Reference: this spec amends the grammar defined in [`semverish-version-validation.md`](semverish-version-validation.md) and adjusts the eligibility grammar of [`java-version-supersession.md`](java-version-supersession.md). Both remain as the historic record of their own changes; where they conflict with this spec, this spec wins. Everything in the baseline spec not restated here — opt-in mechanism, configuration, error payload shape, scope of enforcement — is unchanged.*
+*Reference: this spec amends the grammar defined in [`006-semverish-version-validation.md`](006-semverish-version-validation.md) and adjusts the eligibility grammar of [`013-java-version-supersession.md`](013-java-version-supersession.md). Both remain as the historic record of their own changes; where they conflict with this spec, this spec wins. Everything in the baseline spec not restated here — opt-in mechanism, configuration, error payload shape, scope of enforcement — is unchanged.*
 
 ## Behaviour
 
@@ -93,7 +93,7 @@ This list replaces the baseline list and drives parser-level unit tests.
 
 ## Impact on Java Version Supersession
 
-The supersession rule in [`java-version-supersession.md`](java-version-supersession.md) only acts on versions matching its eligibility grammar, which requires **exactly three** core components and explicitly treats four-component versions as ineligible (its Rules 8 and 9). Left unchanged, every four-component java publication would be ineligible and, under its Rule 11a, retire nothing — silently disabling supersession and reintroducing the duplicate-row backlog. Updating eligibility is therefore in scope.
+The supersession rule in [`013-java-version-supersession.md`](013-java-version-supersession.md) only acts on versions matching its eligibility grammar, which requires **exactly three** core components and explicitly treats four-component versions as ineligible (its Rules 8 and 9). Left unchanged, every four-component java publication would be ineligible and, under its Rule 11a, retire nothing — silently disabling supersession and reintroducing the duplicate-row backlog. Updating eligibility is therefore in scope.
 
 ### Eligible shapes
 
