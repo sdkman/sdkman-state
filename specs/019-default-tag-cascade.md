@@ -7,7 +7,7 @@ long-term-support line, and the tag their maintainers would naturally use is `st
 This feature lets a non-java candidate's `default` come from a `stable` tag, falling back to `lts`
 when there is none. Nothing else about the derived default changes.
 
-*Amends [`candidate-registry.md`](candidate-registry.md): rules 4, 5 and 7, the `default` row of its
+*Amends [`014-candidate-registry.md`](014-candidate-registry.md): rules 4, 5 and 7, the `default` row of its
 API contract, the `lts` sentences of its §Behaviour, its out-of-scope entry on per-candidate defaults,
 its `default` acceptance criteria, and four of its default scenarios. Rules 6 and 8 stand: only rows
 with no distribution count, and java never carries a `default`.*
@@ -30,7 +30,7 @@ A candidate's `lts` tag stops producing its `default` only once a `stable` tag e
 
 ## Business Rules
 
-These replace rules 4, 5 and 7 of [`candidate-registry.md`](candidate-registry.md).
+These replace rules 4, 5 and 7 of [`014-candidate-registry.md`](014-candidate-registry.md).
 
 4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing
    writes a default onto a candidate row and there is no endpoint to set one. Moving a default means
@@ -52,7 +52,7 @@ These replace rules 4, 5 and 7 of [`candidate-registry.md`](candidate-registry.m
   non-java candidate tagged `lts`, five also tagged `latest`, and none tagged `stable`.
 - **`latest` is deliberately excluded.** It means newest, not chosen, and on live it already
   disagrees with the default: `kotlintoolchain` carries `latest` on 0.12.1 and `lts` on 0.13.0.
-- **The resolution traps in [`candidate-registry.md`](candidate-registry.md) §Findings still apply,
+- **The resolution traps in [`014-candidate-registry.md`](014-candidate-registry.md) §Findings still apply,
   now across two tags.** Resolution stays one query for the whole registry. The choice of tag is made
   per candidate, never once for the whole registry. The tag and platform predicates must exclude
   everything outside the four combinations, not merely sort them: sorting alone would let `latest`
@@ -62,7 +62,7 @@ These replace rules 4, 5 and 7 of [`candidate-registry.md`](candidate-registry.m
 ## Examples
 
 These replace the `gradle`, `kuml`, `scala` and `jpx` default scenarios in
-[`candidate-registry.md`](candidate-registry.md) §Examples. The java scenario stays. The `connor`
+[`014-candidate-registry.md`](014-candidate-registry.md) §Examples. The java scenario stays. The `connor`
 scenario stays too, with `And no "connor" version is tagged "stable"` added.
 
 ```gherkin
@@ -161,7 +161,7 @@ for the whole registry, `scala` would be resolved against `stable` and end up wi
 
 ## Out of Scope
 
-- **java.** Rule 8 of [`candidate-registry.md`](candidate-registry.md) is unchanged.
+- **java.** Rule 8 of [`014-candidate-registry.md`](014-candidate-registry.md) is unchanged.
 - **Moving existing `lts` tags to `stable`.** No data migration. Candidates opt in by tagging.
 - **Validation against carrying both tags.** `stable` simply wins.
 - **`latest`, or any further tier.**
@@ -171,7 +171,7 @@ for the whole registry, `scala` would be resolved against `stable` and end up wi
 ## Acceptance Criteria
 
 - [ ] Every scenario in §Examples passes, alongside the java and `connor` scenarios of
-      [`candidate-registry.md`](candidate-registry.md)
+      [`014-candidate-registry.md`](014-candidate-registry.md)
 - [ ] `GET /candidates` still resolves every default without a query per candidate
 - [ ] The existing `lts` default tests in `GetCandidatesAcceptanceSpec` and
       `CandidateDefaultAgreementAcceptanceSpec` still pass, changed at most by an added "no `stable`
@@ -180,6 +180,6 @@ for the whole registry, `scala` would be resolved against `stable` and end up wi
       before `lts`, `UNIVERSAL` before `LINUX_X64`, limited to those four combinations, rows with no
       distribution only, always absent for java. Both the `GET /candidates` route description and
       the `default` property say so.
-- [ ] [`candidate-registry.md`](candidate-registry.md) points to this spec from each passage it
+- [ ] [`014-candidate-registry.md`](014-candidate-registry.md) points to this spec from each passage it
       amends
 - [ ] The project's quality gates pass

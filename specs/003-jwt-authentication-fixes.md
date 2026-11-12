@@ -1,7 +1,7 @@
 # JWT Authentication Fixes
 
 **Status:** Post-review fixes for PR #37
-**Depends on:** `specs/jwt-authentication.md`
+**Depends on:** `specs/001-jwt-authentication.md`
 **Service:** sdkman-state (Kotlin/Ktor)
 
 Fixes ten issues identified during code review of the JWT authentication implementation.

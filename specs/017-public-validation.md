@@ -86,7 +86,7 @@ that moment.
 ## Rollout
 
 **One release, no data migration,** ahead of `sdkman-contrib`'s PR check going live. It does
-not need [`community-role.md`](community-role.md) to ship first, or at all, to answer
+not need [`018-community-role.md`](018-community-role.md) to ship first, or at all, to answer
 correctly.
 
 **Rollback.** Redeploy the previous release. The routes vanish and answer `404`, which fails

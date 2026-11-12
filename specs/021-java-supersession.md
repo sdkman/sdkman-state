@@ -1,7 +1,7 @@
 # Java Supersession
 
 The java listing should advertise one build per release series. Since
-[`java-version-supersession.md`](java-version-supersession.md), a java `POST /versions` hides the
+[`013-java-version-supersession.md`](013-java-version-supersession.md), a java `POST /versions` hides the
 rest of its series whatever the order: the posted version wins. That assumed DISCO publishes
 forward, one build at a time. It does not. On 2026-10-19 OpenJDK on `LINUX_X64` advertises
 `26.0.0.0+35` while the newer `26.0.2.0+10` is hidden. Tags drift the same way: DISCO moves `lts`,
@@ -13,11 +13,11 @@ ordered against its series: a newer build becomes the one visible row and takes 
 an older one is stored hidden. The admin keeps a literal override, including for legacy rows the
 grammar rejects. The semverish feature flag goes: semverish is simply the java route's grammar.
 
-*Reference: replaces the positional rule of [`java-version-supersession.md`](java-version-supersession.md)
-and its eligibility grammar as amended by [`semverish-four-component-core.md`](semverish-four-component-core.md).
-Keeps the grammar of [`semverish-open-ended-core.md`](semverish-open-ended-core.md) and removes its
-feature flag. Amends [`community-role.md`](community-role.md) for java only. Tag moves use the unique
-tag scope of [`assign-tag-to-version.md`](assign-tag-to-version.md). Settled in a grilling session.
+*Reference: replaces the positional rule of [`013-java-version-supersession.md`](013-java-version-supersession.md)
+and its eligibility grammar as amended by [`016-semverish-four-component-core.md`](016-semverish-four-component-core.md).
+Keeps the grammar of [`020-semverish-open-ended-core.md`](020-semverish-open-ended-core.md) and removes its
+feature flag. Amends [`018-community-role.md`](018-community-role.md) for java only. Tag moves use the unique
+tag scope of [`011-assign-tag-to-version.md`](011-assign-tag-to-version.md). Settled in a grilling session.
 Where the earlier specs conflict with this one, this one wins.*
 
 ## Behaviour
@@ -39,7 +39,7 @@ candidate. If `java` is unregistered it answers `400` with a `request` error nam
 
 ### Grammar
 
-A vendor's version must match the grammar of [`semverish-open-ended-core.md`](semverish-open-ended-core.md), unchanged:
+A vendor's version must match the grammar of [`020-semverish-open-ended-core.md`](020-semverish-open-ended-core.md), unchanged:
 
 ```
 <feature>.<interim>.<update>.<patch>[.<trailing>...][-<variant>][+<build-metadata>]
@@ -261,7 +261,7 @@ delete promotes nothing.
 | `DELETE /versions/java` | yes | yes | `403` | `403` |
 | `DELETE /versions` | `400` | `400` | `400` | `400` |
 
-This amends [`community-role.md`](community-role.md) for java: the rows of its API contract, its
+This amends [`018-community-role.md`](018-community-role.md) for java: the rows of its API contract, its
 §Behaviour sentence leaving java to `sdkman-contrib`, and its out-of-scope entry on refusing java
 to the community role.
 

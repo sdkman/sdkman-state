@@ -4,7 +4,7 @@ The State API owns every `versions` row but has no idea what a candidate *is*. C
 
 It also resolves a duplication that already exists inside this service. `src/main/resources/candidates.txt` is an 80-line classpath resource, and it is the allow-list `POST /versions` enforces. That file **is** a candidate registry, maintained by hand, deployed with the service, and independent of the 84-entry Mongo collection it shadows. The two disagreed: `cuba` and `ktx` were retired by deleting them from the file, while `jpx` and `ksrc` fell out of it by accident. `ksrc` still cannot be published to at all; `jpx` was in the same state until it was added back to the file by hand, which is the manual repair collapsing the two lists exists to make unnecessary. Collapsing the two is the point of the work, but it is **not** what this document specifies.
 
-**This is part 1 of two, and it deliberately stops short of the cutover.** It builds the registry as a resource: the table, the public read route, and the two admin write routes. `POST /versions` is untouched and keeps validating against `candidates.txt`, which stays on the classpath. Nothing in this part reads the registry to decide whether a publish is allowed, so the table can be empty for as long as it likes without affecting a single request. Part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), moves the allow-list onto the registry and deletes the file, and it is only safe once the registry has been backfilled through the routes built here.
+**This is part 1 of two, and it deliberately stops short of the cutover.** It builds the registry as a resource: the table, the public read route, and the two admin write routes. `POST /versions` is untouched and keeps validating against `candidates.txt`, which stays on the classpath. Nothing in this part reads the registry to decide whether a publish is allowed, so the table can be empty for as long as it likes without affecting a single request. Part 2, [`015-candidate-registry-allow-list.md`](015-candidate-registry-allow-list.md), moves the allow-list onto the registry and deletes the file, and it is only safe once the registry has been backfilled through the routes built here.
 
 *Reference: this is phase 2 of the MongoDB→PostgreSQL move. Scope, measurements and the decisions behind it are in [`../../../docs/specs/candidates-end-game.md`](../../../docs/specs/candidates-end-game.md); the hard-to-reverse calls are recorded as [`docs/decisions/0007`](../../../docs/decisions/0007-platform-classification-deleted.md), [`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md) (which supersedes [`0006`](../../../docs/decisions/0006-candidate-foreign-key.md)) and [`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md). The word `candidates` also names the **vendor authorisation scope** (`vendors.candidates`, the JWT claim, `CreateVendorRequest.candidates`). That is a different concept and this feature does not touch it.*
 
@@ -14,7 +14,7 @@ A candidate is a registered installable, identified by a short lowercase name (`
 
 **Reading.** `GET /candidates` returns every registered candidate, ascending by identifier, with its presentation metadata. Each candidate also carries a **derived** `default`: the version currently holding the `lts` tag for that candidate. The value is derived per request from `version_tags` and is never stored, so it cannot go stale.
 
-Resolving `default` needs a platform, because tags are scoped to one. The candidate record does not say which platform a candidate lives on — that classification existed in Mongo, was unreliable, and is deliberately not carried across ([`0007`](../../../docs/decisions/0007-platform-classification-deleted.md)). Instead a fixed order applies: **prefer the `UNIVERSAL` row, fall back to `LINUX_X64`**. A candidate with no `lts` tag at either platform has no `default`, and the field is absent. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md): `default` now comes from a `stable` tag, falling back to `lts`.*
+Resolving `default` needs a platform, because tags are scoped to one. The candidate record does not say which platform a candidate lives on — that classification existed in Mongo, was unreliable, and is deliberately not carried across ([`0007`](../../../docs/decisions/0007-platform-classification-deleted.md)). Instead a fixed order applies: **prefer the `UNIVERSAL` row, fall back to `LINUX_X64`**. A candidate with no `lts` tag at either platform has no `default`, and the field is absent. *Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md): `default` now comes from a `stable` tag, falling back to `lts`.*
 
 `java` is **excluded** from `default`. Its `lts` tag exists once per distribution, so a single value would be arbitrary, and its public identifier is distribution-qualified (`25.0.4-tem`) in a way no other candidate's is. Callers needing java's default resolve it themselves through the existing `GET /versions/java/tags/lts?platform=LINUX_X64&distribution=TEMURIN`. `java` still appears in the listing like any other candidate; only its `default` is absent.
 
@@ -47,7 +47,7 @@ Response body (`CandidateDto`):
 | `name` | string | display name, e.g. `Gradle` |
 | `description` | string | free text, up to 2000 characters, a single paragraph of printable ASCII |
 | `website_url` | string | always `https` |
-| `default` | string, optional | the `lts`-tagged version; absent when unresolved, and always absent for `java`. Amended by [`default-tag-cascade.md`](default-tag-cascade.md) |
+| `default` | string, optional | the `lts`-tagged version; absent when unresolved, and always absent for `java`. Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md) |
 
 ```json
 [
@@ -126,10 +126,10 @@ Deletion is hard, not soft — unlike vendors, a candidate carries no history wo
 1. **The registry is not yet the allow-list.** `POST /versions` accepts a candidate if and only if it appears in `candidates.txt`. The registry and the file coexist for the length of this part and are allowed to disagree; reconciling them is part 2. Nothing here reads the table to authorise a write.
 2. **Registration is an upsert.** `POST /admin/candidates` for an existing candidate updates `name`, `description` and `website_url` and refreshes `last_updated_at`. The identifier itself is never mutated; renaming a candidate is a delete plus a create.
 3. **A candidate with versions cannot be deleted.** The service counts the candidate's versions and returns `409`. There is no database constraint behind it: this count *is* the mechanism, not a friendlier surface over one. It therefore carries its own test rather than leaning on a backstop. It is a check and not a lock: a `POST /versions` arriving after the count is not stopped by it. In this part that is inconsequential, because publishing does not consult the registry at all; part 2's rule 6 records why the window stays accepted once it does.
-4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
-5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
-6. **`default` only considers rows with no distribution.** Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`distribution-na-to-null.md`](distribution-na-to-null.md)). There is a trap here: `versions` and `version_tags` both carry a `distribution` column, the existing tag lookup behind `GET /versions/{c}/tags/lts` reads the one on `versions`, and reading the other one instead makes the two endpoints disagree about the same candidate. They must agree.
-7. **`default` does not filter on `visible`.** The existing tag lookup does not either, and the java supersession pass knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag, announcing them as it goes. Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale. *Amended by [`default-tag-cascade.md`](default-tag-cascade.md).*
+4. **`default` is derived, never stored.** It is read from `version_tags` on every request. Nothing writes a default onto a candidate row, and there is no endpoint to set one — moving a default means moving the `lts` tag. *Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md).*
+5. **`default` resolves `UNIVERSAL` first, then `LINUX_X64`.** No other platform is consulted — the resolution is restricted to those two, not merely ordered by them. A candidate whose `lts` sits only on, say, `MAC_ARM64` has no `default`. *Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md).*
+6. **`default` only considers rows with no distribution.** Every non-java candidate stores `distribution` as `NULL` (see the `NA`→`NULL` convergence in [`010-distribution-na-to-null.md`](010-distribution-na-to-null.md)). There is a trap here: `versions` and `version_tags` both carry a `distribution` column, the existing tag lookup behind `GET /versions/{c}/tags/lts` reads the one on `versions`, and reading the other one instead makes the two endpoints disagree about the same candidate. They must agree.
+7. **`default` does not filter on `visible`.** The existing tag lookup does not either, and the java supersession pass knowingly leaves `lts` pointing at retired rows until DISCO next hydrates the tag, announcing them as it goes. Filtering here would make the `sdk list` header and `sdk default` show different versions for exactly that window. The two reads must agree, even when what they agree on is temporarily stale. *Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md).*
 8. **`java` never carries a `default`.** It is excluded by name. This is the one candidate-specific rule in the service and it exists because java is the one candidate with per-distribution tags.
 9. **`website_url` must be `https`.** Rejected on write otherwise. It is the same rule the service already applies to version download URLs, and the same pattern, though that one is private to the version validator today and so is not reachable as it stands.
 10. **Candidate identifiers are lowercase and case-sensitive.** `Java` is not `java`; it is rejected by the pattern.
@@ -147,13 +147,13 @@ Structural validation only, following the accumulated-error pattern (all failure
 - `description` must be present, non-blank, at most 2000 characters, and a **single paragraph of printable ASCII**: every character in `0x20`–`0x7E`, no control characters, no line breaks, and no runs of consecutive spaces.
 - `website_url` must be present and match the existing HTTPS URL pattern, at most 500 characters.
 
-That is the whole of it, and it applies to the new write route alone. The publish path's own validation is untouched by this part: an unknown candidate on `POST /versions` is still refused against `candidates.txt`. Nothing here holds the registry in memory, caches it, expires it or tracks whether it has loaded. All of that arrives with the cutover in [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md), where something reads it; introduced here it would be a failure mode with no reader.
+That is the whole of it, and it applies to the new write route alone. The publish path's own validation is untouched by this part: an unknown candidate on `POST /versions` is still refused against `candidates.txt`. Nothing here holds the registry in memory, caches it, expires it or tracks whether it has loaded. All of that arrives with the cutover in [`015-candidate-registry-allow-list.md`](015-candidate-registry-allow-list.md), where something reads it; introduced here it would be a failure mode with no reader.
 
 ## Database Schema
 
 **One migration, and it carries no data.** It creates an empty table. Nothing on `versions` or `version_tags` is altered, because the registry is enforced by the request validator rather than by a constraint ([`0008`](../../../docs/decisions/0008-registry-enforced-in-application.md)), and the rows arrive afterwards over `POST /admin/candidates` rather than inside the migration ([`0009`](../../../docs/decisions/0009-candidate-descriptions-normalised.md) covers what happens to them on the way). See *Rollout*.
 
-**The number is whatever is next at merge time; the ordering invariant is not.** `Migration.kt` is a bare `Flyway.configure()`, so `outOfOrder` is false and `validateOnMigrate` is true: a lower-numbered migration applied *after* a higher one fails validation and the service refuses to boot. The invariant is therefore that this migration is the highest in the tree when it merges, with nothing lower still pending. That is a thing to check at merge rather than fix in advance, and one competitor is known: [`java-version-supersession.md`](java-version-supersession.md)'s all-migrated-series pass is specced and unshipped on branch `spec/v19-all-migrated-series`, and it also adds a migration. Whichever merges second takes the next free number; a gap left by one that never ships is harmless, because Flyway tolerates it.
+**The number is whatever is next at merge time; the ordering invariant is not.** `Migration.kt` is a bare `Flyway.configure()`, so `outOfOrder` is false and `validateOnMigrate` is true: a lower-numbered migration applied *after* a higher one fails validation and the service refuses to boot. The invariant is therefore that this migration is the highest in the tree when it merges, with nothing lower still pending. That is a thing to check at merge rather than fix in advance, and one competitor is known: [`013-java-version-supersession.md`](013-java-version-supersession.md)'s all-migrated-series pass is specced and unshipped on branch `spec/v19-all-migrated-series`, and it also adds a migration. Whichever merges second takes the next free number; a gap left by one that never ships is harmless, because Flyway tolerates it.
 
 `src/main/resources/db/migration/` — one file, the DDL and nothing else:
 
@@ -220,7 +220,7 @@ Every text column is `TEXT`, matching what V5 established for `versions`. The lo
 
 1. **Deploy** — the migration creates the empty table; `GET /candidates` and both `/admin/candidates` routes appear. The publish path is unchanged and still reads `candidates.txt`, so the empty registry gates nothing. `GET /candidates` returns `[]`, which no deployed consumer reads: `sdkman-candidates` still takes candidate metadata from MongoDB, and its read flip is specced separately.
 2. **Backfill** — `candidates_migration/` in the parent workspace dumps the live Mongo `candidates` collection, drops the retired and fixture candidates, applies the `https` remediation, normalises the descriptions, and posts the set through `POST /admin/candidates`, verifying it with `GET /candidates`. Re-runnable, because registration is an upsert.
-3. **Part 2** — [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md) moves the allow-list onto the now-populated registry and deletes `candidates.txt`. It must not ship before step 2 has verified.
+3. **Part 2** — [`015-candidate-registry-allow-list.md`](015-candidate-registry-allow-list.md) moves the allow-list onto the now-populated registry and deletes `candidates.txt`. It must not ship before step 2 has verified.
 4. The Candidates Service read flip follows, specced separately.
 
 **Why this part stops where it does.** Building the registry and cutting the allow-table over in one release would work, at the cost of a window: between the deploy and the backfill the registry would be empty and load-bearing, so every `POST /versions` would return `400`. It would last seconds to minutes and a rejected DISCO publish simply retries the next day, so the risk is small rather than absent. Splitting removes it outright and buys something better: the backfill runs against a service where nothing yet depends on the table, so a botched or partial run is harmless and simply re-run. `sdkman-state` autodeploys on push, so the extra release is cheap.
@@ -277,7 +277,7 @@ Feature: Candidate registry
       And the body is an empty array
 
   # The gradle, kuml, scala and jpx default scenarios are amended by
-  # default-tag-cascade.md, which replaces them with the stable-then-lts cascade.
+  # 019-default-tag-cascade.md, which replaces them with the stable-then-lts cascade.
 
   Scenario: A candidate's default comes from its lts tag at UNIVERSAL
     Given the candidate "gradle" is registered
@@ -418,14 +418,14 @@ Feature: Candidate registry
 
 ## Out of Scope
 
-- **The allow-list cutover.** Moving `POST /versions` onto the registry, holding the registry in memory with a refresh interval, and deleting `candidates.txt` are all part 2, [`candidate-registry-allow-list.md`](candidate-registry-allow-list.md).
+- **The allow-list cutover.** Moving `POST /versions` onto the registry, holding the registry in memory with a refresh interval, and deleting `candidates.txt` are all part 2, [`015-candidate-registry-allow-list.md`](015-candidate-registry-allow-list.md).
 - The MongoDB `application` collection, `sdkman-hooks`, and Mongo retirement. Those are phase 3, [`../../../docs/specs/application-end-game.md`](../../../docs/specs/application-end-game.md).
 - The Candidates Service's read flip. Specced separately in [`../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md`](../../../candidates/sdkman-candidates/specs/candidate-registry-read-flip.md).
 - The backfill tool itself. It is an operator-side script driving `POST /admin/candidates` over the contract above; it lives in the parent workspace, not in this repo.
 - Foreign-keying the vendor authorisation scope (`vendors.candidates`) to this table.
 - Any change to `POST /versions`, `DELETE /versions`, the tag routes, or the version read routes. This part adds routes and a table; it modifies no existing request path.
 - Auditing of candidate writes.
-- A per-candidate default that is anything other than the `lts` tag; per-candidate tag configuration remains out of scope, as in [`resolve-version-by-tag.md`](resolve-version-by-tag.md). *Amended by [`default-tag-cascade.md`](default-tag-cascade.md), which adds the `stable` tag ahead of `lts`.*
+- A per-candidate default that is anything other than the `lts` tag; per-candidate tag configuration remains out of scope, as in [`004-resolve-version-by-tag.md`](004-resolve-version-by-tag.md). *Amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md), which adds the `stable` tag ahead of `lts`.*
 - Storing or reviving any platform classification for a candidate.
 
 ## Acceptance Criteria
@@ -433,8 +433,8 @@ Feature: Candidate registry
 - [ ] `GET /candidates` returns every registered candidate, ascending by `candidate`, with `candidate`, `name`, `description` and `website_url`
 - [ ] `GET /candidates` is reachable unauthenticated and carries the same cache headers as the version read routes
 - [ ] An empty registry returns `200` with `[]`
-- [ ] Each candidate carries a derived `default` resolved from the `lts` tag, preferring `UNIVERSAL` over `LINUX_X64`, matching only rows with no distribution (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
-- [ ] `default` is absent when no `lts` tag resolves, and is always absent for `java` (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
+- [ ] Each candidate carries a derived `default` resolved from the `lts` tag, preferring `UNIVERSAL` over `LINUX_X64`, matching only rows with no distribution (amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md))
+- [ ] `default` is absent when no `lts` tag resolves, and is always absent for `java` (amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md))
 - [ ] Resolving the derived defaults does not issue a query per candidate
 - [ ] `POST /admin/candidates` registers a candidate and returns `201`; re-posting an existing candidate updates it and returns `200`
 - [ ] `POST /admin/candidates` returns `400` with accumulated failures for a blank field, a non-`https` `website_url`, or an identifier failing `^[a-z][a-z0-9]*$`
@@ -455,8 +455,8 @@ Feature: Candidate registry
 - [ ] No existing acceptance spec needs a candidate registered before it can post a version
 - [ ] No registry cache, TTL configuration, refresh mechanism or readiness state is introduced
 - [ ] No candidate write produces a `vendor_audit` row
-- [ ] The derived `default` is restricted to `UNIVERSAL` and `LINUX_X64`; a candidate whose only `lts` tag is on another platform has no `default` (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
-- [ ] The derived `default` does not filter on `visible`, and agrees with `GET /versions/{candidate}/tags/lts` for the same candidate (amended by [`default-tag-cascade.md`](default-tag-cascade.md))
+- [ ] The derived `default` is restricted to `UNIVERSAL` and `LINUX_X64`; a candidate whose only `lts` tag is on another platform has no `default` (amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md))
+- [ ] The derived `default` does not filter on `visible`, and agrees with `GET /versions/{candidate}/tags/lts` for the same candidate (amended by [`019-default-tag-cascade.md`](019-default-tag-cascade.md))
 - [ ] The `409` on delete is covered by a test of its own, since no database constraint would produce it
 - [ ] `POST /admin/candidates` rejects a description carrying a non-ASCII character, a control character, a line break, or a run of consecutive spaces
 - [ ] `POST /admin/candidates` supports a re-runnable backfill: registering the same candidate twice is an upsert, not a conflict, and the full set is readable back through `GET /candidates`
