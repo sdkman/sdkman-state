@@ -1,3 +1,13 @@
+---
+id: "021"
+title: "Java Supersession"
+status: implemented
+created: 2026-10-19
+depends_on: ["011"]
+amends: ["016", "018", "020"]
+supersedes: ["013"]
+---
+
 # Java Supersession
 
 The java listing should advertise one build per release series. Since

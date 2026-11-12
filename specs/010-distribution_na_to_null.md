@@ -1,3 +1,10 @@
+---
+id: "010"
+title: "Distribution `NA` → `NULL` Convergence Specification"
+status: implemented
+created: 2026-06-20
+---
+
 # Distribution `NA` → `NULL` Convergence Specification
 
 ## Overview

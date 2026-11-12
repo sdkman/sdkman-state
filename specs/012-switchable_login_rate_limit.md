@@ -1,3 +1,10 @@
+---
+id: "012"
+title: "Switchable Login Rate Limiting Specification"
+status: implemented
+created: 2026-07-26
+---
+
 # Switchable Login Rate Limiting Specification
 
 ## Overview

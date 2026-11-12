@@ -1,3 +1,11 @@
+---
+id: "023"
+title: "Java `latest` and `lts`"
+status: implemented
+created: 2026-11-09
+depends_on: ["021"]
+---
+
 # Java `latest` and `lts`
 
 `lts` and `latest` are the two java tags a user reaches for without knowing a version: `lts` is

@@ -1,3 +1,12 @@
+---
+id: "013"
+title: "Java Version Supersession on Write"
+status: superseded
+created: 2026-08-20
+depends_on: ["006"]
+superseded_by: ["021"]
+---
+
 # Java Version Supersession on Write
 
 *Superseded by [`021-java_supersession.md`](021-java_supersession.md). Its comparator-driven rule replaces the positional rule below entirely: java moves to its own route, `POST /versions/java`, where a vendor post is ordered against its series and moves the series' tags, and the admin keeps a literal override. The `RETIRE` audit operation carries over, and the `V17` and `V18` backlog migrations stand as run. This document stays as the historic record of the positional rule.*

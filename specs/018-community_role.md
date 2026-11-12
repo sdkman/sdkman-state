@@ -1,3 +1,10 @@
+---
+id: "018"
+title: "Community Role"
+status: implemented
+created: 2026-10-10
+---
+
 # Community Role
 
 *Amended for java by [`021-java_supersession.md`](021-java_supersession.md): the community role is refused

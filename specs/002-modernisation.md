@@ -1,3 +1,10 @@
+---
+id: "002"
+title: "SDKMAN State API Modernisation Specification"
+status: implemented
+created: 2026-03-14
+---
+
 # SDKMAN State API Modernisation Specification
 
 This specification describes the target state for modernising sdkman-state to follow hexagonal architecture patterns, using sdkman-broker-2 as the reference model.

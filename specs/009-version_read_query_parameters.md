@@ -1,3 +1,10 @@
+---
+id: "009"
+title: "Strict Canonical Query Parameters for Version Reads"
+status: implemented
+created: 2026-05-30
+---
+
 # Strict Canonical Query Parameters for Version Reads
 
 The State API expresses `platform` and `distribution` as enum values in every request and response **body**, but its GET **query parameters** are loosely validated and inconsistent: `platform` expects a legacy lowercase identifier (`linuxx64`) rather than the enum name (`LINUX_X64`); `distribution` silently drops any value that isn't an exact enum match (so a vendor shortcode like `open`, or a typo, just disappears); and `visible` silently coerces any unrecognised value to `true`. In every case an invalid input fails **silently** — the wrong filter is quietly applied or dropped, never reported. This change makes the three version-read query parameters — `platform`, `distribution`, `visible` — **strict and canonical**: they accept the same enum vocabulary used in the bodies, and they reject unknown, legacy, or malformed values with `400` instead of silently coercing or dropping them.

@@ -1,3 +1,10 @@
+---
+id: "004"
+title: "Resolve Version by Tag"
+status: implemented
+created: 2026-04-16
+---
+
 # Resolve Version by Tag
 
 There is currently no way to resolve a tag to the version it points to. Tags like `lts` and `latest` are returned in version responses, but a client cannot look up which version a tag refers to. This feature adds a dedicated tag resolution endpoint that returns the single version a tag points to within a given candidate, distribution, and platform scope.

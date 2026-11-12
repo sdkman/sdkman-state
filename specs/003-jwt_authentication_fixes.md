@@ -1,3 +1,11 @@
+---
+id: "003"
+title: "JWT Authentication Fixes"
+status: implemented
+created: 2026-03-26
+depends_on: ["001"]
+---
+
 # JWT Authentication Fixes
 
 **Status:** Post-review fixes for PR #37

@@ -1,3 +1,10 @@
+---
+id: "011"
+title: "Assign Tag to Version"
+status: implemented
+created: 2026-06-29
+---
+
 # Assign Tag to Version
 
 There is currently no way to add a tag to an existing version without re-posting the entire version through `POST /versions`. That endpoint applies *replace* semantics to the tag set, so a client wanting to move or add a single tag must resend the full version payload and the complete desired tag list. This feature adds a dedicated, focused endpoint that assigns a single tag to an existing version, leaving the version's other tags untouched.

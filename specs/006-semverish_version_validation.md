@@ -1,3 +1,10 @@
+---
+id: "006"
+title: "Semverish Version Validation"
+status: implemented
+created: 2026-05-09
+---
+
 # Semverish Version Validation
 
 SDKMAN currently accepts any non-empty string as a version when versions are created via `POST /versions`. As we move candidates onto a normalised three-part version scheme — referred to here as **semverish** — we need write-time validation that rejects malformed versions before they enter the database. To avoid disrupting candidates that have not yet been migrated, validation is opt-in per candidate via application configuration. The first candidate to opt in will be `java`.

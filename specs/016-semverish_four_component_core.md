@@ -1,3 +1,11 @@
+---
+id: "016"
+title: "Semverish Four-Component Core"
+status: implemented
+created: 2026-10-01
+amends: ["006", "013"]
+---
+
 # Semverish Four-Component Core
 
 *Amended by [`021-java_supersession.md`](021-java_supersession.md): the eligibility grammar and series key of
