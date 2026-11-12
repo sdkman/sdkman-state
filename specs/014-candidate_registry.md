@@ -1,3 +1,10 @@
+---
+id: "014"
+title: "Candidate Registry"
+status: implemented
+created: 2026-09-12
+---
+
 # Candidate Registry
 
 The State API owns every `versions` row but has no idea what a candidate *is*. Candidate metadata — the name, description and website that `sdk list` renders — lives in a MongoDB `candidates` collection read directly by the Candidates Service. This feature moves that collection into Postgres and makes `candidates` a first-class State API resource.

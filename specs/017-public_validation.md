@@ -1,3 +1,10 @@
+---
+id: "017"
+title: "Public Validation"
+status: implemented
+created: 2026-10-07
+---
+
 # Public Validation
 
 `sdkman-contrib` accepts candidate registrations and releases as PRs. Before a maintainer

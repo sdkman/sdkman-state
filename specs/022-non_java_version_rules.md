@@ -1,3 +1,11 @@
+---
+id: "022"
+title: "Non-java Version Rules"
+status: implemented
+created: 2026-10-24
+depends_on: ["011", "017", "019"]
+---
+
 # Non-java Version Rules
 
 `sdkman-contrib` is deliberately dumb. It turns a merged YAML request into `POST /versions`

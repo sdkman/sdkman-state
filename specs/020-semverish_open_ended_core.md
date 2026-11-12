@@ -1,3 +1,11 @@
+---
+id: "020"
+title: "Semverish Open-Ended Core"
+status: implemented
+created: 2026-10-18
+amends: ["016"]
+---
+
 # Semverish Open-Ended Core
 
 *Amended by [`021-java_supersession.md`](021-java_supersession.md): the grammar below stands, but it is the

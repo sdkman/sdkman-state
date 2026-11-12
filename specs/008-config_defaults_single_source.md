@@ -1,3 +1,10 @@
+---
+id: "008"
+title: "Config Defaults — Single Source of Truth Specification"
+status: implemented
+created: 2026-05-23
+---
+
 # Config Defaults — Single Source of Truth Specification
 
 ## Overview

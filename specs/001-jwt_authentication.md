@@ -1,3 +1,10 @@
+---
+id: "001"
+title: "JWT Authentication"
+status: implemented
+created: 2025-12-16
+---
+
 # JWT Authentication
 
 > Status: DRAFT — updated to reflect hexagonal architecture refactor

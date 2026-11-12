@@ -1,3 +1,10 @@
+---
+id: "007"
+title: "Concurrency & Throughput Optimisations Specification"
+status: implemented
+created: 2026-05-22
+---
+
 # Concurrency & Throughput Optimisations Specification
 
 ## Overview

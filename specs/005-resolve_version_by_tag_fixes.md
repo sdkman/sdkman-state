@@ -1,3 +1,11 @@
+---
+id: "005"
+title: "Resolve Version by Tag — Fixes"
+status: implemented
+created: 2026-04-17
+depends_on: ["004"]
+---
+
 # Resolve Version by Tag — Fixes
 
 **Status:** Post-review fixes for PR #41

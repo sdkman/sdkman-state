@@ -1,3 +1,11 @@
+---
+id: "019"
+title: "Default Tag Cascade"
+status: implemented
+created: 2026-10-11
+amends: ["014"]
+---
+
 # Default Tag Cascade
 
 `GET /candidates` gives each non-java candidate a derived `default`, today the version carrying the
