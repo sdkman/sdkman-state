@@ -2,7 +2,7 @@
 
 `lts` and `latest` are the two java tags a user reaches for without knowing a version: `lts` is
 the stable choice and carries the java default, `latest` is the bleeding edge. Under
-[`021-java-supersession.md`](021-java-supersession.md) each is moved one post at a time, by rules local to
+[`021-java_supersession.md`](021-java_supersession.md) each is moved one post at a time, by rules local to
 one distribution and platform, and neither rule knows which java release is current. So both
 drift. On 2026-11-09 `latest` sits on Zulu `17.0.21.0+9` on `LINUX_X32`, Corretto `11.0.33.0+9` on
 `LINUX_X32`, SAP Machine `21.0.13.0+3` on `MAC_X64` and Temurin `17.0.20.1+1` on `MAC_X64`: each
@@ -16,7 +16,7 @@ whole distribution, so a tag is always where the rules say, and a stray one heal
 The data already on live is corrected once, at rollout, by an admin script of ordinary tag calls.
 No new route is added.
 
-*Reference: replaces the `lts` and `latest` rules of [`021-java-supersession.md`](021-java-supersession.md)
+*Reference: replaces the `lts` and `latest` rules of [`021-java_supersession.md`](021-java_supersession.md)
 (§Tags bullets two and three, rules 19 and 20, and its out-of-scope entry on choosing the LTS
 series), and widens its write turn (rule 26) from distribution and platform to distribution. It
 also amends rule 13, so a post stored hidden still triggers placement, and rule 17, so `lts` and
@@ -48,7 +48,7 @@ the start.
 
 The rules work on a **distribution**: every java row sharing a distribution, across all its
 platforms. An absent distribution counts as a value of its own. Only **plain heads** count, the
-visible heads of plain series as [`021-java-supersession.md`](021-java-supersession.md) defines them;
+visible heads of plain series as [`021-java_supersession.md`](021-java_supersession.md) defines them;
 `fx` and `crac` rows, hidden rows and unreadable rows never receive `lts` or `latest`. An
 unreadable row is never a head, so it never takes part. A **GA** head is one whose build metadata
 is not `+ea.N`.
@@ -62,7 +62,7 @@ lines included. Early access never takes `lts`: it is the stable choice, and on 
 `LINUX_X64` it is the java default. For most distributions that is the feature line. GraalVM ships stable interim
 releases on top of its LTS feature, so its `lts` is on the interim line: `25.4.4.1+1`, not
 `25.0.5.0+3`. The `<FEATURE>` tag already goes there under
-[`021-java-supersession.md`](021-java-supersession.md) rule 18, so `25`, `lts` and `latest` share that
+[`021-java_supersession.md`](021-java_supersession.md) rule 18, so `25`, `lts` and `latest` share that
 row.
 
 **A platform without the LTS feature keeps what it has.** If a platform has no GA plain head of
@@ -101,7 +101,7 @@ it, and otherwise is not placed. Nothing else on that platform changes.
 
 *(Assumption, drafting 2026-11-09: candidate heads that cannot be ordered arise only within one
 series, from unknown build metadata at equal core, such as `25.0.5.0+r17` beside `25.0.5.0+1`
-([`021-java-supersession.md`](021-java-supersession.md) rule 10). Heads of different series always differ
+([`021-java_supersession.md`](021-java_supersession.md) rule 10). Heads of different series always differ
 in core and so always order. None is unordered on live today.)*
 
 *(Assumption, planning 2026-11-10: "untouched" holds for one tag on one platform. When more than
@@ -196,7 +196,7 @@ No new routes, request fields or statuses.
     and `latest`.
 11. **Undecidable means untouched.** When the candidate heads for a tag cannot be ordered, the tag
     stays on whichever of them holds it, or is not placed.
-12. **`<FEATURE>` is unchanged.** It moves as [`021-java-supersession.md`](021-java-supersession.md) states.
+12. **`<FEATURE>` is unchanged.** It moves as [`021-java_supersession.md`](021-java_supersession.md) states.
 
 ### Running placement
 
@@ -442,11 +442,11 @@ Feature: Java latest and lts placement
 
 ## Out of Scope
 
-- **The `<FEATURE>` tag.** It keeps the rules of [`021-java-supersession.md`](021-java-supersession.md).
+- **The `<FEATURE>` tag.** It keeps the rules of [`021-java_supersession.md`](021-java_supersession.md).
 - **Other tags on `fx` and `crac` series.** Rule 8 keeps `lts` and `latest` off them;
-  [`021-java-supersession.md`](021-java-supersession.md) already keeps every other tag off them.
+  [`021-java_supersession.md`](021-java_supersession.md) already keeps every other tag off them.
 - **Visibility.** Which rows are visible, and the stale rows DISCO never retires, are
-  [`021-java-supersession.md`](021-java-supersession.md)'s concern.
+  [`021-java_supersession.md`](021-java_supersession.md)'s concern.
 - **Deriving the LTS feature from the calendar.** The release train makes it predictable, but the
   LTS cadence has changed before, and moving the java default is a decision.
 - **A `stable` tag, or any other tag, for java.**

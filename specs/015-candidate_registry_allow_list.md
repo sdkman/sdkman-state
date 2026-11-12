@@ -1,6 +1,6 @@
 # Candidate Registry: the Allow-List Cutover
 
-Part 1, [`014-candidate-registry.md`](014-candidate-registry.md), built the `candidates` table and the three routes that read and write it, and deliberately stopped there. `POST /versions` still validates against `src/main/resources/candidates.txt`, an 80-line classpath resource deployed with the service. Two candidate registries therefore exist side by side, which is the duplication the work set out to remove.
+Part 1, [`014-candidate_registry.md`](014-candidate_registry.md), built the `candidates` table and the three routes that read and write it, and deliberately stopped there. `POST /versions` still validates against `src/main/resources/candidates.txt`, an 80-line classpath resource deployed with the service. Two candidate registries therefore exist side by side, which is the duplication the work set out to remove.
 
 This part removes it. The allow-list moves onto the table and the file is deleted.
 
