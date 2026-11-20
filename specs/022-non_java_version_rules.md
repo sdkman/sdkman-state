@@ -17,7 +17,7 @@ refused only when it is blank, a version can hold a `UNIVERSAL` row beside platf
 `stable` tag can land where the default cascade never reads it, and any tag name is accepted.
 
 This feature gives every non-java version write four rules: a version grammar, one platform
-shape per version, one tag per row (`stable` or `latest`), and a `stable` tag that always
+shape per version, only the `stable` and `latest` tags, and a `stable` tag that always
 agrees with the candidate's default. They bind every caller, and the validation twin answers
 exactly as the write does. It also retires the legacy `lts` tag for non-java candidates.
 
@@ -47,10 +47,12 @@ platform rows, never both. A `UNIVERSAL` row is refused for a version that alrea
 platform row, and a platform row is refused for a version that already has a `UNIVERSAL` row.
 Overwriting a row that already exists is unaffected.
 
-**A row carries at most one tag, `stable` or `latest`.** `stable` marks the chosen default and
+**Only `stable` and `latest`, and they are independent.** `stable` marks the chosen default and
 `latest` the newest release. Any other tag on a non-java row is refused, `lts` included. A row
-never carries both: tagging a row `stable` removes `latest` from it, and the reverse. A `tags`
-field with more than one entry is refused.
+may carry `stable`, `latest`, both, or neither, and setting one never removes the other. So
+when the newest release is also the default, one row carries both. The CLI candidates rely on
+this: promoting a beta tags its row `stable`, and it keeps `latest` until a newer beta takes it,
+so the beta channel always has an answer.
 
 **`lts` is retired for non-java candidates.** It is a legacy remnant from Mongo. The default
 cascade reads `stable` only: `stable` at `UNIVERSAL`, then `stable` at `LINUX_X64`. A candidate
@@ -82,7 +84,7 @@ No new routes and no new request fields. New `400` answers:
 |---|---|
 | `POST /versions`, `POST /validate/versions` | a non-java version breaks the grammar |
 | `POST /versions`, `POST /validate/versions` | the row would give its version both a `UNIVERSAL` row and a platform row |
-| `POST /versions`, `POST /validate/versions`, `POST /versions/tags` | a non-java tag other than `stable` or `latest`, or more than one tag for a row |
+| `POST /versions`, `POST /validate/versions`, `POST /versions/tags` | a non-java tag other than `stable` or `latest` |
 
 ## Business Rules
 
@@ -92,8 +94,8 @@ No new routes and no new request fields. New `400` answers:
 3. **Per-platform `stable`, cleared across shapes.** Moving `stable` onto a platform row clears
    it from other versions' `UNIVERSAL` rows; moving it onto a `UNIVERSAL` row clears it from
    other versions' platform rows. No other tag is touched.
-4. **One tag per row.** A non-java row carries at most one tag, and it is `stable` or `latest`.
-   Setting one removes the other from that row.
+4. **Two independent tags.** A non-java row carries only `stable` and `latest`, in any
+   combination. Setting one leaves the other on that row as it was.
 5. **No `lts`.** The default cascade for non-java candidates reads `stable` only, `UNIVERSAL`
    before `LINUX_X64`.
 6. **One answer.** The `tags` field, the tag route and the validation twin apply rules 3 and 4
@@ -107,8 +109,8 @@ already reads `stable` before `lts`, that change is safe to ship on its own.
 
 **One release, with one data fix.** The 2026-10-10 survey of `state.sdkman.io` found every
 non-java candidate tagged `lts`, five also tagged `latest`, and none tagged `stable`. The
-release retags every non-java `lts` as `stable`, so no live default moves on deploy. Where
-that leaves a row carrying both `stable` and `latest`, `stable` stays and `latest` is removed.
+release retags every non-java `lts` as `stable`, so no live default moves on deploy. A row that
+also carries `latest` keeps it.
 Apart from that fix, the rules judge new writes only. Every non-java version in the phase 1
 snapshot matches the grammar.
 
@@ -146,10 +148,16 @@ Feature: Non-java version rules
     When any caller posts "jpx 1.2.0" for LINUX_X64 with tags ["lts"]
     Then the response status is 400
 
-  Scenario: A row carries one tag
+  Scenario: stable and latest share a row
     Given "jpx 1.2.0" for LINUX_X64 is tagged "latest"
     When it is tagged "stable"
-    Then it carries "stable" only
+    Then it carries "stable" and "latest"
+
+  Scenario: A new latest leaves stable alone
+    Given "jpx 1.2.0" for LINUX_X64 is tagged "stable" and "latest"
+    When "jpx 1.3.0" for LINUX_X64 is posted with tags ["latest"]
+    Then "jpx 1.3.0" carries "latest"
+      And "jpx 1.2.0" carries "stable" only
 
   Scenario: Live lts defaults survive the release
     Given "gradle 8.14" for UNIVERSAL is tagged "lts"
@@ -174,8 +182,8 @@ Feature: Non-java version rules
 - [ ] A non-java version not matching `^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$` is refused with `400` for every caller
 - [ ] A `UNIVERSAL` row is refused for a version with a platform row, and the reverse
 - [ ] Tagging a platform row `stable` clears `stable` from other versions' `UNIVERSAL` rows; tagging a `UNIVERSAL` row `stable` clears it from other versions' platform rows
-- [ ] A non-java tag other than `stable` or `latest`, or more than one tag for a row, is refused with `400`
-- [ ] Setting `stable` on a row removes `latest` from it, and the reverse
+- [ ] A non-java tag other than `stable` or `latest` is refused with `400`
+- [ ] A row accepts `stable` and `latest` together, and setting one leaves the other in place
 - [ ] The default cascade for non-java candidates reads `stable` only
 - [ ] After deploy, every non-java row that was tagged `lts` is tagged `stable`, and no non-java default has changed
 - [ ] The `tags` field and the tag route move and refuse tags identically
