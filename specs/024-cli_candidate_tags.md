@@ -1,3 +1,11 @@
+---
+id: "024"
+title: "CLI Candidate Tags"
+status: draft
+created: 2026-11-20
+depends_on: ["022"]
+---
+
 # CLI Candidate Tags
 
 Phase 3 makes the two SDKMAN CLIs State candidates: `sdkcli` (bash, one `UNIVERSAL` row per
@@ -6,7 +14,7 @@ channels, `stable` and `beta`, and every installed CLI self-updates to whatever 
 point at. Broker 2 answers the tagged version to old CLIs as plain text, and hooks reads the
 same tags to build the selfupdate script.
 
-[`non-java-version-rules.md`](non-java-version-rules.md) allows a non-java row one tag,
+[`022-non_java_version_rules.md`](022-non_java_version_rules.md) allows a non-java row one tag,
 `stable` or `latest`, and swaps one for the other. Under it, `beta` is refused, and promoting a
 beta to `stable` would leave the CLIs with no `beta` at all. This feature gives `sdkcli` and
 `sdkrs` their own tag rule: `stable` and `beta`, independent of each other. Every other
@@ -15,7 +23,7 @@ non-java rule still applies to them.
 *Reference: phase 3 of the MongoDB to PostgreSQL move, end-game §4.3
 ([`application-end-game.md`](../../../docs/specs/application-end-game.md)), and the Broker 2
 version route ([`cli_version_by_tag.md`](../../../do/sdkman-broker/specs/cli_version_by_tag.md)).
-Grilled on 2026-11-20. Where [`non-java-version-rules.md`](non-java-version-rules.md)
+Grilled on 2026-11-20. Where [`022-non_java_version_rules.md`](022-non_java_version_rules.md)
 conflicts with this spec for `sdkcli` or `sdkrs`, this one wins. Builds on that spec, so it
 ships with it or after it, and before the CLIs are registered (plan step 5).*
 
