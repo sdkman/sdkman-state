@@ -84,6 +84,13 @@ data class InvalidNonJavaVersionError(
     override val message: String = "Version '$version' must match ${NonJavaVersionRules.PATTERN_SOURCE}"
 }
 
+data class PlatformShapeError(
+    override val field: String = "platform",
+    val version: String,
+) : ValidationError() {
+    override val message: String = "Version '$version' cannot mix UNIVERSAL and platform rows"
+}
+
 data class InvalidRequestError(
     val details: String,
 ) : ValidationError() {
