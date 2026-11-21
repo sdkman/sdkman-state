@@ -3,6 +3,7 @@ package io.sdkman.state.acceptance
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -31,9 +32,10 @@ class ValidationTwinParityAcceptanceSpec :
         fun versionBody(
             version: String = "27.0.2.0",
             tags: String = "[]",
+            platform: String = "LINUX_X64",
         ): String =
             """
-            {"candidate":"jpx","version":"$version","distribution":"TEMURIN","platform":"LINUX_X64","url":"https://cdn.example.com/jpx-$version.tar.gz","tags":$tags}
+            {"candidate":"jpx","version":"$version","distribution":"TEMURIN","platform":"$platform","url":"https://cdn.example.com/jpx-$version.tar.gz","tags":$tags}
             """.trimIndent()
 
         fun registrationBody(
@@ -58,6 +60,10 @@ class ValidationTwinParityAcceptanceSpec :
                 "a tag starting with a dot" to versionBody(tags = """[".hidden"]"""),
                 "several invalid tags" to versionBody(tags = """["   ", ".hidden"]"""),
                 "a mix of valid and invalid tags" to versionBody(tags = """["latest", "inv@lid!"]"""),
+                "a version outside the non-java grammar" to
+                    """{"candidate":"jpx","version":"1.2.0 LTS","platform":"LINUX_X64","url":"https://cdn.example.com/jpx-1.2.0.tar.gz"}""",
+                "an lts tag" to versionBody(tags = """["lts"]"""),
+                "a 27 tag" to versionBody(tags = """["27"]"""),
                 "an unregistered candidate" to
                     """{"candidate":"ant","version":"1.0.0","platform":"UNIVERSAL","url":"https://ant.example.com/ant-1.0.0.zip","visible":true}""",
             )
@@ -118,6 +124,26 @@ class ValidationTwinParityAcceptanceSpec :
 
         shouldAnswerAsWriteRoute("/versions", "/validate/versions", rejectedVersionBodies)
         shouldAnswerAsWriteRoute("/admin/candidates", "/validate/candidates", rejectedRegistrationBodies)
+
+        should("answer /validate/versions with the same 400 as /versions for a UNIVERSAL row beside a LINUX_X64 row") {
+            withCleanDatabase {
+                withTestApplication {
+                    // given: jpx 27.0.2.0 is stored for LINUX_X64
+                    registerCandidates("jpx")
+                    postAsAdmin("/versions", versionBody()).status shouldBe HttpStatusCode.NoContent
+                    val universalBody = versionBody(platform = "UNIVERSAL")
+
+                    // when: an admin writes the same version for UNIVERSAL, and anyone validates it
+                    val written = postAsAdmin("/versions", universalBody)
+                    val validated = postAnonymously("/validate/versions", universalBody)
+
+                    // then: both refuse it with the same answer
+                    written.bodyAsText() shouldContain "cannot mix UNIVERSAL and platform rows"
+                    validated.status shouldBe HttpStatusCode.BadRequest
+                    validated.bodyAsText() shouldBe written.bodyAsText()
+                }
+            }
+        }
 
         should("accept a UTF_16 registration body on /validate/candidates as /admin/candidates does") {
             withCleanDatabase {
