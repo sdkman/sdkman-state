@@ -21,16 +21,17 @@ class PostgresVersionPlatformRepositoryIntegrationSpec :
         val versions = PostgresVersionRepository()
         val repo = PostgresVersionPlatformRepository()
 
-        fun jpx(
+        fun versionOf(
             version: String,
             platform: Platform,
             distribution: Option<Distribution> = none(),
+            candidate: String = "jpx",
         ): Version =
             Version(
-                candidate = "jpx",
+                candidate = candidate,
                 version = version,
                 platform = platform,
-                url = "https://jpx-$version-${platform.name}",
+                url = "https://$candidate-$version-${platform.name}",
                 visible = true.some(),
                 distribution = distribution,
             )
@@ -39,9 +40,9 @@ class PostgresVersionPlatformRepositoryIntegrationSpec :
             should("return every platform a version is stored on") {
                 withCleanDatabase {
                     // given: one version stored on two platforms, and another version
-                    versions.createOrUpdate(jpx("1.2.0", Platform.LINUX_X64)).shouldBeRight()
-                    versions.createOrUpdate(jpx("1.2.0", Platform.MAC_ARM64)).shouldBeRight()
-                    versions.createOrUpdate(jpx("1.1.0", Platform.UNIVERSAL)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.LINUX_X64)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.MAC_ARM64)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.1.0", Platform.UNIVERSAL)).shouldBeRight()
 
                     // when: reading the platforms of the two-row version
                     val platforms = repo.findPlatforms("jpx", "1.2.0", none()).shouldBeRight()
@@ -54,7 +55,7 @@ class PostgresVersionPlatformRepositoryIntegrationSpec :
             should("return no platforms for an unknown version") {
                 withCleanDatabase {
                     // given: a stored version
-                    versions.createOrUpdate(jpx("1.2.0", Platform.LINUX_X64)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.LINUX_X64)).shouldBeRight()
 
                     // when: reading the platforms of a version never stored
                     val platforms = repo.findPlatforms("jpx", "9.9.9", none()).shouldBeRight()
@@ -67,15 +68,42 @@ class PostgresVersionPlatformRepositoryIntegrationSpec :
             should("return only the platforms of the requested distribution") {
                 withCleanDatabase {
                     // given: one version under two distributions on different platforms
-                    versions.createOrUpdate(jpx("1.2.0", Platform.LINUX_X64, Distribution.TEMURIN.some())).shouldBeRight()
-                    versions.createOrUpdate(jpx("1.2.0", Platform.MAC_ARM64, Distribution.ZULU.some())).shouldBeRight()
-                    versions.createOrUpdate(jpx("1.2.0", Platform.UNIVERSAL)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.LINUX_X64, Distribution.TEMURIN.some())).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.MAC_ARM64, Distribution.ZULU.some())).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.UNIVERSAL)).shouldBeRight()
 
                     // when: reading the platforms of the temurin distribution
                     val platforms = repo.findPlatforms("jpx", "1.2.0", Distribution.TEMURIN.some()).shouldBeRight()
 
                     // then: only the temurin platform comes back
                     platforms shouldContainExactly listOf(Platform.LINUX_X64)
+                }
+            }
+
+            should("return only the platforms of the requested candidate") {
+                withCleanDatabase {
+                    // given: the same version stored for jpx on UNIVERSAL and for gradle on LINUX_X64
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.UNIVERSAL)).shouldBeRight()
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.LINUX_X64, candidate = "gradle")).shouldBeRight()
+
+                    // when: reading the platforms of the jpx version
+                    val platforms = repo.findPlatforms("jpx", "1.2.0", none()).shouldBeRight()
+
+                    // then: only the jpx platform comes back
+                    platforms shouldContainExactly listOf(Platform.UNIVERSAL)
+                }
+            }
+
+            should("return no platforms without a distribution when the version has only a distribution") {
+                withCleanDatabase {
+                    // given: a version stored on LINUX_X64 under temurin only
+                    versions.createOrUpdate(versionOf("1.2.0", Platform.LINUX_X64, Distribution.TEMURIN.some())).shouldBeRight()
+
+                    // when: reading its platforms without a distribution
+                    val platforms = repo.findPlatforms("jpx", "1.2.0", none()).shouldBeRight()
+
+                    // then: nothing comes back
+                    platforms.shouldBeEmpty()
                 }
             }
         }
