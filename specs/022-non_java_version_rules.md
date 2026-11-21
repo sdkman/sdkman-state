@@ -1,7 +1,7 @@
 ---
 id: "022"
 title: "Non-java Version Rules"
-status: draft
+status: implemented
 created: 2026-10-24
 depends_on: ["011", "017", "019"]
 ---
