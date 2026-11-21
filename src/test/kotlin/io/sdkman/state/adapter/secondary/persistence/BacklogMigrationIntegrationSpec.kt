@@ -3,23 +3,24 @@ package io.sdkman.state.adapter.secondary.persistence
 import io.kotest.core.annotation.Tags
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.sdkman.state.support.dropSchema
+import io.sdkman.state.support.migrateSchemaTo
+import io.sdkman.state.support.migrateSchemaToLatest
 import io.sdkman.state.support.sharedTestDataSource
-import org.flywaydb.core.Flyway
-import org.flywaydb.core.api.configuration.FluentConfiguration
 
 @Tags("integration")
 class BacklogMigrationIntegrationSpec :
     ShouldSpec({
 
         beforeSpec {
-            dropBacklogSchema()
-            migrateBacklogSchemaTo("16")
+            dropSchema(BACKLOG_SCHEMA)
+            migrateSchemaTo(BACKLOG_SCHEMA, "16")
             seedBacklog()
-            migrateBacklogSchemaToLatest()
+            migrateSchemaToLatest(BACKLOG_SCHEMA)
         }
 
         afterSpec {
-            dropBacklogSchema()
+            dropSchema(BACKLOG_SCHEMA)
         }
 
         context("V17") {
@@ -80,28 +81,6 @@ private val BACKLOG_ROWS =
         "27.0.0+ea.34" to "OPENJDK",
         "27.0.0+ea.35" to "OPENJDK",
     )
-
-private fun backlogFlyway(): FluentConfiguration =
-    Flyway
-        .configure()
-        .dataSource(sharedTestDataSource)
-        .schemas(BACKLOG_SCHEMA)
-
-private fun migrateBacklogSchemaTo(target: String) {
-    backlogFlyway().target(target).load().migrate()
-}
-
-private fun migrateBacklogSchemaToLatest() {
-    backlogFlyway().load().migrate()
-}
-
-private fun dropBacklogSchema() {
-    sharedTestDataSource.connection.use { connection ->
-        connection.createStatement().use { statement ->
-            statement.execute("DROP SCHEMA IF EXISTS $BACKLOG_SCHEMA CASCADE")
-        }
-    }
-}
 
 private fun seedBacklog() {
     sharedTestDataSource.connection.use { connection ->
