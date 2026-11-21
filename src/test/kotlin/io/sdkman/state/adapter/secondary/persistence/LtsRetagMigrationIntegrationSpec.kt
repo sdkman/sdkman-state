@@ -58,6 +58,14 @@ class LtsRetagMigrationIntegrationSpec :
                 tagsOf("maven", "3.9.1", "LINUX_X64") shouldContainExactly listOf("stable")
             }
 
+            should("retag a UNIVERSAL lts when its candidate holds stable at MAC_ARM64 only") {
+                tagsOf("kotlin", "1.9.0", "UNIVERSAL") shouldContainExactly listOf("stable")
+            }
+
+            should("retag a LINUX_X64 lts when its candidate holds stable at MAC_ARM64 only") {
+                tagsOf("jbang", "0.9.0", "LINUX_X64") shouldContainExactly listOf("stable")
+            }
+
             should("leave a skipped lts row untouched") {
                 lastUpdatedAt("groovy", "4.0.0", "UNIVERSAL") shouldBe SEEDED_AT
             }
@@ -90,6 +98,10 @@ private val RETAG_ROWS =
         TaggedVersion("groovy", "5.0.0", "UNIVERSAL", listOf("stable")),
         TaggedVersion("maven", "3.9.0", "UNIVERSAL", listOf("lts")),
         TaggedVersion("maven", "3.9.1", "LINUX_X64", listOf("stable")),
+        TaggedVersion("kotlin", "1.9.0", "UNIVERSAL", listOf("lts")),
+        TaggedVersion("kotlin", "2.0.0", "MAC_ARM64", listOf("stable")),
+        TaggedVersion("jbang", "0.9.0", "LINUX_X64", listOf("lts")),
+        TaggedVersion("jbang", "1.0.0", "MAC_ARM64", listOf("stable")),
         TaggedVersion("java", "21.0.9", "LINUX_X64", listOf("lts"), distribution = Some("TEM")),
     )
 
