@@ -52,7 +52,7 @@ class VersionServiceImpl(
             .findByTag(candidate, tag, platform, distribution)
             .mapLeft { DomainError.DatabaseError(it) }
 
-    // The version write and tag replacement share one transaction, so a tag-replacement failure
+    // The version write and tag assignments share one transaction, so a tag-assignment failure
     // rolls back the version write. Audit logging stays outside it, so an audit failure never
     // rolls back a successful write.
     override suspend fun createOrUpdate(
@@ -69,14 +69,9 @@ class VersionServiceImpl(
                             .mapLeft { DomainError.DatabaseError(it) }
                             .bind()
                     version.tags.onSome { tagList ->
-                        tagService
-                            .replaceTags(
-                                versionId = versionId,
-                                candidate = version.candidate,
-                                distribution = version.distribution,
-                                platform = version.platform,
-                                tags = tagList,
-                            ).bind()
+                        val uniqueVersion =
+                            UniqueVersion(version.candidate, version.version, version.distribution, version.platform)
+                        tagList.forEach { tag -> tagService.assignNonJavaTag(versionId, uniqueVersion, tag).bind() }
                     }
                     Unit
                 }

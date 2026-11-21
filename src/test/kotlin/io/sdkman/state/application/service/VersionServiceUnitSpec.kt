@@ -142,24 +142,24 @@ class VersionServiceUnitSpec :
         }
 
         context("createOrUpdate") {
+            val gradleVersion = UniqueVersion("gradle", "8.14", none(), Platform.UNIVERSAL)
 
             should("create version, record audit, and process tags") {
                 // given: a version with tags
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
-                        tags = listOf("lts", "latest").some(),
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
+                        tags = listOf("stable", "latest").some(),
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
                     auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version)
                 } returns Either.Right(Unit)
-                coEvery {
-                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts", "latest"))
-                } returns Either.Right(Unit)
+                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "stable") } returns Either.Right(Unit)
+                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "latest") } returns Either.Right(Unit)
 
                 // when: creating a version
                 val result = service.createOrUpdate(version, NIL_UUID, "admin")
@@ -168,19 +168,18 @@ class VersionServiceUnitSpec :
                 result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
                 coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version) }
-                coVerify {
-                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts", "latest"))
-                }
+                coVerify(exactly = 1) { tagService.assignNonJavaTag(42, gradleVersion, "stable") }
+                coVerify(exactly = 1) { tagService.assignNonJavaTag(42, gradleVersion, "latest") }
             }
 
             should("create version without tags when tags are none()") {
                 // given: a version without tags
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
@@ -190,21 +189,21 @@ class VersionServiceUnitSpec :
                 // when: creating a version without tags
                 val result = service.createOrUpdate(version, NIL_UUID, "admin")
 
-                // then: succeeds and does not call replaceTags
+                // then: succeeds and assigns no tag
                 result.shouldBeRight()
                 coVerify { versionsRepo.createOrUpdate(version) }
                 coVerify { auditRepo.recordAudit(NIL_UUID, "admin", AuditOperation.CREATE, version) }
-                coVerify(exactly = 0) { tagService.replaceTags(any(), any(), any(), any(), any()) }
+                coVerify(exactly = 0) { tagService.assignNonJavaTag(any(), any(), any()) }
             }
 
             should("return DatabaseError when repository create fails") {
                 // given: repository create fails
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
                     )
                 val dbFailure =
                     DatabaseFailure.QueryExecutionFailure(
@@ -229,10 +228,10 @@ class VersionServiceUnitSpec :
                 // given: audit logging fails but create succeeds
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
                 coEvery {
@@ -253,17 +252,17 @@ class VersionServiceUnitSpec :
             }
 
             should("return DatabaseError and skip audit when tag processing fails") {
-                // R5: tag replacement is atomic with the version write — if tags fail, the
+                // R5: tag assignment is atomic with the version write — if tags fail, the
                 // version write rolls back and the request must surface the failure (no more
                 // silent swallow). Audit must also be skipped because the version write was
                 // rolled back, so there is no successful operation to record.
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
-                        tags = listOf("lts").some(),
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
+                        tags = listOf("stable").some(),
                     )
                 val tagFailure =
                     DomainError.DatabaseError(
@@ -273,9 +272,7 @@ class VersionServiceUnitSpec :
                         ),
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
-                } returns Either.Left(tagFailure)
+                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "stable") } returns Either.Left(tagFailure)
 
                 // when: creating a version with failing tag processing
                 val result = service.createOrUpdate(version, NIL_UUID, "admin")
@@ -296,26 +293,24 @@ class VersionServiceUnitSpec :
                 val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
                 val version =
                     Version(
-                        candidate = "java",
-                        version = "17.0.1",
-                        platform = Platform.LINUX_X64,
-                        url = "https://example.com/java-17.tar.gz",
-                        tags = listOf("lts").some(),
+                        candidate = "gradle",
+                        version = "8.14",
+                        platform = Platform.UNIVERSAL,
+                        url = "https://example.com/gradle-8.14.zip",
+                        tags = listOf("stable").some(),
                     )
                 val tagFailure =
                     DomainError.DatabaseError(
                         DatabaseFailure.QueryExecutionFailure("tag error", RuntimeException("x")),
                     )
                 coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery {
-                    tagService.replaceTags(42, "java", none(), Platform.LINUX_X64, listOf("lts"))
-                } returns Either.Left(tagFailure)
+                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "stable") } returns Either.Left(tagFailure)
                 coEvery { transactional.inTransaction<DomainError, Unit>(any()) } coAnswers {
                     val block = firstArg<suspend () -> Either<DomainError, Unit>>()
                     block()
                 }
 
-                // when: the version write succeeds but tag replacement fails
+                // when: the version write succeeds but tag assignment fails
                 val result = txService.createOrUpdate(version, NIL_UUID, "admin")
 
                 // then: the failure is returned and inTransaction was invoked exactly once
