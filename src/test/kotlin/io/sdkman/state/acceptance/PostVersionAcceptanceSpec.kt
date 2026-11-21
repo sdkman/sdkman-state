@@ -62,7 +62,7 @@ class PostVersionAcceptanceSpec :
             val version =
                 Version(
                     candidate = "jpx",
-                    version = "25.0.2.0-crac+1.r25.ea.123",
+                    version = "25.0.2.0-crac_1.r25.ea.123",
                     platform = Platform.LINUX_X64,
                     url = "https://jpx-25.0.2.0-crac-zulu",
                     visible = true.some(),
