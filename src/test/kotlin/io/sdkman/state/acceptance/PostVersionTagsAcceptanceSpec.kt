@@ -122,7 +122,7 @@ class PostVersionTagsAcceptanceSpec :
                 }
                 """.trimIndent()
 
-            val clearTagsPost =
+            val emptyTagsPost =
                 """
                 {
                     "candidate": "jpx",
@@ -148,7 +148,7 @@ class PostVersionTagsAcceptanceSpec :
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
-                            setBody(clearTagsPost)
+                            setBody(emptyTagsPost)
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
@@ -177,7 +177,7 @@ class PostVersionTagsAcceptanceSpec :
                 }
                 """.trimIndent()
 
-            val replacePost =
+            val latestOnlyPost =
                 """
                 {
                     "candidate": "jpx",
@@ -203,7 +203,7 @@ class PostVersionTagsAcceptanceSpec :
                     client
                         .post("/versions") {
                             contentType(ContentType.Application.Json)
-                            setBody(replacePost)
+                            setBody(latestOnlyPost)
                             bearerAuth(JwtTestSupport.adminToken())
                         }.status shouldBe HttpStatusCode.NoContent
 
