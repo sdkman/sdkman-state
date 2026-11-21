@@ -36,7 +36,7 @@ class VersionRequestValidator(
             VersionFieldRules.validateMd5sum(request.md5sum),
             VersionFieldRules.validateSha256sum(request.sha256sum),
             VersionFieldRules.validateSha512sum(request.sha512sum),
-            VersionFieldRules.validateTags(request.tags),
+            validateTags(request),
         ) { candidate, version, platform, url, distribution, md5sum, sha256sum, sha512sum, tags ->
             Version(
                 candidate = candidate,
@@ -53,11 +53,20 @@ class VersionRequestValidator(
         }
 
     private fun validateVersion(request: VersionRequest): Either<NonEmptyList<ValidationError>, String> =
-        if (request.candidate.isSome { it == JAVA_CANDIDATE }) {
+        if (request.isJava()) {
             VersionFieldRules.validateVersion(request.version)
         } else {
             NonJavaVersionRules.validate(request.version)
         }
+
+    private fun validateTags(request: VersionRequest): Either<NonEmptyList<ValidationError>, Option<List<String>>> =
+        if (request.isJava()) {
+            VersionFieldRules.validateTags(request.tags, TagNameRules::validate)
+        } else {
+            VersionFieldRules.validateTags(request.tags, TagNameRules::validateNonJava)
+        }
+
+    private fun VersionRequest.isJava(): Boolean = candidate.isSome { it == JAVA_CANDIDATE }
 
     private fun validateCandidate(candidate: Option<String>): Either<NonEmptyList<ValidationError>, String> =
         candidate.fold(

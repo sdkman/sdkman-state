@@ -5,6 +5,7 @@ import arrow.core.NonEmptyList
 import arrow.core.left
 import arrow.core.right
 import arrow.core.toNonEmptyListOrNone
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.TagAssignment
 
 // Structural validation for a single tag assignment, following the accumulated-error
@@ -19,7 +20,7 @@ object TagAssignmentValidator {
             buildList {
                 if (assignment.candidate.isBlank()) add(EmptyFieldError("candidate"))
                 if (assignment.version.isBlank()) add(EmptyFieldError("version"))
-                addAll(TagNameRules.validate("tag", assignment.tag))
+                addAll(validateTag(assignment))
             }
         return errors
             .toNonEmptyListOrNone()
@@ -28,4 +29,11 @@ object TagAssignmentValidator {
                 { nel -> nel.left() },
             )
     }
+
+    private fun validateTag(assignment: TagAssignment): List<ValidationError> =
+        if (assignment.candidate == JAVA_CANDIDATE) {
+            TagNameRules.validate("tag", assignment.tag)
+        } else {
+            TagNameRules.validateNonJava("tag", assignment.tag)
+        }
 }
