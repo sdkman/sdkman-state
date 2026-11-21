@@ -4,11 +4,13 @@ import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.mockk
 import io.sdkman.state.application.validation.JavaPoster
 import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.repository.VersionPlatformRepository
 import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
@@ -45,8 +47,9 @@ class WriteValidationUnitSpec :
             }
             """.trimIndent()
 
-        val validator = VersionRequestValidator(allowList("jpx"))
-        val unreadyValidator = VersionRequestValidator(unreadyAllowList())
+        val versionPlatforms = mockk<VersionPlatformRepository>()
+        val validator = VersionRequestValidator(allowList("jpx"), versionPlatforms)
+        val unreadyValidator = VersionRequestValidator(unreadyAllowList(), versionPlatforms)
         val javaValidator = JavaVersionRequestValidator(allowList(JAVA_CANDIDATE))
         val unreadyJavaValidator = JavaVersionRequestValidator(unreadyAllowList())
 

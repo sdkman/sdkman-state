@@ -21,6 +21,7 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
+import io.sdkman.state.adapter.secondary.persistence.PostgresVersionPlatformRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
@@ -109,7 +110,7 @@ class HealthCheckAcceptanceSpec :
                             authService = authService,
                             vendorRepository = vendorRepo,
                             appConfig = appConfig,
-                            versionRequestValidator = VersionRequestValidator(allowList()),
+                            versionRequestValidator = VersionRequestValidator(allowList(), PostgresVersionPlatformRepository()),
                         )
                         configureCandidateRouting(candidateService, allowList())
                     }
