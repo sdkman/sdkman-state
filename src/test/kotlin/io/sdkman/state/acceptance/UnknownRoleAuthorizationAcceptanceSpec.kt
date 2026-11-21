@@ -28,10 +28,10 @@ class UnknownRoleAuthorizationAcceptanceSpec :
                 url = "https://jpx-17.0.1.0-tem",
                 visible = true.some(),
                 distribution = Distribution.TEMURIN.some(),
-                tags = listOf("lts").some(),
+                tags = listOf("stable").some(),
             )
         val uniqueVersionBody = """{"candidate":"jpx","version":"17.0.1.0","platform":"LINUX_X64","distribution":"TEMURIN"}"""
-        val uniqueTagBody = """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}"""
+        val uniqueTagBody = """{"candidate":"jpx","tag":"stable","distribution":"TEMURIN","platform":"LINUX_X64"}"""
         val tagAssignmentBody =
             TagAssignment(
                 candidate = "jpx",

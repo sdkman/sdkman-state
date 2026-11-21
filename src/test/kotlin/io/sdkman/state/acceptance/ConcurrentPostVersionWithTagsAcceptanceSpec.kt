@@ -42,7 +42,7 @@ class ConcurrentPostVersionWithTagsAcceptanceSpec :
     ShouldSpec({
 
         should("collapse concurrent POST /versions with tags into a single row and tag set") {
-            val tags = listOf("latest", "lts", "21")
+            val tags = listOf("stable", "latest")
             val version =
                 Version(
                     candidate = "jpx",

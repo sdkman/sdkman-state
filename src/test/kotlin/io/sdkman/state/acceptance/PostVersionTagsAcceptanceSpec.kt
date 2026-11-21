@@ -27,7 +27,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -50,7 +50,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }
@@ -64,7 +64,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -104,7 +104,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }
@@ -118,7 +118,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -173,7 +173,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27", "lts"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -185,7 +185,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["latest"]
                 }
                 """.trimIndent()
 
@@ -214,7 +214,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest")
                 }
             }
         }
@@ -290,7 +290,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.1.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -330,7 +330,7 @@ class PostVersionTagsAcceptanceSpec :
                             parameter("distribution", "TEMURIN")
                         }
                     getA.status shouldBe HttpStatusCode.OK
-                    getA.bodyAsText().extractTags() shouldBe listOf("27")
+                    getA.bodyAsText().extractTags() shouldBe listOf("stable")
 
                     val getB =
                         client.get("/versions/jpx/27.0.2.0") {
@@ -352,7 +352,7 @@ class PostVersionTagsAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27", "27.0", "lts"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -374,7 +374,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "27", "27.0", "lts")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }
@@ -387,7 +387,7 @@ class PostVersionTagsAcceptanceSpec :
                     "version": "8.12",
                     "platform": "UNIVERSAL",
                     "url": "https://cdn.example.com/gradle-8.12.zip",
-                    "tags": ["latest", "8"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -408,7 +408,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest", "8")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }

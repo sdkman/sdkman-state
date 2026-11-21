@@ -74,7 +74,7 @@ class VendorAuthorizationAcceptanceSpec :
                     registerCandidates("jpx")
 
                     // given: create version with tags
-                    val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
+                    val versionWithTags = authorizedVersion.copy(tags = listOf("stable").some())
                     val vendorToken = JwtTestSupport.vendorToken(candidates = listOf("jpx"))
 
                     client.post("/versions") {
@@ -88,7 +88,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"stable","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(vendorToken)
                         }
@@ -161,7 +161,7 @@ class VendorAuthorizationAcceptanceSpec :
                     registerCandidates("jpx")
 
                     // given: create version with tags using admin
-                    val versionWithTags = authorizedVersion.copy(tags = listOf("lts").some())
+                    val versionWithTags = authorizedVersion.copy(tags = listOf("stable").some())
                     client.post("/versions") {
                         contentType(ContentType.Application.Json)
                         setBody(versionWithTags.toJsonString())
@@ -174,7 +174,7 @@ class VendorAuthorizationAcceptanceSpec :
                         client.delete("/versions/tags") {
                             contentType(ContentType.Application.Json)
                             setBody(
-                                """{"candidate":"jpx","tag":"lts","distribution":"TEMURIN","platform":"LINUX_X64"}""",
+                                """{"candidate":"jpx","tag":"stable","distribution":"TEMURIN","platform":"LINUX_X64"}""",
                             )
                             bearerAuth(vendorToken)
                         }
