@@ -379,7 +379,7 @@ class PostVersionTagsAcceptanceSpec :
             }
         }
 
-        should("POST version without distribution stores tags with NA sentinel") {
+        should("POST version without distribution stores its tags") {
             val requestBody =
                 """
                 {
