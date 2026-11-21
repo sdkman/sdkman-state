@@ -109,7 +109,7 @@ class PostVersionTagsAcceptanceSpec :
             }
         }
 
-        should("POST with empty tags clears all tags") {
+        should("POST with empty tags keeps existing tags") {
             val initialPost =
                 """
                 {
@@ -159,12 +159,12 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldBe emptyList()
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }
 
-        should("declarative replacement removes tags not in new list") {
+        should("POST with only latest keeps the unlisted stable tag") {
             val initialPost =
                 """
                 {
@@ -214,7 +214,7 @@ class PostVersionTagsAcceptanceSpec :
                         }
                     getResponse.status shouldBe HttpStatusCode.OK
 
-                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("latest")
+                    getResponse.bodyAsText().extractTags() shouldContainExactlyInAnyOrder listOf("stable", "latest")
                 }
             }
         }
