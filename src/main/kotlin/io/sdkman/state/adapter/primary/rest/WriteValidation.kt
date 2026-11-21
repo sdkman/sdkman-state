@@ -2,7 +2,10 @@ package io.sdkman.state.adapter.primary.rest
 
 import arrow.core.Either
 import arrow.core.NonEmptyList
+import arrow.core.flatMap
 import arrow.core.left
+import arrow.core.right
+import arrow.core.toNonEmptyListOrNone
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -14,11 +17,13 @@ import io.sdkman.state.application.validation.JavaPoster
 import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.ValidationError
 import io.sdkman.state.application.validation.VersionRequestValidator
+import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.Version
 
-fun VersionRequestValidator.checkVersionBody(body: String): Either<RejectedBody, Version> =
+suspend fun VersionRequestValidator.checkVersionBody(body: String): Either<RejectedBody, Version> =
     checkUnlessRegistryUnavailable(allowListLoaded()) { validateRequest(body) }
+        .flatMap { version -> checkPlatformShape(version) }
 
 fun JavaVersionRequestValidator.checkJavaVersionBody(
     body: String,
@@ -37,7 +42,20 @@ suspend fun ApplicationCall.respondRejectedBody(rejection: RejectedBody) =
             )
         is RejectedBody.Invalid ->
             respond(HttpStatusCode.BadRequest, ValidationErrorResponse("Validation failed", rejection.failures))
+        is RejectedBody.DatabaseUnavailable ->
+            respondDomainError(DomainError.DatabaseError(rejection.failure))
     }
+
+private suspend fun VersionRequestValidator.checkPlatformShape(version: Version): Either<RejectedBody, Version> =
+    validatePlatformShape(version).fold(
+        ifLeft = { failure -> RejectedBody.DatabaseUnavailable(failure).left() },
+        ifRight = { errors ->
+            errors.toNonEmptyListOrNone().fold(
+                ifEmpty = { version.right() },
+                ifSome = { shapeErrors -> shapeErrors.toInvalidBody().left() },
+            )
+        },
+    )
 
 private fun checkUnlessRegistryUnavailable(
     registryLoaded: Boolean,

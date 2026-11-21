@@ -1,13 +1,18 @@
 package io.sdkman.state.adapter.primary.rest
 
+import arrow.core.left
+import arrow.core.none
+import arrow.core.right
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.coEvery
 import io.mockk.mockk
 import io.sdkman.state.application.validation.JavaPoster
 import io.sdkman.state.application.validation.JavaVersionRequestValidator
 import io.sdkman.state.application.validation.VersionRequestValidator
+import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.repository.VersionPlatformRepository
@@ -18,13 +23,16 @@ import io.sdkman.state.support.unreadyAllowList
 
 class WriteValidationUnitSpec :
     ShouldSpec({
-        fun versionJson(candidate: String = "jpx") =
-            """
+        fun versionJson(
+            candidate: String = "jpx",
+            version: String = "1.2.0",
+            platform: String = "LINUX_X64",
+        ) = """
             {
                 "candidate": "$candidate",
-                "version": "1.2.0",
-                "platform": "LINUX_X64",
-                "url": "https://example.com/$candidate-1.2.0.zip"
+                "version": "$version",
+                "platform": "$platform",
+                "url": "https://example.com/$candidate-$version.zip"
             }
             """.trimIndent()
 
@@ -48,6 +56,7 @@ class WriteValidationUnitSpec :
             """.trimIndent()
 
         val versionPlatforms = mockk<VersionPlatformRepository>()
+        coEvery { versionPlatforms.findPlatforms(any(), any(), any()) } returns emptyList<Platform>().right()
         val validator = VersionRequestValidator(allowList("jpx"), versionPlatforms)
         val unreadyValidator = VersionRequestValidator(unreadyAllowList(), versionPlatforms)
         val javaValidator = JavaVersionRequestValidator(allowList(JAVA_CANDIDATE))
@@ -100,6 +109,33 @@ class WriteValidationUnitSpec :
 
                 // then: readiness is checked before the body is parsed
                 result shouldBeLeft RejectedBody.RegistryUnavailable
+            }
+
+            should("reject a UNIVERSAL body beside a stored LINUX_X64 row as invalid on field platform") {
+                // given: jpx 2.0.0 is stored on LINUX_X64 only
+                coEvery { versionPlatforms.findPlatforms("jpx", "2.0.0", none()) } returns
+                    listOf(Platform.LINUX_X64).right()
+                val body = versionJson(version = "2.0.0", platform = "UNIVERSAL")
+
+                // when: checking a UNIVERSAL body for the same version
+                val result = validator.checkVersionBody(body)
+
+                // then: the rejection names the platform field only
+                val rejection = result.shouldBeLeft().shouldBeInstanceOf<RejectedBody.Invalid>()
+                rejection.failures.map { it.field } shouldContainExactly listOf("platform")
+            }
+
+            should("answer database unavailable when the stored platforms cannot be read") {
+                // given: the platform read of jpx 3.0.0 fails
+                val failure = DatabaseFailure.QueryExecutionFailure("Failed to find version platforms", RuntimeException())
+                coEvery { versionPlatforms.findPlatforms("jpx", "3.0.0", none()) } returns failure.left()
+                val body = versionJson(version = "3.0.0")
+
+                // when: checking a valid body
+                val result = validator.checkVersionBody(body)
+
+                // then: the read failure is passed on
+                result shouldBeLeft RejectedBody.DatabaseUnavailable(failure)
             }
         }
 
