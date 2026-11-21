@@ -1,5 +1,6 @@
 package io.sdkman.state.adapter.secondary.persistence
 
+import arrow.core.Option
 import arrow.core.none
 import arrow.core.some
 import io.kotest.core.annotation.Tags
@@ -11,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.Version
 import io.sdkman.state.support.insertVersionWithId
 import io.sdkman.state.support.selectTagNames
@@ -23,6 +25,27 @@ class PostgresTagRepositoryIntegrationSpec :
     ShouldSpec({
 
         val repo = PostgresTagRepository()
+
+        suspend fun insertTagged(
+            version: String,
+            platform: Platform,
+            tags: List<String>,
+            distribution: Option<Distribution> = none(),
+        ): Int {
+            val versionId =
+                insertVersionWithId(
+                    Version(
+                        candidate = "jpx",
+                        version = version,
+                        platform = platform,
+                        url = "https://jpx-$version-$platform",
+                        visible = true.some(),
+                        distribution = distribution,
+                    ),
+                )
+            repo.replaceTags(versionId, "jpx", distribution, platform, tags).shouldBeRight()
+            return versionId
+        }
 
         context("replaceTags") {
             should("create tags for a version") {
@@ -368,6 +391,87 @@ class PostgresTagRepositoryIntegrationSpec :
 
                     // then: 0 rows affected
                     deletedCount shouldBe 0
+                }
+            }
+        }
+
+        context("clearStableAcrossShapes") {
+            should("clear stable from another version's platform rows when a UNIVERSAL row takes it") {
+                withCleanDatabase {
+                    // given: an older version stable on two platforms
+                    val linuxId = insertTagged("1.1.0", Platform.LINUX_X64, listOf("stable"))
+                    val macId = insertTagged("1.1.0", Platform.MAC_ARM64, listOf("stable"))
+                    insertTagged("1.2.0", Platform.UNIVERSAL, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the UNIVERSAL row
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.UNIVERSAL))
+
+                    // then: both platform stables are gone
+                    result.shouldBeRight() shouldBe 2
+                    selectTagNames(linuxId).shouldBeEmpty()
+                    selectTagNames(macId).shouldBeEmpty()
+                }
+            }
+
+            should("clear stable from another version's UNIVERSAL row when a platform row takes it") {
+                withCleanDatabase {
+                    // given: an older version stable on UNIVERSAL
+                    val universalId = insertTagged("1.1.0", Platform.UNIVERSAL, listOf("stable"))
+                    val linuxId = insertTagged("1.2.0", Platform.LINUX_X64, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the platform row
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.LINUX_X64))
+
+                    // then: the UNIVERSAL stable is gone and the platform stable stays
+                    result.shouldBeRight() shouldBe 1
+                    selectTagNames(universalId).shouldBeEmpty()
+                    selectTagNames(linuxId) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+
+            should("spare the version's own rows of the other shape") {
+                withCleanDatabase {
+                    // given: one version stable on UNIVERSAL and on LINUX_X64
+                    val universalId = insertTagged("1.2.0", Platform.UNIVERSAL, listOf("stable"))
+                    val linuxId = insertTagged("1.2.0", Platform.LINUX_X64, listOf("stable"))
+
+                    // when: stable is cleared across shapes for its UNIVERSAL row
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.UNIVERSAL))
+
+                    // then: nothing is cleared
+                    result.shouldBeRight() shouldBe 0
+                    selectTagNames(universalId) shouldContainExactlyInAnyOrder listOf("stable")
+                    selectTagNames(linuxId) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+
+            should("leave the stable of another distribution in place") {
+                withCleanDatabase {
+                    // given: an older version stable on LINUX_X64 in another distribution
+                    val otherDistributionId =
+                        insertTagged("1.1.0", Platform.LINUX_X64, listOf("stable"), Distribution.TEMURIN.some())
+                    insertTagged("1.2.0", Platform.UNIVERSAL, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the UNIVERSAL row without a distribution
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.UNIVERSAL))
+
+                    // then: the other distribution keeps its stable
+                    result.shouldBeRight() shouldBe 0
+                    selectTagNames(otherDistributionId) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+
+            should("leave latest on the other shape in place") {
+                withCleanDatabase {
+                    // given: an older version tagged stable and latest on LINUX_X64
+                    val linuxId = insertTagged("1.1.0", Platform.LINUX_X64, listOf("stable", "latest"))
+                    insertTagged("1.2.0", Platform.UNIVERSAL, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the UNIVERSAL row
+                    repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.UNIVERSAL)).shouldBeRight()
+
+                    // then: only latest remains
+                    selectTagNames(linuxId) shouldContainExactlyInAnyOrder listOf("latest")
                 }
             }
         }
