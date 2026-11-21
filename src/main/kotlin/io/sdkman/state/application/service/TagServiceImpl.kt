@@ -6,7 +6,9 @@ import arrow.core.raise.either
 import io.sdkman.state.domain.error.DomainError
 import io.sdkman.state.domain.model.AuditOperation
 import io.sdkman.state.domain.model.Distribution
+import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.STABLE_TAG
 import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
 import io.sdkman.state.domain.model.UniqueVersion
@@ -44,6 +46,24 @@ class TagServiceImpl(
         tagsRepo
             .assignTag(versionId, candidate, distribution, platform, tag)
             .mapLeft { DomainError.DatabaseError(it) }
+
+    override suspend fun assignNonJavaTag(
+        versionId: Int,
+        uniqueVersion: UniqueVersion,
+        tag: String,
+    ): Either<DomainError, Unit> =
+        either {
+            tagsRepo
+                .assignTag(versionId, uniqueVersion.candidate, uniqueVersion.distribution, uniqueVersion.platform, tag)
+                .mapLeft { DomainError.DatabaseError(it) }
+                .bind()
+            if (tag == STABLE_TAG) {
+                tagsRepo
+                    .clearStableAcrossShapes(uniqueVersion)
+                    .mapLeft { DomainError.DatabaseError(it) }
+                    .bind()
+            }
+        }
 
     override suspend fun findTagNamesByVersionId(versionId: Int): Either<DomainError, List<String>> =
         tagsRepo
@@ -88,17 +108,19 @@ class TagServiceImpl(
     private suspend fun assignTagToExistingVersion(assignment: TagAssignment): Either<DomainError, Unit> =
         either {
             versionsRepo.lockWritesIfJava(assignment.candidate, assignment.distribution).bind()
-            val versionId =
-                versionsRepo
-                    .findExistingVersionId(
-                        UniqueVersion(
-                            candidate = assignment.candidate,
-                            version = assignment.version,
-                            distribution = assignment.distribution,
-                            platform = assignment.platform,
-                        ),
-                    ).bind()
-            assignTagToVersion(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
-                .bind()
+            val uniqueVersion =
+                UniqueVersion(
+                    candidate = assignment.candidate,
+                    version = assignment.version,
+                    distribution = assignment.distribution,
+                    platform = assignment.platform,
+                )
+            val versionId = versionsRepo.findExistingVersionId(uniqueVersion).bind()
+            if (assignment.candidate == JAVA_CANDIDATE) {
+                assignTagToVersion(versionId, assignment.candidate, assignment.distribution, assignment.platform, assignment.tag)
+                    .bind()
+            } else {
+                assignNonJavaTag(versionId, uniqueVersion, assignment.tag).bind()
+            }
         }
 }

@@ -130,6 +130,63 @@ class TagServiceUnitSpec :
             }
         }
 
+        context("assignNonJavaTag") {
+            val gradleUniversal = UniqueVersion("gradle", "8.14", none(), Platform.UNIVERSAL)
+
+            beforeEach {
+                coEvery { tagsRepo.assignTag(42, any(), any(), any(), any()) } returns Either.Right(Unit)
+                coEvery { tagsRepo.clearStableAcrossShapes(any()) } returns Either.Right(1)
+            }
+
+            should("assign a gradle stable tag and clear stable across platform shapes once") {
+                // when: tagging a gradle version stable
+                val result = service.assignNonJavaTag(42, gradleUniversal, "stable")
+
+                // then: the tag is assigned, then stable is cleared from the other shape
+                result.shouldBeRight()
+                coVerifyOrder {
+                    tagsRepo.assignTag(42, "gradle", none(), Platform.UNIVERSAL, "stable")
+                    tagsRepo.clearStableAcrossShapes(gradleUniversal)
+                }
+                coVerify(exactly = 1) { tagsRepo.clearStableAcrossShapes(any()) }
+            }
+
+            should("never clear stable across platform shapes for a gradle latest tag") {
+                // when: tagging a gradle version latest
+                val result = service.assignNonJavaTag(42, gradleUniversal, "latest")
+
+                // then: the tag is assigned and nothing is cleared
+                result.shouldBeRight()
+                coVerify { tagsRepo.assignTag(42, "gradle", none(), Platform.UNIVERSAL, "latest") }
+                coVerify(exactly = 0) { tagsRepo.clearStableAcrossShapes(any()) }
+            }
+
+            should("return DatabaseError and clear nothing when the tag write fails") {
+                // given: the tag write fails
+                val dbFailure = DatabaseFailure.QueryExecutionFailure("tag error", RuntimeException("x"))
+                coEvery { tagsRepo.assignTag(42, any(), any(), any(), any()) } returns Either.Left(dbFailure)
+
+                // when: tagging a gradle version stable
+                val result = service.assignNonJavaTag(42, gradleUniversal, "stable")
+
+                // then: the failure surfaces before any clearing
+                result shouldBeLeft DomainError.DatabaseError(dbFailure)
+                coVerify(exactly = 0) { tagsRepo.clearStableAcrossShapes(any()) }
+            }
+
+            should("return DatabaseError when clearing stable across platform shapes fails") {
+                // given: the clearing delete fails
+                val dbFailure = DatabaseFailure.QueryExecutionFailure("clear error", RuntimeException("x"))
+                coEvery { tagsRepo.clearStableAcrossShapes(gradleUniversal) } returns Either.Left(dbFailure)
+
+                // when: tagging a gradle version stable
+                val result = service.assignNonJavaTag(42, gradleUniversal, "stable")
+
+                // then: the failure surfaces
+                result shouldBeLeft DomainError.DatabaseError(dbFailure)
+            }
+        }
+
         context("findTagNamesByVersionId") {
 
             should("delegate to tag repository") {
@@ -466,6 +523,49 @@ class TagServiceUnitSpec :
 
                 // then: no distribution is locked
                 coVerify(exactly = 0) { versionsRepo.lockJavaWrites(any()) }
+            }
+
+            should("clear stable across platform shapes once for a gradle stable assignment") {
+                // given: a gradle version that exists
+                val gradleStable = TagAssignment("gradle", "8.14", none(), Platform.UNIVERSAL, "stable")
+                givenAssignableVersion(gradleStable)
+                coEvery { tagsRepo.clearStableAcrossShapes(any()) } returns Either.Right(1)
+
+                // when: tagging it stable
+                val result = service.assignTag(gradleStable, NIL_UUID, "admin")
+
+                // then: stable is cleared from the other platform shape once
+                result.shouldBeRight()
+                coVerify(exactly = 1) {
+                    tagsRepo.clearStableAcrossShapes(UniqueVersion("gradle", "8.14", none(), Platform.UNIVERSAL))
+                }
+            }
+
+            should("never clear stable across platform shapes for a gradle latest assignment") {
+                // given: a gradle version that exists
+                val gradleLatest = TagAssignment("gradle", "8.14", none(), Platform.UNIVERSAL, "latest")
+                givenAssignableVersion(gradleLatest)
+
+                // when: tagging it latest
+                val result = service.assignTag(gradleLatest, NIL_UUID, "admin")
+
+                // then: nothing is cleared
+                result.shouldBeRight()
+                coVerify(exactly = 0) { tagsRepo.clearStableAcrossShapes(any()) }
+            }
+
+            should("never clear stable across platform shapes for a java assignment") {
+                // given: a java version that exists
+                val javaStable = temurinLatest.copy(tag = "stable")
+                givenAssignableVersion(javaStable)
+
+                // when: tagging it stable
+                val result = service.assignTag(javaStable, NIL_UUID, "admin")
+
+                // then: the tag is assigned and nothing is cleared
+                result.shouldBeRight()
+                coVerify { tagsRepo.assignTag(42, "java", Distribution.TEMURIN.some(), Platform.LINUX_X64, "stable") }
+                coVerify(exactly = 0) { tagsRepo.clearStableAcrossShapes(any()) }
             }
 
             should("answer DatabaseError and look up nothing when the java write lock fails") {
