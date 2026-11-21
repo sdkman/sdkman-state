@@ -278,7 +278,7 @@ class VendorAuditAcceptanceSpec :
                     "distribution": "TEMURIN",
                     "platform": "LINUX_X64",
                     "url": "https://cdn.example.com/jpx-27.0.2.0-temurin-linux-x64.tar.gz",
-                    "tags": ["latest", "27"]
+                    "tags": ["stable", "latest"]
                 }
                 """.trimIndent()
 
@@ -296,7 +296,7 @@ class VendorAuditAcceptanceSpec :
 
                 val auditRecords = selectAuditRecords()
                 auditRecords shouldHaveSize 1
-                auditRecords.first().versionData.extractTags() shouldBe listOf("latest", "27")
+                auditRecords.first().versionData.extractTags() shouldBe listOf("stable", "latest")
             }
         }
 
