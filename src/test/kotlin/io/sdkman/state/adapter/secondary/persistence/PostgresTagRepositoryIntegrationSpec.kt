@@ -31,19 +31,20 @@ class PostgresTagRepositoryIntegrationSpec :
             platform: Platform,
             tags: List<String>,
             distribution: Option<Distribution> = none(),
+            candidate: String = "jpx",
         ): Int {
             val versionId =
                 insertVersionWithId(
                     Version(
-                        candidate = "jpx",
+                        candidate = candidate,
                         version = version,
                         platform = platform,
-                        url = "https://jpx-$version-$platform",
+                        url = "https://$candidate-$version-$platform",
                         visible = true.some(),
                         distribution = distribution,
                     ),
                 )
-            repo.replaceTags(versionId, "jpx", distribution, platform, tags).shouldBeRight()
+            repo.replaceTags(versionId, candidate, distribution, platform, tags).shouldBeRight()
             return versionId
         }
 
@@ -472,6 +473,36 @@ class PostgresTagRepositoryIntegrationSpec :
 
                     // then: only latest remains
                     selectTagNames(linuxId) shouldContainExactlyInAnyOrder listOf("latest")
+                }
+            }
+
+            should("leave another version's stable on a platform of the same shape in place") {
+                withCleanDatabase {
+                    // given: an older version stable on MAC_ARM64 and a newer one stable on LINUX_X64
+                    val macId = insertTagged("1.1.0", Platform.MAC_ARM64, listOf("stable"))
+                    insertTagged("1.2.0", Platform.LINUX_X64, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the LINUX_X64 row
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.LINUX_X64))
+
+                    // then: the MAC_ARM64 stable stays
+                    result.shouldBeRight() shouldBe 0
+                    selectTagNames(macId) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+
+            should("leave the UNIVERSAL stable of another candidate in place") {
+                withCleanDatabase {
+                    // given: a gradle version stable on UNIVERSAL and a jpx version stable on LINUX_X64
+                    val gradleId = insertTagged("1.2.0", Platform.UNIVERSAL, listOf("stable"), candidate = "gradle")
+                    insertTagged("1.2.0", Platform.LINUX_X64, listOf("stable"))
+
+                    // when: stable is cleared across shapes for the jpx LINUX_X64 row
+                    val result = repo.clearStableAcrossShapes(UniqueVersion("jpx", "1.2.0", none(), Platform.LINUX_X64))
+
+                    // then: the gradle stable stays
+                    result.shouldBeRight() shouldBe 0
+                    selectTagNames(gradleId) shouldContainExactlyInAnyOrder listOf("stable")
                 }
             }
         }
