@@ -242,10 +242,10 @@ class NonJavaVersionRulesAcceptanceSpec :
                 withTestApplication {
                     registerCandidates("jpx")
 
-                    // when: the same version is posted with stable and latest
+                    // when: the same version is posted with stable only
                     val response =
                         postVersion(
-                            jpx.copy(tags = listOf("stable", "latest").some()).toJsonString(),
+                            jpx.copy(tags = listOf("stable").some()).toJsonString(),
                             JwtTestSupport.adminToken(),
                         )
 
