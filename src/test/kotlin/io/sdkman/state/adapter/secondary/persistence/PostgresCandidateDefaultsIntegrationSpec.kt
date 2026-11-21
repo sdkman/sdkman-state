@@ -29,7 +29,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
             distribution: Option<Distribution> = none(),
             tagDistribution: Option<Distribution> = distribution,
             visible: Boolean = true,
-            tag: String = "lts",
+            tag: String = "stable",
         ) {
             val versionId =
                 insertVersionWithId(
@@ -47,7 +47,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
 
         should("prefer the UNIVERSAL row over the LINUX_X64 row") {
             withCleanDatabase {
-                // given: one candidate tagged lts on both resolvable platforms
+                // given: one candidate tagged stable on both resolvable platforms
                 seedTaggedVersion("gradle", "9.0.0", Platform.UNIVERSAL)
                 seedTaggedVersion("gradle", "8.0.0", Platform.LINUX_X64)
 
@@ -59,9 +59,9 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("fall back to the LINUX_X64 row when no UNIVERSAL row is tagged lts") {
+        should("fall back to the LINUX_X64 row when no UNIVERSAL row is tagged stable") {
             withCleanDatabase {
-                // given: the candidate carries lts only on LINUX_X64, plus an untagged UNIVERSAL row
+                // given: the candidate carries stable only on LINUX_X64, plus an untagged UNIVERSAL row
                 insertVersionWithId(
                     Version(
                         candidate = "gradle",
@@ -81,9 +81,9 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("omit a candidate whose only lts tag sits on MAC_ARM64") {
+        should("omit a candidate whose only stable tag sits on MAC_ARM64") {
             withCleanDatabase {
-                // given: the candidate is tagged lts on a platform outside the resolution order
+                // given: the candidate is tagged stable on a platform outside the resolution order
                 seedTaggedVersion("scala", "3.5.0", Platform.MAC_ARM64)
 
                 // when: the defaults are derived
@@ -94,15 +94,15 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("include a candidate whose lts row is not visible") {
+        should("include a candidate whose stable row is not visible") {
             withCleanDatabase {
-                // given: the lts tag points at a retired row, as between supersession and the next DISCO pass
+                // given: the stable tag points at a retired row
                 seedTaggedVersion("groovy", "4.0.0", Platform.UNIVERSAL, visible = false)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
 
-                // then: visibility goes unfiltered, so this agrees with GET /versions/{c}/tags/lts
+                // then: visibility goes unfiltered, so this agrees with GET /versions/{c}/tags/stable
                 defaults shouldContain ("groovy" to "4.0.0")
             }
         }
@@ -123,7 +123,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
 
         should("return one entry per candidate") {
             withCleanDatabase {
-                // given: three candidates, one of them tagged lts on both resolvable platforms
+                // given: three candidates, one of them tagged stable on both resolvable platforms
                 seedTaggedVersion("gradle", "9.0.0", Platform.UNIVERSAL)
                 seedTaggedVersion("gradle", "8.0.0", Platform.LINUX_X64)
                 seedTaggedVersion("groovy", "4.0.0", Platform.UNIVERSAL)
@@ -137,39 +137,39 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("prefer stable on LINUX_X64 over lts on UNIVERSAL") {
+        should("ignore lts on UNIVERSAL and resolve stable on LINUX_X64") {
             withCleanDatabase {
                 // given: stable only on LINUX_X64 and lts on UNIVERSAL
-                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64, tag = "stable")
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64)
                 seedTaggedVersion("kuml", "0.21.0", Platform.UNIVERSAL, tag = "lts")
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
 
-                // then: the tag decides before the platform
+                // then: lts is not read, even on the preferred platform
                 defaults shouldContain ("kuml" to "0.20.5")
             }
         }
 
-        should("resolve the tag per candidate") {
+        should("omit a candidate tagged only lts") {
             withCleanDatabase {
                 // given: gradle carries only stable and scala carries only lts
-                seedTaggedVersion("gradle", "8.14", Platform.UNIVERSAL, tag = "stable")
+                seedTaggedVersion("gradle", "8.14", Platform.UNIVERSAL)
                 seedTaggedVersion("scala", "3.4.3", Platform.UNIVERSAL, tag = "lts")
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
 
-                // then: each candidate resolves its own tag
-                defaults shouldBe mapOf("gradle" to "8.14", "scala" to "3.4.3")
+                // then: only stable produces a default
+                defaults shouldBe mapOf("gradle" to "8.14")
             }
         }
 
-        should("ignore stable on MAC_ARM64 and resolve lts on LINUX_X64") {
+        should("ignore stable on MAC_ARM64 and resolve stable on LINUX_X64") {
             withCleanDatabase {
-                // given: stable only on a platform outside the resolution order, lts on LINUX_X64
-                seedTaggedVersion("kuml", "0.21.0", Platform.MAC_ARM64, tag = "stable")
-                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64, tag = "lts")
+                // given: stable on a platform outside the resolution order and on LINUX_X64
+                seedTaggedVersion("kuml", "0.21.0", Platform.MAC_ARM64)
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
@@ -179,23 +179,23 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("match tag names exactly so Stable never beats lts") {
+        should("match tag names exactly so Stable never counts as stable") {
             withCleanDatabase {
-                // given: a capitalised Stable tag and an lts tag, both on UNIVERSAL
+                // given: a capitalised Stable tag on UNIVERSAL and a stable tag on LINUX_X64
                 seedTaggedVersion("kuml", "0.21.0", Platform.UNIVERSAL, tag = "Stable")
-                seedTaggedVersion("kuml", "0.20.5", Platform.UNIVERSAL, tag = "lts")
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
 
-                // then: Stable is a different tag, so lts resolves
+                // then: Stable is a different tag, so the LINUX_X64 stable resolves
                 defaults shouldContain ("kuml" to "0.20.5")
             }
         }
 
         should("omit a candidate tagged only latest") {
             withCleanDatabase {
-                // given: the candidate carries latest on UNIVERSAL and no stable or lts
+                // given: the candidate carries latest on UNIVERSAL and no stable
                 seedTaggedVersion("jpx", "0.15.5", Platform.UNIVERSAL, tag = "latest")
 
                 // when: the defaults are derived
@@ -206,7 +206,7 @@ class PostgresCandidateDefaultsIntegrationSpec :
             }
         }
 
-        should("ignore stable on a version row with a distribution and resolve lts") {
+        should("ignore stable on a version row with a distribution and fall back to LINUX_X64") {
             withCleanDatabase {
                 // given: stable points at a TEMURIN version row through a tag row with no distribution
                 seedTaggedVersion(
@@ -215,9 +215,8 @@ class PostgresCandidateDefaultsIntegrationSpec :
                     Platform.UNIVERSAL,
                     Distribution.TEMURIN.some(),
                     tagDistribution = none(),
-                    tag = "stable",
                 )
-                seedTaggedVersion("kuml", "0.20.5", Platform.UNIVERSAL, tag = "lts")
+                seedTaggedVersion("kuml", "0.20.5", Platform.LINUX_X64)
 
                 // when: the defaults are derived
                 val defaults = repo.findDefaults().shouldBeRight()
