@@ -18,6 +18,7 @@ import io.ktor.http.contentType
 import io.ktor.http.withCharset
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.sdkman.state.support.JwtTestSupport
+import io.sdkman.state.support.failingVersionPlatforms
 import io.sdkman.state.support.registerCandidates
 import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
@@ -140,6 +141,25 @@ class ValidationTwinParityAcceptanceSpec :
                     // then: both refuse it with the same answer
                     written.bodyAsText() shouldContain "cannot mix UNIVERSAL and platform rows"
                     validated.status shouldBe HttpStatusCode.BadRequest
+                    validated.bodyAsText() shouldBe written.bodyAsText()
+                }
+            }
+        }
+
+        should("answer /validate/versions with the same 500 as /versions when the stored platforms cannot be read") {
+            withCleanDatabase {
+                withTestApplication(versionPlatforms = failingVersionPlatforms()) {
+                    // given: jpx is registered and every read of the stored platforms fails
+                    registerCandidates("jpx")
+
+                    // when: an admin writes a valid body, and anyone validates it
+                    val written = postAsAdmin("/versions", versionBody())
+                    val validated = postAnonymously("/validate/versions", versionBody())
+
+                    // then: both answer the platform read failure with the same 500
+                    written.status shouldBe HttpStatusCode.InternalServerError
+                    written.bodyAsText() shouldContain "Failed to find version platforms"
+                    validated.status shouldBe HttpStatusCode.InternalServerError
                     validated.bodyAsText() shouldBe written.bodyAsText()
                 }
             }
