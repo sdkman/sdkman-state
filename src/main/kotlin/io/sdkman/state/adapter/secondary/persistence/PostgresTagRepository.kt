@@ -6,7 +6,9 @@ import arrow.core.toOption
 import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.STABLE_TAG
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.VersionTag
 import io.sdkman.state.domain.repository.TagRepository
 import org.jetbrains.exposed.v1.core.Op
@@ -16,7 +18,9 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.notInList
+import org.jetbrains.exposed.v1.core.notInSubQuery
 import org.jetbrains.exposed.v1.javatime.timestamp
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -226,6 +230,39 @@ class PostgresTagRepository : TagRepository {
             }.mapLeft { error ->
                 DatabaseFailure.QueryExecutionFailure(
                     message = "Failed to delete tag: ${error.message}",
+                    cause = error,
+                )
+            }
+
+    override suspend fun clearStableAcrossShapes(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int> =
+        Either
+            .catch {
+                dbQuery {
+                    val otherShape =
+                        if (uniqueVersion.platform == Platform.UNIVERSAL) {
+                            VersionTagsTable.platform neq Platform.UNIVERSAL.name
+                        } else {
+                            VersionTagsTable.platform eq Platform.UNIVERSAL.name
+                        }
+                    val ownRowIds =
+                        VersionsTable
+                            .select(VersionsTable.id)
+                            .where {
+                                (VersionsTable.candidate eq uniqueVersion.candidate) and
+                                    (VersionsTable.version eq uniqueVersion.version) and
+                                    versionsDistributionEq(uniqueVersion.distribution)
+                            }
+                    VersionTagsTable.deleteWhere {
+                        (candidate eq uniqueVersion.candidate) and
+                            (tag eq STABLE_TAG) and
+                            distributionEq(uniqueVersion.distribution) and
+                            otherShape and
+                            (versionId notInSubQuery ownRowIds)
+                    }
+                }
+            }.mapLeft { error ->
+                DatabaseFailure.QueryExecutionFailure(
+                    message = "Failed to clear stable across platform shapes: ${error.message}",
                     cause = error,
                 )
             }

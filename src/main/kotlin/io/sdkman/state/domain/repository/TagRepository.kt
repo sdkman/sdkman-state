@@ -6,6 +6,7 @@ import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import io.sdkman.state.domain.model.VersionTag
 
 interface TagRepository {
@@ -32,6 +33,8 @@ interface TagRepository {
     ): Either<DatabaseFailure, Unit>
 
     suspend fun deleteTag(uniqueTag: UniqueTag): Either<DatabaseFailure, Int>
+
+    suspend fun clearStableAcrossShapes(uniqueVersion: UniqueVersion): Either<DatabaseFailure, Int>
 
     suspend fun hasTagsForVersion(versionId: Int): Either<DatabaseFailure, Boolean>
 }
