@@ -33,13 +33,13 @@ internal object VersionsTable : IntIdTable(name = "versions") {
     val lastUpdatedAt = timestamp("last_updated_at")
 }
 
-class PostgresVersionRepository : VersionRepository {
-    private fun distributionEq(distribution: Option<Distribution>): Op<Boolean> =
-        distribution.fold(
-            { VersionsTable.distribution.isNull() },
-            { VersionsTable.distribution eq it.name },
-        )
+internal fun versionsDistributionEq(distribution: Option<Distribution>): Op<Boolean> =
+    distribution.fold(
+        { VersionsTable.distribution.isNull() },
+        { VersionsTable.distribution eq it.name },
+    )
 
+class PostgresVersionRepository : VersionRepository {
     private fun ResultRow.toVersion(): Version =
         Version(
             candidate = this[VersionsTable.candidate],
@@ -123,7 +123,7 @@ class PostgresVersionRepository : VersionRepository {
                             (VersionsTable.candidate eq candidate) and
                                 (VersionsTable.version eq version) and
                                 (VersionsTable.platform eq platform.name) and
-                                distributionEq(distribution)
+                                versionsDistributionEq(distribution)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
                         .withBatchFetchedTags()
                         .firstOrNone()
@@ -189,7 +189,7 @@ class PostgresVersionRepository : VersionRepository {
                             (VersionsTable.candidate eq uniqueVersion.candidate) and
                                 (VersionsTable.version eq uniqueVersion.version) and
                                 (VersionsTable.platform eq uniqueVersion.platform.name) and
-                                distributionEq(uniqueVersion.distribution)
+                                versionsDistributionEq(uniqueVersion.distribution)
                         }.map { it[VersionsTable.id].value }
                         .firstOrNone()
                 }
@@ -218,7 +218,7 @@ class PostgresVersionRepository : VersionRepository {
                         .where {
                             (VersionTagsTable.candidate eq candidate) and
                                 (VersionTagsTable.tag eq tag) and
-                                distributionEq(distribution) and
+                                versionsDistributionEq(distribution) and
                                 (VersionTagsTable.platform eq platform.name)
                         }.map { it[VersionsTable.id].value to it.toVersion() }
                         .withBatchFetchedTags()
@@ -239,7 +239,7 @@ class PostgresVersionRepository : VersionRepository {
                         (candidate eq uniqueVersion.candidate) and
                             (this.version eq uniqueVersion.version) and
                             (platform eq uniqueVersion.platform.name) and
-                            distributionEq(uniqueVersion.distribution)
+                            versionsDistributionEq(uniqueVersion.distribution)
                     }
                 }
             }.mapLeft { error ->
@@ -330,5 +330,5 @@ class PostgresVersionRepository : VersionRepository {
     ): Op<Boolean> = javaDistributionScope(distribution) and (VersionsTable.platform eq platform.name)
 
     private fun javaDistributionScope(distribution: Option<Distribution>): Op<Boolean> =
-        (VersionsTable.candidate eq JAVA_CANDIDATE) and distributionEq(distribution)
+        (VersionsTable.candidate eq JAVA_CANDIDATE) and versionsDistributionEq(distribution)
 }
