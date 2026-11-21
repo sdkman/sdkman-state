@@ -1,5 +1,7 @@
 package io.sdkman.state.application.validation
 
+import io.sdkman.state.domain.model.NON_JAVA_TAGS
+
 // Shared tag-name validation rules. A tag must be 1–50 characters, start and end
 // with an alphanumeric character, and use only alphanumerics, dots, hyphens, and
 // underscores in between. Both `VersionFieldRules` (tag list on a version)
@@ -30,5 +32,17 @@ object TagNameRules {
                 )
 
             else -> emptyList()
+        }
+
+    fun validateNonJava(
+        field: String,
+        tag: String,
+    ): List<ValidationError> =
+        validate(field, tag).ifEmpty {
+            if (tag in NON_JAVA_TAGS) {
+                emptyList()
+            } else {
+                listOf(InvalidTagError(field, "Tag '$tag' is not allowed; use stable or latest"))
+            }
         }
 }

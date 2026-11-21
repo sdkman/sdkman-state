@@ -132,4 +132,33 @@ class TagAssignmentValidatorSpec :
                 errors.toList()[2].shouldBeInstanceOf<InvalidTagError>().field shouldBe "tag"
             }
         }
+
+        context("validate non-java tags") {
+
+            fun assignment(
+                candidate: String,
+                tag: String,
+            ) = TagAssignment(
+                candidate = candidate,
+                version = "8.12",
+                distribution = arrow.core.none(),
+                platform = Platform.UNIVERSAL,
+                tag = tag,
+            )
+
+            listOf("lts", "27", "Stable").forEach { tag ->
+                should("refuse gradle tag '$tag' with an InvalidTagError") {
+                    TagAssignmentValidator.validate(assignment("gradle", tag)).shouldBeLeft().toList() shouldBe
+                        listOf(InvalidTagError("tag", "Tag '$tag' is not allowed; use stable or latest"))
+                }
+            }
+
+            should("accept gradle tag 'stable'") {
+                TagAssignmentValidator.validate(assignment("gradle", "stable")) shouldBeRight assignment("gradle", "stable")
+            }
+
+            should("accept java tag 'lts'") {
+                TagAssignmentValidator.validate(assignment("java", "lts")) shouldBeRight assignment("java", "lts")
+            }
+        }
     })

@@ -90,7 +90,7 @@ class JavaVersionRequestValidator(
         poster: JavaPoster,
     ): Either<NonEmptyList<ValidationError>, Option<List<String>>> =
         when (poster) {
-            JavaPoster.ADMIN -> VersionFieldRules.validateTags(tags)
+            JavaPoster.ADMIN -> VersionFieldRules.validateTags(tags, TagNameRules::validate)
             JavaPoster.VENDOR -> requireAbsent(tags, ServerDecidedFieldError("tags"))
         }
 

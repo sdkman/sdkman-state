@@ -122,13 +122,16 @@ internal object VersionFieldRules {
             },
         )
 
-    fun validateTags(tagsOpt: Option<List<String>>): Either<NonEmptyList<ValidationError>, Option<List<String>>> =
+    fun validateTags(
+        tagsOpt: Option<List<String>>,
+        tagRule: (field: String, tag: String) -> List<ValidationError>,
+    ): Either<NonEmptyList<ValidationError>, Option<List<String>>> =
         tagsOpt.fold(
             { None.right() },
             { tags ->
                 val tagErrors =
                     tags.flatMapIndexed { index, tag ->
-                        TagNameRules.validate("tags[$index]", tag)
+                        tagRule("tags[$index]", tag)
                     }
                 tagErrors.toNonEmptyListOrNone().fold(
                     { tags.some().right() },
