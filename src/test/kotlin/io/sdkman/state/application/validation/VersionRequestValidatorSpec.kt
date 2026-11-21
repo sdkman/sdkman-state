@@ -782,4 +782,32 @@ class VersionRequestValidatorSpec :
                     listOf("candidate", "version", "platform", "url", "distribution", "md5sum", "sha256sum", "sha512sum", "tags[0]")
             }
         }
+
+        context("Non-java version grammar") {
+
+            fun gradleJson(version: String) =
+                """
+                {
+                    "candidate": "gradle",
+                    "version": "$version",
+                    "platform": "UNIVERSAL",
+                    "url": "https://example.com/gradle.zip"
+                }
+                """.trimIndent()
+
+            listOf("1.2.0", "3.2.9.Final", "2.0.0-RC15", "5.23.0.0_2", "1".repeat(50)).forEach { version ->
+                should("accept gradle version '$version'") {
+                    validator.validateRequest(gradleJson(version)).shouldBeRight().version shouldBe version
+                }
+            }
+
+            listOf("1.2.0 LTS", "-1.0", "1.0/beta", "1".repeat(51)).forEach { version ->
+                should("refuse gradle version '$version' with an InvalidNonJavaVersionError") {
+                    val errors = validator.validateRequest(gradleJson(version)).shouldBeLeft()
+
+                    errors.toList() shouldBe listOf(InvalidNonJavaVersionError(version = version))
+                    errors.head.message shouldBe "Version '$version' must match ^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$"
+                }
+            }
+        }
     })

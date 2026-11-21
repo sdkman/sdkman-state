@@ -29,7 +29,7 @@ class VersionRequestValidator(
     fun validate(request: VersionRequest): Either<NonEmptyList<ValidationError>, Version> =
         Either.zipOrAccumulate(
             validateCandidate(request.candidate),
-            VersionFieldRules.validateVersion(request.version),
+            validateVersion(request),
             VersionFieldRules.validatePlatform(request.platform),
             VersionFieldRules.validateUrl(request.url),
             VersionFieldRules.validateDistribution(request.distribution),
@@ -50,6 +50,13 @@ class VersionRequestValidator(
                 sha512sum = sha512sum,
                 tags = tags,
             )
+        }
+
+    private fun validateVersion(request: VersionRequest): Either<NonEmptyList<ValidationError>, String> =
+        if (request.candidate.isSome { it == JAVA_CANDIDATE }) {
+            VersionFieldRules.validateVersion(request.version)
+        } else {
+            NonJavaVersionRules.validate(request.version)
         }
 
     private fun validateCandidate(candidate: Option<String>): Either<NonEmptyList<ValidationError>, String> =

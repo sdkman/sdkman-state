@@ -77,6 +77,13 @@ data class InvalidVersionFormatError(
         "Version '$version' does not conform to the semverish format: FEATURE.INTERIM.UPDATE.PATCH[.N...][-fx|-crac][+build-metadata]"
 }
 
+data class InvalidNonJavaVersionError(
+    override val field: String = "version",
+    val version: String,
+) : ValidationError() {
+    override val message: String = "Version '$version' must match ${NonJavaVersionRules.PATTERN_SOURCE}"
+}
+
 data class InvalidRequestError(
     val details: String,
 ) : ValidationError() {
