@@ -29,6 +29,7 @@ import io.sdkman.state.config.AppConfig
 import io.sdkman.state.config.DefaultAppConfig
 import io.sdkman.state.config.configureJwtAuthentication
 import io.sdkman.state.config.createHikariDataSource
+import io.sdkman.state.domain.repository.VersionPlatformRepository
 import io.sdkman.state.domain.service.CandidateAllowList
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.DatabaseConfig
@@ -90,9 +91,10 @@ val sharedTestDatabase: Database by lazy {
 
 fun withTestApplication(
     candidateAllowList: CandidateAllowList = RefreshingCandidateAllowList(PostgresCandidateRepository()),
+    versionPlatforms: VersionPlatformRepository = PostgresVersionPlatformRepository(),
     fn: suspend (ApplicationTestBuilder.() -> Unit),
 ) {
-    withTestApplicationConfiguredBy(testApplicationConfig(), candidateAllowList, fn)
+    withTestApplicationConfiguredBy(testApplicationConfig(), candidateAllowList, versionPlatforms, fn)
 }
 
 fun withTestApplicationAtLtsFeature(
@@ -102,6 +104,7 @@ fun withTestApplicationAtLtsFeature(
     withTestApplicationConfiguredBy(
         testApplicationConfig().apply { put("java.lts.feature", ltsFeature.toString()) },
         RefreshingCandidateAllowList(PostgresCandidateRepository()),
+        PostgresVersionPlatformRepository(),
         fn,
     )
 }
@@ -109,6 +112,7 @@ fun withTestApplicationAtLtsFeature(
 private fun withTestApplicationConfiguredBy(
     config: MapApplicationConfig,
     candidateAllowList: CandidateAllowList,
+    versionPlatforms: VersionPlatformRepository,
     fn: suspend (ApplicationTestBuilder.() -> Unit),
 ) {
     sharedTestDatabase
@@ -118,7 +122,7 @@ private fun withTestApplicationConfiguredBy(
         }
         application {
             runBlocking { candidateAllowList.refresh() }
-            configureTestApplication(DefaultAppConfig(config), candidateAllowList)
+            configureTestApplication(DefaultAppConfig(config), candidateAllowList, versionPlatforms)
         }
         fn(this)
     }
@@ -131,6 +135,7 @@ fun Application.configureTestApplication(candidateAllowList: CandidateAllowList)
 fun Application.configureTestApplication(
     appConfig: AppConfig,
     candidateAllowList: CandidateAllowList,
+    versionPlatforms: VersionPlatformRepository = PostgresVersionPlatformRepository(),
 ) {
     configureHTTP()
     configureSerialization()
@@ -147,7 +152,7 @@ fun Application.configureTestApplication(
 
     val candidateService = CandidateServiceImpl(PostgresCandidateRepository())
 
-    val versionRequestValidator = VersionRequestValidator(candidateAllowList, PostgresVersionPlatformRepository())
+    val versionRequestValidator = VersionRequestValidator(candidateAllowList, versionPlatforms)
     val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(
