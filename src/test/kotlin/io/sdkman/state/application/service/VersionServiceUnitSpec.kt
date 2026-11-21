@@ -287,9 +287,11 @@ class VersionServiceUnitSpec :
 
             should("roll back the outer transaction when tag processing fails") {
                 // R5: the version+tag write must run in one transaction. Verify by spying on the
-                // Transactional port — it should be called exactly once, and a Left bubbled out
-                // of its block must reach the caller unchanged.
+                // Transactional port: it is called exactly once, both writes run inside its block,
+                // and the failure that leaves the block reaches the caller unchanged.
                 val transactional = mockk<Transactional>()
+                var inBlock = false
+                val writesInBlock = mutableListOf<Boolean>()
                 val txService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
                 val version =
                     Version(
@@ -303,19 +305,28 @@ class VersionServiceUnitSpec :
                     DomainError.DatabaseError(
                         DatabaseFailure.QueryExecutionFailure("tag error", RuntimeException("x")),
                     )
-                coEvery { versionsRepo.createOrUpdate(version) } returns Either.Right(42)
-                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "stable") } returns Either.Left(tagFailure)
+                coEvery { versionsRepo.createOrUpdate(version) } coAnswers {
+                    writesInBlock.add(inBlock)
+                    Either.Right(42)
+                }
+                coEvery { tagService.assignNonJavaTag(42, gradleVersion, "stable") } coAnswers {
+                    writesInBlock.add(inBlock)
+                    Either.Left(tagFailure)
+                }
                 coEvery { transactional.inTransaction<DomainError, Unit>(any()) } coAnswers {
                     val block = firstArg<suspend () -> Either<DomainError, Unit>>()
-                    block()
+                    inBlock = true
+                    block().also { inBlock = false }
                 }
 
                 // when: the version write succeeds but tag assignment fails
                 val result = txService.createOrUpdate(version, NIL_UUID, "admin")
 
-                // then: the failure is returned and inTransaction was invoked exactly once
-                result.shouldBeLeft()
+                // then: the failure is returned, inTransaction was invoked exactly once,
+                // and the version write and the tag assignment both ran inside it
+                result shouldBeLeft tagFailure
                 coVerify(exactly = 1) { transactional.inTransaction<DomainError, Unit>(any()) }
+                writesInBlock shouldBe listOf(true, true)
             }
         }
 
