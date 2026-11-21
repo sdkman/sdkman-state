@@ -212,9 +212,9 @@ paths:
                     error: "Validation Error"
                     failures:
                       - field: "candidate"
-                        message: "Candidate must not be blank"
+                        message: "candidate cannot be empty"
                       - field: "tag"
-                        message: "Tag must not be blank"
+                        message: "tag cannot be empty"
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
@@ -277,11 +277,11 @@ paths:
                     error: "Validation Error"
                     failures:
                       - field: "candidate"
-                        message: "Candidate must not be blank"
+                        message: "candidate cannot be empty"
                       - field: "version"
-                        message: "Version must not be blank"
+                        message: "version cannot be empty"
                       - field: "tag"
-                        message: "Tag must match the pattern ^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$"
+                        message: "Tag 'lts' is not allowed; use stable or latest"
         "401":
           description: "Unauthorized - Missing or invalid authentication"
         "403":
