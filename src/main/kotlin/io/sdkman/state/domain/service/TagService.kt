@@ -7,6 +7,7 @@ import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
 import io.sdkman.state.domain.model.TagAssignment
 import io.sdkman.state.domain.model.UniqueTag
+import io.sdkman.state.domain.model.UniqueVersion
 import java.util.UUID
 
 interface TagService {
@@ -23,6 +24,12 @@ interface TagService {
         candidate: String,
         distribution: Option<Distribution>,
         platform: Platform,
+        tag: String,
+    ): Either<DomainError, Unit>
+
+    suspend fun assignNonJavaTag(
+        versionId: Int,
+        uniqueVersion: UniqueVersion,
         tag: String,
     ): Either<DomainError, Unit>
 
