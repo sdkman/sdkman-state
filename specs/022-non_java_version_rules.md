@@ -70,11 +70,26 @@ on that platform. On top of that:
 So the version the default cascade picks is always the version every platform's `stable`
 lookup answers, wherever one exists.
 
+*(Assumption, planning 2026-11-21: an "other version" is a row of the same candidate and
+distribution whose version differs. The clear never crosses a distribution and never touches
+the tagged version's own rows.)*
+
 **Both ways of tagging obey the same rules.** The `tags` field of `POST /versions` and the tag
 route, `POST /versions/tags`, move and refuse tags identically.
 
+*(Assumption, planning 2026-11-21: on a non-java row the `tags` field sets each tag it lists,
+as the tag route sets one, and removes none. Its replace semantics end there: a tag the row
+holds but the field leaves out stays, and an empty list changes nothing. `DELETE /versions/tags`
+still removes a tag.)*
+
 **The twin answers as the write does.** `POST /validate/versions` applies every rule here
 against the State it reads at that moment, and answers exactly as `POST /versions` would.
+
+*(Assumption, planning 2026-11-21: the platform-shape rule reads the version's stored rows, so
+the twin now reads the database per request, which rule 4 of
+[`017-public_validation.md`](017-public_validation.md) ruled out. A failed read answers `500` on
+both routes. Non-java writes are not serialised: each is judged against State as it reads it,
+and two concurrent writes for one candidate are not guarded against each other.)*
 
 ## API Contract
 
@@ -114,9 +129,31 @@ also carries `latest` keeps it.
 Apart from that fix, the rules judge new writes only. Every non-java version in the phase 1
 snapshot matches the grammar.
 
+*(Assumption, planning 2026-11-21: `stable` has been written since the survey, so a scope may
+already hold it. The retag skips an `lts` whose candidate, distribution and platform already
+hold `stable`. It also skips a `UNIVERSAL` `lts` with no distribution when its candidate holds
+`stable` at `LINUX_X64` with no distribution, since retagging it would move that default. A
+skipped `lts` stays as it is, and the cascade no longer reads it.)*
+
 **Rollback.** Redeploy the previous release. The rules lift, and nothing written under them
 changes. The retagged rows keep `stable`, which the previous release's cascade reads first,
 so no default moves.
+
+## Consumers
+
+- **`vendor-release`.** It changes first, as §Rollout states.
+- **The control plane's local stack.** `seed/seed.sh` tags each non-java default `lts`, tags
+  `contrib 0.1.1` `lts` so that `stable` must beat it, and posts groovy `9.9.9+build`, which the
+  grammar refuses. Each of those posts fails the day this ships. One control-plane change, landed
+  with this build, tags those defaults `stable`, drops the synthetic `lts` and drops
+  `9.9.9+build`. The `+` checks that read `9.9.9+build`, Insomnia folder `08` and
+  `compose/verify-nginx-front.sh`, read the seeded java `21.0.13.0+9-tem` instead, since only a
+  java version can still carry a `+`. The Insomnia suite, its spec and the glossary stop
+  describing an `lts` default for a non-java candidate.
+
+*(Assumption, planning 2026-11-21: this spec named no control-plane change. This one keeps the
+workspace verification gate green. `test/integration.sh` sits outside that gate, but its groovy
+default check reads `stable` too, so none of its checks newly fails.)*
 
 ## Examples
 
