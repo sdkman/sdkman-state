@@ -8,6 +8,7 @@ import io.sdkman.state.adapter.secondary.persistence.PostgresCandidateRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresHealthRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresTagRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVendorRepository
+import io.sdkman.state.adapter.secondary.persistence.PostgresVersionPlatformRepository
 import io.sdkman.state.adapter.secondary.persistence.PostgresVersionRepository
 import io.sdkman.state.application.service.AuthServiceImpl
 import io.sdkman.state.application.service.CandidateServiceImpl
@@ -58,7 +59,7 @@ fun Application.module() {
     val candidateAllowList = RefreshingCandidateAllowList(candidateRepo)
     scheduleCandidateRefresh(candidateAllowList, appConfig.candidateRefreshIntervalMs)
 
-    val versionRequestValidator = VersionRequestValidator(candidateAllowList)
+    val versionRequestValidator = VersionRequestValidator(candidateAllowList, PostgresVersionPlatformRepository())
     val versionService = VersionServiceImpl(versionsRepo, tagService, auditRepo, transactional)
 
     configureRouting(

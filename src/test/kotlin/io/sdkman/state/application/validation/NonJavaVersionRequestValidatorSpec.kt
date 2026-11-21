@@ -1,8 +1,17 @@
 package io.sdkman.state.application.validation
 
+import arrow.core.left
+import arrow.core.none
+import arrow.core.right
 import arrow.core.some
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
+import io.mockk.mockk
+import io.sdkman.state.domain.error.DatabaseFailure
+import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.model.Version
+import io.sdkman.state.domain.repository.VersionPlatformRepository
 import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
@@ -10,7 +19,8 @@ import io.sdkman.state.support.shouldBeRight
 class NonJavaVersionRequestValidatorSpec :
     ShouldSpec({
 
-        val validator = VersionRequestValidator(allowList("java", "gradle"))
+        val versionPlatforms = mockk<VersionPlatformRepository>()
+        val validator = VersionRequestValidator(allowList("java", "gradle"), versionPlatforms)
 
         context("Non-java version grammar") {
 
@@ -56,6 +66,26 @@ class NonJavaVersionRequestValidatorSpec :
                     validator.validateRequest(gradleJson(tag)).shouldBeLeft().toList() shouldBe
                         listOf(InvalidTagError("tags[0]", "Tag '$tag' is not allowed; use stable or latest"))
                 }
+            }
+        }
+
+        context("Non-java platform shape") {
+
+            val universalRow = Version("gradle", "8.12", Platform.UNIVERSAL, "https://example.com/gradle.zip")
+
+            should("refuse a UNIVERSAL row beside a stored LINUX_X64 row of the same version") {
+                coEvery { versionPlatforms.findPlatforms("gradle", "8.12", none()) } returns
+                    listOf(Platform.LINUX_X64).right()
+
+                validator.validatePlatformShape(universalRow).shouldBeRight() shouldBe
+                    listOf(PlatformShapeError(version = "8.12"))
+            }
+
+            should("pass a failed platform read through unchanged") {
+                val failure = DatabaseFailure.QueryExecutionFailure("Failed to find version platforms", RuntimeException())
+                coEvery { versionPlatforms.findPlatforms("gradle", "8.12", none()) } returns failure.left()
+
+                validator.validatePlatformShape(universalRow).shouldBeLeft() shouldBe failure
             }
         }
     })

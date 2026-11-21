@@ -7,8 +7,10 @@ import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
+import io.mockk.mockk
 import io.sdkman.state.domain.model.Distribution
 import io.sdkman.state.domain.model.Platform
+import io.sdkman.state.domain.repository.VersionPlatformRepository
 import io.sdkman.state.support.allowList
 import io.sdkman.state.support.shouldBeLeft
 import io.sdkman.state.support.shouldBeRight
@@ -16,7 +18,8 @@ import io.sdkman.state.support.shouldBeRight
 class VersionRequestValidatorSpec :
     ShouldSpec({
 
-        val validator = VersionRequestValidator(allowList("java", "gradle", "kotlin", "maven", "scala"))
+        val versionPlatforms = mockk<VersionPlatformRepository>()
+        val validator = VersionRequestValidator(allowList("java", "gradle", "kotlin", "maven", "scala"), versionPlatforms)
 
         context("Happy path tests") {
 
@@ -413,7 +416,7 @@ class VersionRequestValidatorSpec :
 
             should("enumerate the registered candidates sorted ascending") {
                 // given: a validator whose registry is held in a deliberately unsorted order
-                val unsortedValidator = VersionRequestValidator(allowList("scala", "ant", "gradle"))
+                val unsortedValidator = VersionRequestValidator(allowList("scala", "ant", "gradle"), versionPlatforms)
                 val json =
                     """
                     {
@@ -670,7 +673,7 @@ class VersionRequestValidatorSpec :
 
             should("refuse java with a JavaRouteError rather than InvalidCandidateError when java is unregistered") {
                 // given: a validator whose registry does not hold java
-                val validatorWithoutJava = VersionRequestValidator(allowList("gradle"))
+                val validatorWithoutJava = VersionRequestValidator(allowList("gradle"), versionPlatforms)
 
                 // when: validating an otherwise valid java request
                 val errors = validatorWithoutJava.validateRequest(javaJson).shouldBeLeft()

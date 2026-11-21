@@ -9,12 +9,15 @@ import arrow.core.nel
 import arrow.core.raise.either
 import arrow.core.right
 import io.sdkman.state.adapter.primary.rest.dto.VersionRequest
+import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.JAVA_CANDIDATE
 import io.sdkman.state.domain.model.Version
+import io.sdkman.state.domain.repository.VersionPlatformRepository
 import io.sdkman.state.domain.service.CandidateAllowList
 
 class VersionRequestValidator(
     private val candidateAllowList: CandidateAllowList,
+    private val versionPlatforms: VersionPlatformRepository,
 ) {
     // A registry that has never loaded is not a validation failure: reporting it as one would
     // surface a transient database fault to a publisher as "candidate is not valid".
@@ -51,6 +54,11 @@ class VersionRequestValidator(
                 tags = tags,
             )
         }
+
+    suspend fun validatePlatformShape(version: Version): Either<DatabaseFailure, List<ValidationError>> =
+        versionPlatforms
+            .findPlatforms(version.candidate, version.version, version.distribution)
+            .map { storedPlatforms -> PlatformShapeRules.validate(version, storedPlatforms) }
 
     private fun validateVersion(request: VersionRequest): Either<NonEmptyList<ValidationError>, String> =
         if (request.isJava()) {
