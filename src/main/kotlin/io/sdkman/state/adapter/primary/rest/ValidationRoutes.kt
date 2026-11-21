@@ -19,7 +19,7 @@ fun Route.validateCandidateRoute() {
     }
 }
 
-private suspend fun ApplicationCall.respondValidation(check: (String) -> Either<RejectedBody, Any>) {
+private suspend fun ApplicationCall.respondValidation(check: suspend (String) -> Either<RejectedBody, Any>) {
     response.header(HttpHeaders.CacheControl, "no-store")
     receiveTextWithin(VALIDATION_BODY_LIMIT_BYTES).fold(
         ifEmpty = { respond(HttpStatusCode.PayloadTooLarge) },
