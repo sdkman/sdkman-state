@@ -89,7 +89,7 @@ paths:
                       - "27"
                       - "27.0"
     post:
-      description: "Create or update a version of any registered candidate but java. The version must not be blank and is otherwise stored as posted: no format is enforced. Visibility is stored as posted, absent meaning true, and the post hides no other version. Java is rejected with 400 for every caller, identifying the candidate field and naming POST /versions/java, the only route that writes a java version."
+      description: "Create or update a version of any registered candidate but java. The version must match ^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$: it starts with a letter or digit, holds only letters, digits, dots, underscores and hyphens, and is at most 50 characters long. A version has one platform shape: a UNIVERSAL row is refused for a version that already has a platform row, and a platform row for a version that already has a UNIVERSAL row; overwriting an existing row is unaffected. Visibility is stored as posted, absent meaning true, and the post hides no other version. Java is rejected with 400 for every caller, identifying the candidate field and naming POST /versions/java, the only route that writes a java version."
       security:
         - bearerAuth: []
       requestBody:
@@ -120,6 +120,27 @@ paths:
                     failures:
                       - field: "candidate"
                         message: "candidate 'java' is not accepted here; use POST /versions/java"
+                version_grammar:
+                  summary: "The version breaks the grammar"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "version"
+                        message: "Version '1.2.0 LTS' must match ^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$"
+                platform_shape:
+                  summary: "The row would mix UNIVERSAL and platform rows for its version"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "platform"
+                        message: "Version '1.2.0' cannot mix UNIVERSAL and platform rows"
+                lts_tag:
+                  summary: "A tag other than stable or latest"
+                  value:
+                    error: "Validation failed"
+                    failures:
+                      - field: "tags[0]"
+                        message: "Tag 'lts' is not allowed; use stable or latest"
         "204":
           description: "No Content"
           content:
@@ -216,7 +237,7 @@ paths:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
     post:
-      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. A java lts or latest assigned here holds only until the distribution's next vendor write, which keeps it only where it agrees with State's placement."
+      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. A non-java tag must be stable or latest; any other, lts included, is refused with 400. Assigning one never removes the other, and stable assigned to a platform row also clears stable from other versions' UNIVERSAL rows, while stable assigned to a UNIVERSAL row clears it from other versions' platform rows. A java lts or latest assigned here holds only until the distribution's next vendor write, which keeps it only where it agrees with State's placement."
       security:
         - bearerAuth: []
       requestBody:
@@ -616,7 +637,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /candidates:
     get:
-      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived on every request from the `stable` tag, falling back to the `lts` tag, and is never stored. The tag decides first, then the platform: `stable` on UNIVERSAL, then `stable` on LINUX_X64, then `lts` on UNIVERSAL, then `lts` on LINUX_X64. Only those four combinations produce a default, and only rows with no distribution count. An entry for java never carries a `default`."
+      description: "List the candidate registry. Rows are ordered ascending by candidate and the order is part of the contract: the Candidates Service renders `sdk list` straight from it. There is no pagination - the registry is order-of-100 rows - and an empty registry answers an empty array. The `default` of each entry is derived on every request from the `stable` tag and is never stored: `stable` on UNIVERSAL, then `stable` on LINUX_X64. Only those two combinations produce a default, and only rows with no distribution count; `lts` never does. An entry for java never carries a `default`."
       responses:
         "200":
           description: "OK"
@@ -741,7 +762,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
   /validate/versions:
     post:
-      description: "Validate a POST /versions body without writing it and without a login. Takes exactly the POST /versions body and runs the same validation, so a 400 is identical to the one POST /versions gives for the same body. A token, if sent, changes nothing. A 204 is a prediction, not a promise: the write can still fail on authorization, a database error, or a registry change in between. Answers may lag a registry change by up to the registry refresh interval. Validation reads nothing from the database per request and is not throttled."
+      description: "Validate a POST /versions body without writing it and without a login. Takes exactly the POST /versions body and runs the same validation, so a 400 is identical to the one POST /versions gives for the same body. A token, if sent, changes nothing. A 204 is a prediction, not a promise: the write can still fail on authorization, a database error, or a registry change in between. Answers may lag a registry change by up to the registry refresh interval. Validation reads the version's stored rows to apply the platform-shape rule, so it reads the database per request; it is not throttled."
       requestBody:
         content:
           '*/*':
@@ -777,7 +798,7 @@ paths:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
         "500":
-          description: "Internal Server Error - The candidate registry has never loaded successfully, as for POST /versions"
+          description: "Internal Server Error - a database error while reading the version's stored rows, or a candidate registry that has never loaded successfully, as for POST /versions"
           headers:
             Cache-Control:
               $ref: "#/components/headers/NoStore"
@@ -1420,7 +1441,7 @@ components:
           type: "string"
         default:
           type: "string"
-          description: "The version carrying the `stable` tag, falling back to the `lts` tag. The tag decides first, then the platform: `stable` on UNIVERSAL, then `stable` on LINUX_X64, then `lts` on UNIVERSAL, then `lts` on LINUX_X64. Only those four combinations count; any other tag or platform never produces a default. Only rows with no distribution are considered. Derived from version_tags on every request and never stored. The field is absent - not null - when no tag resolves, and always absent for java, which is the one candidate with per-distribution tags."
+          description: "The version carrying the `stable` tag: `stable` on UNIVERSAL, then `stable` on LINUX_X64. Only those two combinations count; any other tag, `lts` included, or platform never produces a default. Only rows with no distribution are considered. Derived from version_tags on every request and never stored. The field is absent - not null - when no tag resolves, and always absent for java, which is the one candidate with per-distribution tags."
       required:
         - "candidate"
         - "name"
@@ -1473,7 +1494,7 @@ components:
           type: "string"
         version:
           type: "string"
-          description: "Version identifier. On POST /versions it must not be blank, and no format is enforced. Java versions are posted to POST /versions/java, whose JavaVersion body states the java grammar."
+          description: "Version identifier. On POST /versions it must match ^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$. Java versions are posted to POST /versions/java, whose JavaVersion body states the java grammar."
         platform:
           type: "string"
           enum:
@@ -1523,11 +1544,9 @@ components:
             pattern: "^[a-zA-Z0-9]([a-zA-Z0-9._-]{0,48}[a-zA-Z0-9])?$"
             maxLength: 50
           example:
+            - "stable"
             - "latest"
-            - "27"
-            - "27.0"
-            - "lts"
-          description: "Version tags (e.g. latest, 27, 27.1). Tags must start and end with alphanumeric characters and may contain dots, hyphens, and underscores. On POST: absent preserves existing tags, empty array clears all tags, non-empty array replaces all tags. Tags are mutually exclusive within (candidate, distribution, platform) scope. Always present in GET responses as an array (empty if no tags)."
+          description: "Version tags. On POST /versions only stable and latest are accepted; any other tag, lts included, is refused with 400. On POST each listed tag is set and none is removed: absent or an empty array leaves the row's tags as they are, and a tag the row holds but the list leaves out stays. stable and latest are independent and may share a row. Tagging a row stable also clears stable from other versions' rows of the other platform shape: a platform row clears UNIVERSAL rows, a UNIVERSAL row clears platform rows. Tags are mutually exclusive within (candidate, distribution, platform) scope. Always present in GET responses as an array (empty if no tags)."
       required:
         - "candidate"
         - "version"
