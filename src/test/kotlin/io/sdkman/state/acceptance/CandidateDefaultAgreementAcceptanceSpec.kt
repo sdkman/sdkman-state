@@ -27,7 +27,7 @@ import kotlinx.serialization.json.jsonPrimitive
 @Tags("acceptance")
 class CandidateDefaultAgreementAcceptanceSpec :
     ShouldSpec({
-        should("derive the same default as the lts tag route resolves") {
+        should("derive no default from a row the lts tag route still resolves") {
             val version =
                 Version(
                     candidate = "gradle",
@@ -40,8 +40,7 @@ class CandidateDefaultAgreementAcceptanceSpec :
                 )
 
             withCleanDatabase {
-                // given: a retired gradle row the lts tag still points at — the window the java
-                // supersession pass leaves open, where the two reads must not disagree
+                // given: a retired gradle row still carrying the legacy lts tag
                 val versionId = insertVersionWithId(version)
                 insertTag("gradle", "lts", none(), Platform.UNIVERSAL, versionId)
 
@@ -51,8 +50,8 @@ class CandidateDefaultAgreementAcceptanceSpec :
                     // when: the tag route resolves lts at the platform the default prefers
                     val resolved = resolveTagVersion("lts")
 
-                    // then: the listing derives the very same version as its default
-                    derivedGradleDefault() shouldBe resolved.some()
+                    // then: the tag route still answers, but the default cascade reads stable only
+                    (derivedGradleDefault() to resolved) shouldBe (none<String>() to "8.14.3")
                 }
             }
         }

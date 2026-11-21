@@ -9,6 +9,7 @@ import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
+import io.sdkman.state.domain.model.STABLE_TAG
 import io.sdkman.state.domain.repository.CandidateRepository
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -37,8 +38,6 @@ internal object CandidatesTable : Table(name = "candidates") {
 
 class PostgresCandidateRepository : CandidateRepository {
     private companion object {
-        val TAG_RESOLUTION_ORDER = listOf("stable", "lts")
-
         val UPSERT_SQL =
             """
             INSERT INTO candidates (candidate, name, description, website_url, created_at, last_updated_at)
@@ -182,20 +181,15 @@ class PostgresCandidateRepository : CandidateRepository {
                             VersionsTable,
                             JoinType.INNER,
                             additionalConstraint = { VersionTagsTable.versionId eq VersionsTable.id },
-                        ).select(VersionTagsTable.candidate, VersionTagsTable.tag, VersionTagsTable.platform, VersionsTable.version)
+                        ).select(VersionTagsTable.candidate, VersionTagsTable.platform, VersionsTable.version)
                         .where {
-                            (VersionTagsTable.tag inList TAG_RESOLUTION_ORDER) and
+                            (VersionTagsTable.tag eq STABLE_TAG) and
                                 VersionsTable.distribution.isNull() and
                                 (VersionTagsTable.platform inList PLATFORM_RESOLUTION_ORDER)
                         }.groupBy { it[VersionTagsTable.candidate] }
                         .mapValues { (_, tagged) ->
                             tagged
-                                .sortedWith(
-                                    compareBy(
-                                        { TAG_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.tag]) },
-                                        { PLATFORM_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.platform]) },
-                                    ),
-                                ).first()[VersionsTable.version]
+                                .minBy { PLATFORM_RESOLUTION_ORDER.indexOf(it[VersionTagsTable.platform]) }[VersionsTable.version]
                         }
                 }
             }.mapLeft { error ->

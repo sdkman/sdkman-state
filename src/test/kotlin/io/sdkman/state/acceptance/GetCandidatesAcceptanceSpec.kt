@@ -99,9 +99,9 @@ class GetCandidatesAcceptanceSpec :
             }
         }
 
-        should("derive the default of a candidate from its lts tag on UNIVERSAL") {
+        should("list a candidate tagged only lts on UNIVERSAL without a default") {
             withCleanDatabase {
-                // given: a registered candidate whose UNIVERSAL row carries the lts tag
+                // given: a registered candidate whose UNIVERSAL row carries only the legacy lts tag
                 insertCandidates(registrationOf("gradle"))
                 insertVersionTagged("gradle", "8.14", Platform.UNIVERSAL, "lts")
 
@@ -109,16 +109,17 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the default is derived from `version_tags`, never stored
-                    response.bodyAsText().candidateEntries().defaultOf("gradle") shouldBe "8.14".some()
+                    // then: gradle is listed — `single` fails if not — with the field absent
+                    val gradleEntry = response.bodyAsText().candidateEntries().single()
+                    gradleEntry.keys shouldNotContain "default"
                 }
             }
         }
 
-        should("fall back to the LINUX_X64 lts tag when no UNIVERSAL row is tagged") {
+        should("fall back to the LINUX_X64 stable tag when no UNIVERSAL row is tagged") {
             withCleanDatabase {
                 // given: an untagged UNIVERSAL row alongside the tagged LINUX_X64 one, separating
-                // "no UNIVERSAL row tagged lts" from "no UNIVERSAL row at all"
+                // "no UNIVERSAL row tagged stable" from "no UNIVERSAL row at all"
                 insertCandidates(registrationOf("kuml"))
                 insertVersionWithId(
                     Version(
@@ -129,7 +130,7 @@ class GetCandidatesAcceptanceSpec :
                         visible = true.some(),
                     ),
                 )
-                insertVersionTagged("kuml", "0.20.5", Platform.LINUX_X64, "lts")
+                insertVersionTagged("kuml", "0.20.5", Platform.LINUX_X64, "stable")
 
                 withTestApplication {
                     // when: a client lists the candidates
@@ -151,13 +152,13 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the stable tag produces the default
+                    // then: the default is derived from `version_tags`, never stored
                     response.bodyAsText().candidateEntries().defaultOf("gradle") shouldBe "8.14".some()
                 }
             }
         }
 
-        should("prefer the stable tag over the lts tag on UNIVERSAL") {
+        should("ignore an lts tag beside the stable tag on UNIVERSAL") {
             withCleanDatabase {
                 // given: different UNIVERSAL versions tagged stable and lts
                 insertCandidates(registrationOf("gradle"))
@@ -168,13 +169,13 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: stable wins
+                    // then: stable answers
                     response.bodyAsText().candidateEntries().defaultOf("gradle") shouldBe "8.14".some()
                 }
             }
         }
 
-        should("prefer the stable tag on LINUX_X64 over the lts tag on UNIVERSAL") {
+        should("ignore the lts tag on UNIVERSAL and resolve the stable tag on LINUX_X64") {
             withCleanDatabase {
                 // given: stable only on the fallback platform, lts on the preferred one
                 insertCandidates(registrationOf("kuml"))
@@ -185,7 +186,7 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the tag decides before the platform
+                    // then: lts is not read, even on the preferred platform
                     response.bodyAsText().candidateEntries().defaultOf("kuml") shouldBe "0.20.5".some()
                 }
             }
@@ -208,7 +209,7 @@ class GetCandidatesAcceptanceSpec :
             }
         }
 
-        should("prefer the UNIVERSAL lts tag when lts exists on both platforms") {
+        should("list a candidate tagged lts on both platforms without a default") {
             withCleanDatabase {
                 // given: no stable tag, and different versions tagged lts on UNIVERSAL and LINUX_X64
                 insertCandidates(registrationOf("scala"))
@@ -219,41 +220,42 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: within the lts tag, UNIVERSAL wins
-                    response.bodyAsText().candidateEntries().defaultOf("scala") shouldBe "3.4.3".some()
+                    // then: scala is listed — `single` fails if not — with the field absent
+                    val scalaEntry = response.bodyAsText().candidateEntries().single()
+                    scalaEntry.keys shouldNotContain "default"
                 }
             }
         }
 
         should("ignore the stable tag on a platform outside the resolution order") {
             withCleanDatabase {
-                // given: stable only on MAC_ARM64, lts on LINUX_X64
+                // given: different versions tagged stable on MAC_ARM64 and LINUX_X64
                 insertCandidates(registrationOf("kuml"))
                 insertVersionTagged("kuml", "0.21.0", Platform.MAC_ARM64, "stable")
-                insertVersionTagged("kuml", "0.20.5", Platform.LINUX_X64, "lts")
+                insertVersionTagged("kuml", "0.20.5", Platform.LINUX_X64, "stable")
 
                 withTestApplication {
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: the lts tag on LINUX_X64 answers
+                    // then: the stable tag on LINUX_X64 answers
                     response.bodyAsText().candidateEntries().defaultOf("kuml") shouldBe "0.20.5".some()
                 }
             }
         }
 
-        should("match tag names exactly so Stable never beats lts") {
+        should("match tag names exactly so Stable never counts") {
             withCleanDatabase {
-                // given: a capitalised Stable tag and an lts tag, both on UNIVERSAL
+                // given: a capitalised Stable tag on UNIVERSAL and a stable tag on LINUX_X64
                 insertCandidates(registrationOf("kuml"))
                 insertVersionTagged("kuml", "0.21.0", Platform.UNIVERSAL, "Stable")
-                insertVersionTagged("kuml", "0.20.5", Platform.UNIVERSAL, "lts")
+                insertVersionTagged("kuml", "0.20.5", Platform.LINUX_X64, "stable")
 
                 withTestApplication {
                     // when: a client lists the candidates
                     val response = client.get("/candidates")
 
-                    // then: only the exact lts tag counts
+                    // then: only the exact stable tag counts
                     response.bodyAsText().candidateEntries().defaultOf("kuml") shouldBe "0.20.5".some()
                 }
             }
@@ -287,17 +289,17 @@ class GetCandidatesAcceptanceSpec :
                     // when: a client lists the candidates
                     val entries = client.get("/candidates").bodyAsText().candidateEntries()
 
-                    // then: neither candidate is resolved against the other's tag
-                    (entries.defaultOf("gradle") to entries.defaultOf("scala")) shouldBe ("8.14".some() to "3.4.3".some())
+                    // then: gradle's stable lends scala no default
+                    (entries.defaultOf("gradle") to entries.defaultOf("scala")) shouldBe ("8.14".some() to none<String>())
                 }
             }
         }
 
-        should("list a candidate tagged lts only on MAC_ARM64 without a default") {
+        should("list a candidate tagged stable only on MAC_ARM64 without a default") {
             withCleanDatabase {
-                // given: connor's only lts tag sits outside the resolution order, and no stable tag exists
+                // given: connor's only stable tag sits outside the resolution order
                 insertCandidates(registrationOf("connor"))
-                insertVersionTagged("connor", "1.0.0", Platform.MAC_ARM64, "lts")
+                insertVersionTagged("connor", "1.0.0", Platform.MAC_ARM64, "stable")
 
                 withTestApplication {
                     // when: a client lists the candidates
@@ -310,12 +312,12 @@ class GetCandidatesAcceptanceSpec :
             }
         }
 
-        should("omit the default of java even when its lts row would otherwise resolve") {
+        should("omit the default of java even when its stable row would otherwise resolve") {
             withCleanDatabase {
                 // given: a java row satisfying every other rule — no distribution, on UNIVERSAL —
                 // so only the by-name exclusion can keep the default away
                 insertCandidates(registrationOf("java"))
-                insertVersionTagged("java", "25.0.4", Platform.UNIVERSAL, "lts")
+                insertVersionTagged("java", "25.0.4", Platform.UNIVERSAL, "stable")
 
                 withTestApplication {
                     // when: a client lists the candidates
