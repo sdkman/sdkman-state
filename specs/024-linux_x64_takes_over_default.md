@@ -1,7 +1,7 @@
 ---
 id: "024"
 title: "LINUX_X64 Takes Over the Default"
-status: draft
+status: implemented
 created: 2026-11-21
 depends_on: ["022"]
 ---
