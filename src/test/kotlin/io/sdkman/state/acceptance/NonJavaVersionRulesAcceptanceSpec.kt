@@ -34,6 +34,7 @@ import io.sdkman.state.support.withCleanDatabase
 import io.sdkman.state.support.withTestApplication
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -85,6 +86,12 @@ class NonJavaVersionRulesAcceptanceSpec :
                 .firstOrNone { it.getValue("candidate").jsonPrimitive.content == "jpx" }
                 .flatMap { entry -> entry["default"].toOption() }
                 .map { it.jsonPrimitive.content }
+
+        suspend fun ApplicationTestBuilder.stableOn(platform: Platform): String =
+            Json
+                .decodeFromString<JsonObject>(client.get("/versions/jpx/tags/stable?platform=$platform").bodyAsText())
+                .getValue("version")
+                .jsonPrimitive.content
 
         suspend fun HttpResponse.failedFields(): List<String> =
             Json.decodeFromString<ValidationErrorResponse>(bodyAsText()).failures.map { it.field }
@@ -311,6 +318,72 @@ class NonJavaVersionRulesAcceptanceSpec :
                     response.status shouldBe HttpStatusCode.NoContent
                     tagsOf(older).shouldBeEmpty()
                     tagsOf(jpx) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+        }
+
+        should("keep stable and the default on jpx 1.0.0 when jpx 2.0.0 is posted stable on MAC_ARM64") {
+            withCleanDatabase {
+                // given: jpx 1.0.0 holds stable on UNIVERSAL
+                val universal = jpx.copy(version = "1.0.0", platform = Platform.UNIVERSAL)
+                insertTaggedVersion(universal, "stable")
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    // when: jpx 2.0.0 is posted stable on MAC_ARM64
+                    val mac = jpx.copy(version = "2.0.0", platform = Platform.MAC_ARM64, tags = listOf("stable").some())
+                    val response = postVersion(mac.toJsonString(), JwtTestSupport.adminToken())
+
+                    // then: the UNIVERSAL default stays and the MAC_ARM64 lookup answers the new version
+                    response.status shouldBe HttpStatusCode.NoContent
+                    tagsOf(universal) shouldContainExactlyInAnyOrder listOf("stable")
+                    jpxDefault() shouldBe "1.0.0".some()
+                    stableOn(Platform.MAC_ARM64) shouldBe "2.0.0"
+                }
+            }
+        }
+
+        should("move the default to jpx 2.0.0 when jpx 2.0.0 is posted stable on LINUX_X64 after MAC_ARM64") {
+            withCleanDatabase {
+                // given: jpx 1.0.0 holds stable on UNIVERSAL and jpx 2.0.0 holds stable on MAC_ARM64
+                val universal = jpx.copy(version = "1.0.0", platform = Platform.UNIVERSAL)
+                insertTaggedVersion(universal, "stable")
+                insertTaggedVersion(jpx.copy(version = "2.0.0", platform = Platform.MAC_ARM64), "stable")
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    // when: jpx 2.0.0 is posted stable on LINUX_X64
+                    val linux = jpx.copy(version = "2.0.0", tags = listOf("stable").some())
+                    val response = postVersion(linux.toJsonString(), JwtTestSupport.adminToken())
+
+                    // then: the UNIVERSAL row loses stable and the default moves
+                    response.status shouldBe HttpStatusCode.NoContent
+                    tagsOf(universal).shouldBeEmpty()
+                    jpxDefault() shouldBe "2.0.0".some()
+                }
+            }
+        }
+
+        should("keep the default on jpx 1.0.0 when jpx 2.0.0 is posted stable on MAC_ARM64 and WINDOWS_X64") {
+            withCleanDatabase {
+                // given: jpx 1.0.0 holds stable on UNIVERSAL
+                insertTaggedVersion(jpx.copy(version = "1.0.0", platform = Platform.UNIVERSAL), "stable")
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    // when: jpx 2.0.0 is posted stable on MAC_ARM64 and WINDOWS_X64
+                    val responses =
+                        listOf(Platform.MAC_ARM64, Platform.WINDOWS_X64).map { platform ->
+                            val release = jpx.copy(version = "2.0.0", platform = platform, tags = listOf("stable").some())
+                            postVersion(release.toJsonString(), JwtTestSupport.adminToken())
+                        }
+
+                    // then: both writes succeed and the default stays on the UNIVERSAL version
+                    responses.map { it.status } shouldBe listOf(HttpStatusCode.NoContent, HttpStatusCode.NoContent)
+                    jpxDefault() shouldBe "1.0.0".some()
                 }
             }
         }
