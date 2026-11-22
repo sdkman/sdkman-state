@@ -51,11 +51,9 @@ every platform's `stable` lookup answers.
 
 ## Rollout
 
-No data fix, one check. Under 022, a `stable` on any platform but `LINUX_X64` deleted another
-version's `UNIVERSAL` `stable`, so a candidate can have lost its default between 022's deploy
-and this one. On deploy, list every non-java candidate that `GET /candidates` answers without a
-`default`. Each one that had a default before 022 deployed gets it back: tag that `UNIVERSAL`
-version `stable` through `POST /versions/tags`. Otherwise the release changes future writes only.
+No data fix. Under 022, a `stable` on a platform other than `LINUX_X64` cleared another
+version's `UNIVERSAL` `stable`, which can leave a candidate with no default. This release stops
+that for future writes. It does not repair a candidate already left without one.
 
 **Rollback.** Redeploy the previous release. Writes clear across shapes as 022 says again;
 nothing already written changes.
