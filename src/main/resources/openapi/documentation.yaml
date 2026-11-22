@@ -236,7 +236,7 @@ paths:
                     error: "Not Found"
                     message: "Tag 'nonexistent' not found"
     post:
-      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. A non-java tag must be stable or latest; any other, lts included, is refused with 400. Assigning one never removes the other, and stable assigned to a platform row also clears stable from other versions' UNIVERSAL rows, while stable assigned to a UNIVERSAL row clears it from other versions' platform rows. A java lts or latest assigned here holds only until the distribution's next vendor write, which keeps it only where it agrees with State's placement."
+      description: "Assign a single tag to an existing version (append, not replace). The tag is added to the target version's existing tag set; a tag held by another version in the same (candidate, distribution, platform) scope is moved; re-assigning a tag the version already holds is an idempotent no-op. Never creates a version. No semverish validation is applied to the version field. A non-java tag must be stable or latest; any other, lts included, is refused with 400. Assigning one never removes the other, and of the platform rows, only a LINUX_X64 stable clears stable from other versions' UNIVERSAL rows, while stable assigned to a UNIVERSAL row clears it from other versions' platform rows. A java lts or latest assigned here holds only until the distribution's next vendor write, which keeps it only where it agrees with State's placement."
       security:
         - bearerAuth: []
       requestBody:
@@ -1545,7 +1545,7 @@ components:
           example:
             - "stable"
             - "latest"
-          description: "Version tags. On POST /versions only stable and latest are accepted; any other tag, lts included, is refused with 400. On POST each listed tag is set and none is removed: absent or an empty array leaves the row's tags as they are, and a tag the row holds but the list leaves out stays. stable and latest are independent and may share a row. Tagging a row stable also clears stable from other versions' rows of the other platform shape: a platform row clears UNIVERSAL rows, a UNIVERSAL row clears platform rows. Tags are mutually exclusive within (candidate, distribution, platform) scope. Always present in GET responses as an array (empty if no tags)."
+          description: "Version tags. On POST /versions only stable and latest are accepted; any other tag, lts included, is refused with 400. On POST each listed tag is set and none is removed: absent or an empty array leaves the row's tags as they are, and a tag the row holds but the list leaves out stays. stable and latest are independent and may share a row. Tagging a row stable also clears stable from other versions' rows of the other platform shape: of the platform rows, only a LINUX_X64 row clears UNIVERSAL rows, a UNIVERSAL row clears platform rows. Tags are mutually exclusive within (candidate, distribution, platform) scope. Always present in GET responses as an array (empty if no tags)."
       required:
         - "candidate"
         - "version"
