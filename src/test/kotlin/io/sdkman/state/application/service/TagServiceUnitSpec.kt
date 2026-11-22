@@ -151,6 +151,36 @@ class TagServiceUnitSpec :
                 coVerify(exactly = 1) { tagsRepo.clearStableAcrossShapes(any()) }
             }
 
+            should("assign a gradle stable tag on LINUX_X64 and clear stable across platform shapes once") {
+                // given: a gradle version on LINUX_X64
+                val gradleLinuxX64 = UniqueVersion("gradle", "8.14", none(), Platform.LINUX_X64)
+
+                // when: tagging it stable
+                val result = service.assignNonJavaTag(42, gradleLinuxX64, "stable")
+
+                // then: the tag is assigned and stable is cleared from the UNIVERSAL shape once
+                result.shouldBeRight()
+                coVerify { tagsRepo.assignTag(42, "gradle", none(), Platform.LINUX_X64, "stable") }
+                coVerify(exactly = 1) { tagsRepo.clearStableAcrossShapes(gradleLinuxX64) }
+            }
+
+            Platform.entries
+                .filterNot { it == Platform.UNIVERSAL || it == Platform.LINUX_X64 }
+                .forEach { platform ->
+                    should("assign a gradle stable tag on $platform and never clear stable across platform shapes") {
+                        // given: a gradle version on a platform that cannot take over the default
+                        val gradleOnPlatform = UniqueVersion("gradle", "8.14", none(), platform)
+
+                        // when: tagging it stable
+                        val result = service.assignNonJavaTag(42, gradleOnPlatform, "stable")
+
+                        // then: the tag is assigned and no UNIVERSAL stable is cleared
+                        result.shouldBeRight()
+                        coVerify { tagsRepo.assignTag(42, "gradle", none(), platform, "stable") }
+                        coVerify(exactly = 0) { tagsRepo.clearStableAcrossShapes(any()) }
+                    }
+                }
+
             should("never clear stable across platform shapes for a gradle latest tag") {
                 // when: tagging a gradle version latest
                 val result = service.assignNonJavaTag(42, gradleUniversal, "latest")
