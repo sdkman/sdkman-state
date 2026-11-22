@@ -7,6 +7,8 @@ const val STABLE_TAG = "stable"
 
 val NON_JAVA_TAGS = setOf(STABLE_TAG, "latest")
 
+val DEFAULT_PLATFORMS = listOf(Platform.UNIVERSAL, Platform.LINUX_X64)
+
 data class VersionTag(
     val id: Int = 0,
     val candidate: String,
