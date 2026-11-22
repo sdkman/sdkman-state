@@ -366,6 +366,28 @@ class NonJavaVersionRulesAcceptanceSpec :
             }
         }
 
+        should("keep stable on jpx 1.0.0 when POST /versions/tags assigns stable to jpx 2.0.0 on MAC_ARM64") {
+            withCleanDatabase {
+                // given: jpx 1.0.0 holds stable on UNIVERSAL and jpx 2.0.0 exists untagged on MAC_ARM64
+                val universal = jpx.copy(version = "1.0.0", platform = Platform.UNIVERSAL)
+                val mac = jpx.copy(version = "2.0.0", platform = Platform.MAC_ARM64)
+                insertTaggedVersion(universal, "stable")
+                insertVersions(mac)
+
+                withTestApplication {
+                    registerCandidates("jpx")
+
+                    // when: the tag route assigns stable to jpx 2.0.0 on MAC_ARM64
+                    val response = assignTag(mac, "stable")
+
+                    // then: the MAC_ARM64 lookup answers the new version and the UNIVERSAL row keeps stable
+                    response.status shouldBe HttpStatusCode.NoContent
+                    stableOn(Platform.MAC_ARM64) shouldBe "2.0.0"
+                    tagsOf(universal) shouldContainExactlyInAnyOrder listOf("stable")
+                }
+            }
+        }
+
         should("keep the default on jpx 1.0.0 when jpx 2.0.0 is posted stable on MAC_ARM64 and WINDOWS_X64") {
             withCleanDatabase {
                 // given: jpx 1.0.0 holds stable on UNIVERSAL
