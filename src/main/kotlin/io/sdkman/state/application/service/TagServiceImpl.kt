@@ -19,6 +19,8 @@ import io.sdkman.state.domain.service.TagService
 import io.sdkman.state.domain.service.Transactional
 import java.util.UUID
 
+private val STABLE_CLEARING_PLATFORMS = setOf(Platform.UNIVERSAL, Platform.LINUX_X64)
+
 class TagServiceImpl(
     private val tagsRepo: TagRepository,
     private val auditRepo: AuditRepository,
@@ -57,7 +59,7 @@ class TagServiceImpl(
                 .assignTag(versionId, uniqueVersion.candidate, uniqueVersion.distribution, uniqueVersion.platform, tag)
                 .mapLeft { DomainError.DatabaseError(it) }
                 .bind()
-            if (tag == STABLE_TAG) {
+            if (tag == STABLE_TAG && uniqueVersion.platform in STABLE_CLEARING_PLATFORMS) {
                 tagsRepo
                     .clearStableAcrossShapes(uniqueVersion)
                     .mapLeft { DomainError.DatabaseError(it) }
