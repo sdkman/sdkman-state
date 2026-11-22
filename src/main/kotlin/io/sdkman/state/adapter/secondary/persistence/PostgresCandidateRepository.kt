@@ -9,6 +9,7 @@ import io.sdkman.state.domain.error.DatabaseFailure
 import io.sdkman.state.domain.model.Candidate
 import io.sdkman.state.domain.model.CandidateRegistration
 import io.sdkman.state.domain.model.CandidateRegistrationResult
+import io.sdkman.state.domain.model.DEFAULT_PLATFORMS
 import io.sdkman.state.domain.model.STABLE_TAG
 import io.sdkman.state.domain.repository.CandidateRepository
 import org.jetbrains.exposed.v1.core.JoinType
@@ -52,7 +53,7 @@ class PostgresCandidateRepository : CandidateRepository {
 
         const val DELETE_SQL = "DELETE FROM candidates WHERE candidate = ? RETURNING *"
 
-        val PLATFORM_RESOLUTION_ORDER = listOf("UNIVERSAL", "LINUX_X64")
+        val PLATFORM_RESOLUTION_ORDER = DEFAULT_PLATFORMS.map { it.name }
     }
 
     private fun connection(): Connection = TransactionManager.current().connection.connection as Connection
