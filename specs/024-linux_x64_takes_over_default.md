@@ -27,14 +27,16 @@ this one wins.*
 
 ## Behaviour
 
-**Only `LINUX_X64` clears a `UNIVERSAL` `stable`.** Tagging a non-java `LINUX_X64` row `stable`
-also clears `stable` from any other version's `UNIVERSAL` row. Tagging a row on any other
-platform `stable` leaves every `UNIVERSAL` row as it was.
+**Of the platform rows, only `LINUX_X64` clears a `UNIVERSAL` `stable`.** Tagging a non-java
+`LINUX_X64` row `stable` also clears `stable` from any other version's `UNIVERSAL` row. Tagging
+a row `stable` on a platform other than `LINUX_X64` or `UNIVERSAL` leaves every `UNIVERSAL` row
+as it was.
 
 **A `UNIVERSAL` `stable` still clears every platform.** Tagging a `UNIVERSAL` row `stable`
 clears `stable` from every other version's platform rows, as 022 says.
 
-**A candidate never loses its default to a tag write.** While a candidate moves from a
+**Setting a tag never costs a candidate its default.** Removing `stable` with
+`DELETE /versions/tags` still can, as today. While a candidate moves from a
 `UNIVERSAL` build to platform builds, the default stays on the `UNIVERSAL` version until
 `LINUX_X64` is tagged, then moves to it. Until then a platform's `stable` lookup can answer a
 newer version than the default. A release with no `LINUX_X64` build leaves the default on the
@@ -43,14 +45,17 @@ newer version than the default. A release with no `LINUX_X64` build leaves the d
 This replaces 022's guarantee that the version the default cascade picks is always the version
 every platform's `stable` lookup answers.
 
-**Every way of tagging agrees.** The `tags` field of `POST /versions`, the tag route
-`POST /versions/tags` and the validation twin `POST /validate/versions` apply the narrowed clear
-identically.
+**Both ways of tagging agree.** The `tags` field of `POST /versions` and the tag route
+`POST /versions/tags` apply the narrowed clear identically. The clear never refuses a write, so
+`POST /validate/versions` answers as before.
 
 ## Rollout
 
-No data fix. A `UNIVERSAL` `stable` left beside a newer platform `stable` by a write under 022
-is the shape this spec allows. The release changes future writes only.
+No data fix, one check. Under 022, a `stable` on any platform but `LINUX_X64` deleted another
+version's `UNIVERSAL` `stable`, so a candidate can have lost its default between 022's deploy
+and this one. On deploy, list every non-java candidate that `GET /candidates` answers without a
+`default`. Each one that had a default before 022 deployed gets it back: tag that `UNIVERSAL`
+version `stable` through `POST /versions/tags`. Otherwise the release changes future writes only.
 
 **Rollback.** Redeploy the previous release. Writes clear across shapes as 022 says again;
 nothing already written changes.
@@ -84,10 +89,12 @@ Feature: LINUX_X64 takes over the default
     When "jpx 2.0.0" for MAC_ARM64 and WINDOWS_X64 is posted with tags ["stable"]
     Then "jpx"'s default is 1.0.0
 
-  Scenario: The tag route and the twin agree
+  Scenario: The tag route keeps the old default
+    Given "jpx 2.0.0" exists for MAC_ARM64 with no tags
     When "jpx 2.0.0" for MAC_ARM64 is tagged "stable" through POST /versions/tags
-    Then "jpx 1.0.0" for UNIVERSAL carries "stable"
-      And POST /validate/versions answers that write as POST /versions does
+    Then the response status is 204
+      And the MAC_ARM64 "stable" of "jpx" is 2.0.0
+      And "jpx 1.0.0" for UNIVERSAL carries "stable"
 ```
 
 ## Out of Scope
@@ -99,9 +106,10 @@ Feature: LINUX_X64 takes over the default
 ## Acceptance Criteria
 
 - [ ] Tagging a non-java `LINUX_X64` row `stable` clears `stable` from other versions' `UNIVERSAL` rows
-- [ ] Tagging a non-java row on any other platform `stable` leaves every `UNIVERSAL` row unchanged
+- [ ] Tagging a non-java row `stable` on a platform other than `LINUX_X64` or `UNIVERSAL` leaves every `UNIVERSAL` row unchanged
 - [ ] Tagging a `UNIVERSAL` row `stable` still clears it from other versions' platform rows
 - [ ] Both publish orders (another platform then `LINUX_X64`, and the reverse) and a release with no `LINUX_X64` build are covered by acceptance tests, and no order leaves a candidate without a default
-- [ ] The `tags` field, the tag route and the validation twin apply the clear identically
+- [ ] The `tags` field and the tag route apply the clear identically
 - [ ] java writes behave as before
+- [ ] OpenAPI's `POST /versions/tags` description and the `tags` property say that, of the platform rows, only a `LINUX_X64` `stable` clears other versions' `UNIVERSAL` `stable`
 - [ ] All quality gates pass (`./gradlew check`)
